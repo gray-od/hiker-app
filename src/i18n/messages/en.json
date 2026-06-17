@@ -1,0 +1,99 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "search": "Search",
+    "loading": "Loading…",
+    "empty": "No data",
+    "confirm": "Confirm",
+    "share": "Share",
+    "export": "Export",
+    "logout": "Log out",
+    "login": "Log in",
+    "sign_in_with_google": "Sign in with Google",
+    "weight_g": "g",
+    "calories": "cal",
+    "day": "day",
+    "days": "days"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "gear": "Gear",
+    "lists": "Lists",
+    "meals": "Meals",
+    "settings": "Settings"
+  },
+  "gear": {
+    "title": "Gear Library",
+    "add_item": "Add Item",
+    "empty": "You don't have any gear yet. Add your first item.",
+    "category": "Category",
+    "weight": "Weight",
+    "season": "Season",
+    "all_seasons": "All Seasons",
+    "notes": "Notes",
+    "categories": {
+      "backpack": "Backpack",
+      "sleep_system": "Sleep System",
+      "tent": "Tent",
+      "clothing": "Clothing",
+      "footwear": "Footwear",
+      "kitchen": "Kitchen",
+      "hygiene": "Hygiene",
+      "first_aid": "First Aid",
+      "navigation": "Navigation",
+      "documents": "Documents",
+      "electronics": "Electronics",
+      "other": "Other"
+    },
+    "season": {
+      "summer": "Summer",
+      "winter": "Winter",
+      "demi": "Demi-Season",
+      "all": "All Seasons"
+    }
+  },
+  "lists": {
+    "title": "Packing Lists",
+    "add": "Create List",
+    "empty": "You don't have any lists yet. Create your first packing list.",
+    "total_weight": "Total Weight",
+    "packed": "Packed",
+    "worn": "Worn",
+    "consumable": "Consumable",
+    "items": "items",
+    "duplicate": "Duplicate",
+    "base_weight": "Base Weight",
+    "worn_weight": "Worn Weight",
+    "consumable_weight": "Consumable Weight"
+  },
+  "meals": {
+    "title": "Meal Plans",
+    "add": "Create Meal Plan",
+    "empty": "You don't have any meal plans yet. Create your first meal plan.",
+    "day": "Day",
+    "days": "Days",
+    "total_calories": "Total Calories",
+    "total_weight": "Total Weight",
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "snack": "Snack",
+    "dinner": "Dinner",
+    "protein": "Protein",
+    "fat": "Fat",
+    "carbs": "Carbs",
+    "calculator": "Calculator"
+  },
+  "dashboard": {
+    "title": "My Hikes",
+    "quick_actions": "Quick Actions",
+    "recent_lists": "Recent Lists",
+    "recent_meals": "Recent Meal Plans",
+    "create_list": "Create List",
+    "create_meal": "Create Meal Plan"
+  }
+}

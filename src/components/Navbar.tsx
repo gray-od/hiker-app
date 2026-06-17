@@ -1,0 +1,179 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import {
+  Compass,
+  Backpack,
+  ClipboardList,
+  UtensilsCrossed,
+  Settings,
+  LogOut,
+  Globe,
+} from 'lucide-react';
+import { useState, useCallback } from 'react';
+
+const locales = [
+  { code: 'uk', label: 'UA' },
+  { code: 'ru', label: 'RU' },
+  { code: 'en', label: 'EN' },
+] as const;
+
+const navItems = [
+  { href: '/', icon: Compass, labelKey: 'dashboard' as const },
+  { href: '/gear', icon: Backpack, labelKey: 'gear' as const },
+  { href: '/lists', icon: ClipboardList, labelKey: 'lists' as const },
+  { href: '/meals', icon: UtensilsCrossed, labelKey: 'meals' as const },
+  { href: '/settings', icon: Settings, labelKey: 'settings' as const },
+];
+
+export default function Navbar() {
+  const pathname = usePathname();
+  const tnav = useTranslations('nav');
+  const tcommon = useTranslations('common');
+  const [langOpen, setLangOpen] = useState(false);
+
+  const isActive = useCallback(
+    (href: string) => {
+      if (href === '/') return pathname === '/';
+      return pathname.startsWith(href);
+    },
+    [pathname],
+  );
+
+  const switchLocale = (locale: string) => {
+    document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    window.location.reload();
+  };
+
+  const bottomNav = navItems.slice(0, 5);
+
+  return (
+    <>
+      {/* ── Desktop side nav ── */}
+      <aside className="hidden md:flex md:flex-col md:w-64 md:h-screen md:fixed md:left-0 md:top-0 md:bg-white md:dark:bg-zinc-900 md:border-r md:border-zinc-200 md:dark:border-zinc-800 md:z-40">
+        {/* App name */}
+        <div className="px-6 py-6 border-b border-zinc-200 dark:border-zinc-800">
+          <Link href="/" className="text-xl font-bold text-[#75a93a] tracking-tight">
+            ПроПоходи
+          </Link>
+        </div>
+
+        {/* Nav links */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  active
+                    ? 'bg-[#75a93a]/10 text-[#75a93a] dark:bg-[#75a93a]/20'
+                    : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                }`}
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+                <span>{tnav(item.labelKey)}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Language + logout */}
+        <div className="px-3 py-4 border-t border-zinc-200 dark:border-zinc-800 space-y-1">
+          <div className="relative">
+            <button
+              onClick={() => setLangOpen((o) => !o)}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <Globe className="w-5 h-5 shrink-0" />
+              <span>Language</span>
+            </button>
+            {langOpen && (
+              <>
+                {/* backdrop to close on outside click */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setLangOpen(false)}
+                  aria-hidden
+                />
+                <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-zinc-800 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-20">
+                  {locales.map((loc) => (
+                    <button
+                      key={loc.code}
+                      onClick={() => {
+                        switchLocale(loc.code);
+                        setLangOpen(false);
+                      }}
+                      className="block w-full text-left px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      {loc.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <LogOut className="w-5 h-5 shrink-0" />
+            <span>{tcommon('logout')}</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Mobile bottom bar ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-40">
+        <div className="flex items-center justify-around py-1">
+          {bottomNav.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-0 ${
+                  active ? 'text-[#75a93a]' : 'text-zinc-500 dark:text-zinc-400'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium leading-tight">
+                  {tnav(item.labelKey)}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ── Mobile top header ── */}
+      <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40">
+        <div className="flex items-center justify-between px-4 h-12">
+          <Link href="/" className="text-lg font-bold text-[#75a93a] tracking-tight">
+            ПроПоходи
+          </Link>
+          <div className="flex items-center gap-1">
+            {locales.map((loc) => (
+              <button
+                key={loc.code}
+                onClick={() => switchLocale(loc.code)}
+                className="text-xs font-medium px-2 py-1 rounded text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                {loc.label}
+              </button>
+            ))}
+            <button
+              className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              title={tcommon('logout')}
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+    </>
+  );
+}
