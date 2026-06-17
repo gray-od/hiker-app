@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const t = useTranslations('common');
@@ -12,29 +12,22 @@ export default function LoginPage() {
   const handleSignInWithGoogle = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase environment variables are not configured');
-      }
+    const supabase = createClient();
 
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-      const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'http://localhost:3000/auth/callback',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
         },
-      });
+      },
+    });
 
-      if (authError) throw authError;
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Authentication failed';
-      console.error('Login error:', message);
-      setError(message);
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
     }
   };

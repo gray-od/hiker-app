@@ -76,11 +76,12 @@ Auto-creates profile via trigger on auth.users insert.
 | Round | Date | What | Files Changed |
 |---|---|---|---|
 | 1 | 17.06.2026 | Project scaffold: Next.js, Supabase schema, i18n (uk/ru/en), Google OAuth auth, responsive Navbar, placeholder pages (dashboard/gear/lists/meals). | 34 files created |
+| 2 | 17.06.2026 | Gear module CRUD: client component with Supabase data fetching, add/edit modal form, delete confirmation, loading/empty states, responsive table, i18n (uk/ru/en). | 5 files changed |
 
 ## Open Issues
-- [ ] Применить SQL-миграцию в Supabase SQL Editor (ручной шаг)
-- [ ] Настроить Google OAuth Provider в Supabase (ручной шаг)
-- [ ] Реализовать CRUD для модуля снаряжения (Раунд 2)
+- [x] Применить SQL-миграцию (выполнено 17.06.2026 — через pooler eu-west-1)
+- [x] Настроить Google OAuth Provider в Supabase (выполнено 17.06.2026)
+- [x] Реализовать CRUD для модуля снаряжения (Раунд 2)
 - [ ] Реализовать модуль раскладок питания (Раунд 3)
 - [ ] PWA: Service Worker + офлайн-режим (Раунд 4)
 - [ ] Деплой на Vercel
