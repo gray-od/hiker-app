@@ -1,4 +1,5 @@
 {
+  "app_name": "ProHikes",
   "common": {
     "save": "Сохранить",
     "cancel": "Отмена",
@@ -16,6 +17,7 @@
     "login": "Войти",
     "sign_in_with_google": "Войти через Google",
     "weight_g": "г",
+    "weight_kg": "кг",
     "calories": "кал",
     "day": "день",
     "days": "дни"
@@ -98,5 +100,17 @@
     "recent_meals": "Последние раскладки",
     "create_list": "Создать список",
     "create_meal": "Создать раскладку"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык интерфейса",
+    "profile": "Профиль",
+    "name": "Имя",
+    "email": "Электронная почта",
+    "saved": "Сохранено",
+    "theme": "Тема",
+    "light": "Светлая",
+    "dark": "Тёмная",
+    "system": "Системная"
   }
 }

@@ -16,13 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ПроПоходи — спорядження та розкладки',
+  title: 'ProHikes — Планування походів',
   description:
     'Застосунок для планування туристичного спорядження та розкладок харчування',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'ПроПоходи',
+    title: 'ProHikes',
   },
 };
 

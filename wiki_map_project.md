@@ -48,8 +48,25 @@ Created full project structure:
 
 ## Manual Steps Pending
 
-1. Apply SQL migration in Supabase SQL Editor
-2. Configure Google OAuth in Supabase Authentication → Providers
+1. ~~Apply SQL migration in Supabase SQL Editor~~ Done 17.06.2026 — via pooler eu-west-1
+2. ~~Configure Google OAuth in Supabase Authentication → Providers~~ Done 17.06.2026
+
+## Known Issues (тестирование 18.06.2026)
+
+| # | Проблема | Статус |
+|---|---|---|
+| KI-1 | Gear CRUD: INSERT/UPDATE не сохраняет данные в Supabase | 🔴 |
+| KI-2 | Страницы Списки/Питание — заглушки без функционала | 🔴 |
+| KI-3 | Настройки — 404 (нет файла page.tsx) | 🔴 |
+| KI-4 | Переключение языка не работает (NEXT_LOCALE игнорируется) | 🔴 |
+| KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🔴 |
+| KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 |
+
+### Что работает после Раунда 2
+- ✅ Вход через Google OAuth
+- ✅ Редирект с `/` на `/login`
+- ✅ Gear page UI рендерится (заголовок, кнопки, модалка, таблица)
+- ✅ i18n переводы загружаются (uk/ru/en)
 
 ## Next Steps
 
@@ -97,7 +114,7 @@ hiker-app/
 │   │   │   ├── server.ts               # Server Supabase client (cookies)
 │   │   │   └── middleware.ts           # updateSession() helper
 │   │   └── types.ts                    # TypeScript DB interfaces
-│   └── middleware.ts                   # Combined intl + Supabase
+│   └── proxy.ts                       # Next.js 16 proxy (Supabase session refresh, /auth/* excluded)
 └── supabase/
     └── migrations/
         └── 00001_init.sql              # Full DB schema + RLS

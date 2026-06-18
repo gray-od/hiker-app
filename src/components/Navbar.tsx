@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   Compass,
@@ -33,6 +33,7 @@ export default function Navbar() {
   const tnav = useTranslations('nav');
   const tcommon = useTranslations('common');
   const [langOpen, setLangOpen] = useState(false);
+  const router = useRouter();
 
   const isActive = useCallback(
     (href: string) => {
@@ -47,6 +48,13 @@ export default function Navbar() {
     window.location.reload();
   };
 
+  const handleLogout = async () => {
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
   const bottomNav = navItems.slice(0, 5);
 
   return (
@@ -56,7 +64,7 @@ export default function Navbar() {
         {/* App name */}
         <div className="px-6 py-6 border-b border-zinc-200 dark:border-zinc-800">
           <Link href="/" className="text-xl font-bold text-[#75a93a] tracking-tight">
-            ПроПоходи
+            ProHikes
           </Link>
         </div>
 
@@ -118,7 +126,7 @@ export default function Navbar() {
             )}
           </div>
 
-          <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+          <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             <LogOut className="w-5 h-5 shrink-0" />
             <span>{tcommon('logout')}</span>
           </button>
@@ -153,7 +161,7 @@ export default function Navbar() {
       <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40">
         <div className="flex items-center justify-between px-4 h-12">
           <Link href="/" className="text-lg font-bold text-[#75a93a] tracking-tight">
-            ПроПоходи
+            ProHikes
           </Link>
           <div className="flex items-center gap-1">
             {locales.map((loc) => (
@@ -166,6 +174,7 @@ export default function Navbar() {
               </button>
             ))}
             <button
+              onClick={handleLogout}
               className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               title={tcommon('logout')}
             >

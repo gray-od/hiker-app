@@ -16,6 +16,7 @@
     "login": "Log in",
     "sign_in_with_google": "Sign in with Google",
     "weight_g": "g",
+    "weight_kg": "kg",
     "calories": "cal",
     "day": "day",
     "days": "days"
@@ -98,5 +99,17 @@
     "recent_meals": "Recent Meal Plans",
     "create_list": "Create List",
     "create_meal": "Create Meal Plan"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Interface language",
+    "profile": "Profile",
+    "name": "Name",
+    "email": "Email",
+    "saved": "Saved",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

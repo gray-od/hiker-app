@@ -77,12 +77,30 @@ Auto-creates profile via trigger on auth.users insert.
 |---|---|---|---|
 | 1 | 17.06.2026 | Project scaffold: Next.js, Supabase schema, i18n (uk/ru/en), Google OAuth auth, responsive Navbar, placeholder pages (dashboard/gear/lists/meals). | 34 files created |
 | 2 | 17.06.2026 | Gear module CRUD: client component with Supabase data fetching, add/edit modal form, delete confirmation, loading/empty states, responsive table, i18n (uk/ru/en). | 5 files changed |
+| 3 | 18.06.2026 | Bug fixes + stabilization: Gear CRUD error handling, weight in kg (smart format), login redirect fix, logout buttons fix, language switching fix (cookie reading), settings page created, app renamed to ProHikes. | 9 files changed |
 
 ## Open Issues
 - [x] Применить SQL-миграцию (выполнено 17.06.2026 — через pooler eu-west-1)
 - [x] Настроить Google OAuth Provider в Supabase (выполнено 17.06.2026)
-- [x] Реализовать CRUD для модуля снаряжения (Раунд 2)
-- [ ] Реализовать модуль раскладок питания (Раунд 3)
+- [x] Реализовать CRUD для модуля снаряжения (Раунд 2) — исправлено в Раунде 3
+- [ ] Реализовать модуль раскладок питания (Раунд 4)
 - [ ] PWA: Service Worker + офлайн-режим (Раунд 4)
 - [ ] Деплой на Vercel
 - [ ] Supabase OAuth redirect URI: `https://lcqsbjflososfglajydw.supabase.co/auth/v1/callback`
+
+## Known Issues (тестирование 18.06.2026)
+
+| # | Проблема | Детали |
+|---|---|---|
+| KI-1 | ~~Сохранение данных не работает~~ | **FIXED R3** — добавлен error handling на insert/update/delete |
+| KI-2 | **Вкладки Списки/Питание — мёртвые** | Страницы-заглушки из Раунда 1, без функционала |
+| KI-3 | ~~Настройки — 404~~ | **FIXED R3** — создан `src/app/settings/page.tsx` |
+| KI-4 | ~~Переключение языка не работает~~ | **FIXED R3** — `request.ts` теперь читает cookie `NEXT_LOCALE` |
+| KI-5 | **next-intl middleware удалён** | `createMiddleware` из next-intl несовместим с Next.js 16 proxy. i18n работает через cookie в request.ts |
+| KI-6 | **Прокси на proxy.ts** | `src/middleware.ts` → `src/proxy.ts` (Next.js 16), только Supabase session refresh, `/auth/*` исключён. |
+
+### Что работает
+- ✅ Вход через Google OAuth
+- ✅ Редирект с `/` на `/login` (без сессии)
+- ✅ Страница `/gear` рендерится (UI виден: заголовок, кнопка, таблица, модалка)
+- ✅ i18n (uk/ru/en) — переводы загружаются

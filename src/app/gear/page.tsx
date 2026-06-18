@@ -34,6 +34,7 @@ export default function GearPage() {
   const [editingItem, setEditingItem] = useState<GearItem | null>(null);
   const [formData, setFormData] = useState<Omit<GearItem, 'id' | 'user_id' | 'created_at'>>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -71,7 +72,7 @@ export default function GearPage() {
     setFormData({
       name: item.name,
       category: item.category,
-      weight_g: item.weight_g,
+      weight_g: item.weight_g / 1000,
       season: item.season,
       notes: item.notes || '',
     });
@@ -85,39 +86,50 @@ export default function GearPage() {
     if (!user) return;
 
     setSaving(true);
+    setError(null);
+
+    const payload = {
+      name: formData.name,
+      category: formData.category,
+      weight_g: Math.round(formData.weight_g * 1000),
+      season: formData.season,
+      notes: formData.notes,
+    };
 
     if (editingItem) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('gear_items')
-        .update({
-          name: formData.name,
-          category: formData.category,
-          weight_g: formData.weight_g,
-          season: formData.season,
-          notes: formData.notes,
-        })
+        .update(payload)
         .eq('id', editingItem.id);
+
+      if (updateError) {
+        setError(updateError.message);
+        setSaving(false);
+        return;
+      }
 
       setItems(prev =>
         prev.map(i =>
           i.id === editingItem.id
-            ? { ...i, ...formData }
+            ? { ...i, ...payload }
             : i,
         ),
       );
     } else {
-      const { data } = await supabase
+      const { data, error: insertError } = await supabase
         .from('gear_items')
         .insert({
           user_id: user.id,
-          name: formData.name,
-          category: formData.category,
-          weight_g: formData.weight_g,
-          season: formData.season,
-          notes: formData.notes,
+          ...payload,
         })
         .select()
         .single();
+
+      if (insertError) {
+        setError(insertError.message);
+        setSaving(false);
+        return;
+      }
 
       if (data) {
         setItems(prev => [data as GearItem, ...prev]);
@@ -131,10 +143,16 @@ export default function GearPage() {
   async function handleDelete(id: string) {
     const supabase = createClient();
 
-    await supabase
+    const { error: deleteError } = await supabase
       .from('gear_items')
       .delete()
       .eq('id', id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      setConfirmDelete(null);
+      return;
+    }
 
     setItems(prev => prev.filter(i => i.id !== id));
     setConfirmDelete(null);
@@ -142,6 +160,13 @@ export default function GearPage() {
 
   function handleFormChange(field: string, value: string | number) {
     setFormData(prev => ({ ...prev, [field]: value }));
+  }
+
+  function formatWeight(grams: number): string {
+    if (grams >= 1000) {
+      return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
+    }
+    return `${grams} ${tCommon('weight_g')}`;
   }
 
   return (
@@ -171,6 +196,12 @@ export default function GearPage() {
           {tGear('add_item')}
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+          {error}
+        </div>
+      )}
 
       {/* Loading state */}
       {loading && (
@@ -215,7 +246,7 @@ export default function GearPage() {
                     {tGear('category')}
                   </th>
                   <th className="text-right px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
-                    {tGear('weight')}, {tCommon('weight_g')}
+                    {tGear('weight')}
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
                     {tGear('season_label')}
@@ -237,7 +268,7 @@ export default function GearPage() {
                       {tGear(`categories.${item.category}`)}
                     </td>
                     <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                      {item.weight_g}{tCommon('weight_g')}
+                      {formatWeight(item.weight_g)}
                     </td>
                     <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
                       {tGear(`season.${item.season}`)}
@@ -315,14 +346,14 @@ export default function GearPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    {tGear('weight')}, {tCommon('weight_g')}
+                    {tGear('weight')}, {tCommon('weight_kg')}
                   </label>
                   <input
                     type="number"
                     value={formData.weight_g}
-                    onChange={(e) => handleFormChange('weight_g', parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleFormChange('weight_g', parseFloat(e.target.value) || 0)}
                     min={0}
-                    step={1}
+                    step={0.01}
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                   />
                 </div>

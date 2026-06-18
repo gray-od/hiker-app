@@ -18,7 +18,7 @@ export default function LoginPage() {
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'http://localhost:3000/auth/callback',
+        redirectTo: `${window.location.origin}/auth/callback`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -53,7 +53,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-            ПроПоходи
+            ProHikes
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm">
             {t('login')}
@@ -97,7 +97,7 @@ export default function LoginPage() {
         </button>
 
         <p className="mt-10 text-xs text-zinc-400 dark:text-zinc-600">
-          &copy; {new Date().getFullYear()} ПроПоходи
+          &copy; {new Date().getFullYear()} ProHikes
         </p>
       </div>
     </div>
