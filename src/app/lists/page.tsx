@@ -1,51 +1,202 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+'use client';
 
-export default async function ListsPage() {
-  const cookieStore = await cookies();
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { createClient } from '@/lib/supabase/client';
+import type { GearList } from '@/lib/types';
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value),
-            );
-          } catch {
-            // Server Component — ignored; middleware refreshes sessions
+const SEASONS = ['summer', 'winter', 'demi'] as const;
+
+type ListItemRaw = {
+  id: string;
+  quantity: number;
+  is_packed: boolean;
+  worn: boolean;
+  consumable: boolean;
+  gear_item: { weight_g: number } | null;
+};
+
+type GearListWithItems = GearList & { list_items: ListItemRaw[] };
+
+const EMPTY_FORM = {
+  name: '',
+  season: 'summer' as (typeof SEASONS)[number],
+  trip_date: '',
+};
+
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const dd = d.getDate().toString().padStart(2, '0');
+  const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+const SEASON_COLORS: Record<string, { light: string; dark: string }> = {
+  summer: { light: 'bg-[#ffec6d]/20 text-[#b8960f]', dark: 'dark:bg-[#ffec6d]/10 dark:text-[#ffec6d]' },
+  winter: { light: 'bg-[#6db3ff]/20 text-[#2563eb]', dark: 'dark:bg-[#6db3ff]/10 dark:text-[#6db3ff]' },
+  demi: { light: 'bg-[#f5a623]/20 text-[#c2841a]', dark: 'dark:bg-[#f5a623]/10 dark:text-[#f5a623]' },
+};
+
+export default function ListsPage() {
+  const router = useRouter();
+  const t = useTranslations('lists');
+  const tCommon = useTranslations('common');
+  const tGear = useTranslations('gear');
+
+  const [lists, setLists] = useState<GearListWithItems[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      setLoading(true);
+
+      supabase
+        .from('gear_lists')
+        .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setLists(data as unknown as GearListWithItems[]);
           }
-        },
-      },
-    },
-  );
+          setLoading(false);
+        });
+    });
+  }, [router]);
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    redirect('/login');
+  function getItemsCount(list: GearListWithItems): number {
+    return list.list_items?.length ?? 0;
   }
 
-  const t = await getTranslations('lists');
-  const tCommon = await getTranslations('common');
+  function getTotalWeight(list: GearListWithItems): number {
+    return (list.list_items ?? []).reduce((sum, li) => {
+      if (li.gear_item) {
+        return sum + li.gear_item.weight_g * li.quantity;
+      }
+      return sum;
+    }, 0);
+  }
+
+  function getPackedCount(list: GearListWithItems): number {
+    return (list.list_items ?? []).filter((li) => li.is_packed).length;
+  }
+
+  function getPackingProgress(list: GearListWithItems): number {
+    const total = getItemsCount(list);
+    if (total === 0) return 0;
+    return Math.round((getPackedCount(list) / total) * 100);
+  }
+
+  function formatWeight(grams: number): string {
+    if (grams >= 1000) {
+      return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
+    }
+    return `${grams} ${tCommon('weight_g')}`;
+  }
+
+  async function fetchLists() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('gear_lists')
+      .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setLists(data as unknown as GearListWithItems[]);
+    }
+  }
+
+  async function handleCreate() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    setSaving(true);
+    setError(null);
+
+    const { data, error: insertError } = await supabase
+      .from('gear_lists')
+      .insert({
+        user_id: user.id,
+        name: formData.name,
+        season: formData.season,
+        trip_date: formData.trip_date || null,
+      })
+      .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
+      .single();
+
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
+    }
+
+    if (data) {
+      setLists((prev) => [data as unknown as GearListWithItems, ...prev]);
+    }
+
+    setSaving(false);
+    setModalOpen(false);
+    setFormData(EMPTY_FORM);
+  }
+
+  async function handleDelete(id: string) {
+    const supabase = createClient();
+
+    const { error: deleteError } = await supabase
+      .from('gear_lists')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      setConfirmDelete(null);
+      return;
+    }
+
+    setLists((prev) => prev.filter((l) => l.id !== id));
+    setConfirmDelete(null);
+  }
+
+  function handleFormChange(field: string, value: string) {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function openCreateModal() {
+    setFormData(EMPTY_FORM);
+    setModalOpen(true);
+  }
 
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
           {t('title')}
         </h1>
-        <button className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm">
+        <button
+          onClick={openCreateModal}
+          className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+        >
           <svg
             className="w-4 h-4"
             fill="none"
@@ -63,54 +214,203 @@ export default async function ListsPage() {
         </button>
       </div>
 
-      {/* Empty state */}
-      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
-        <svg
-          className="w-12 h-12 mx-auto text-zinc-300 dark:text-zinc-600 mb-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
-          />
-        </svg>
-        <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-          {t('empty')}
-        </h3>
-      </div>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+          {error}
+        </div>
+      )}
 
-      {/* Cards placeholder (shown when lists exist) */}
-      <div className="hidden mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Card template — repeated for each list */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-[#75a93a]/50 transition-colors cursor-pointer">
-          <div className="flex items-start justify-between mb-3">
-            <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-              Назва походу
-            </h3>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">
-              12.06.2026
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
-            <span>
-              {t('items')}: 0
-            </span>
-            <span>
-              {t('base_weight')}: 0 {tCommon('weight_g')}
-            </span>
-          </div>
-          <div className="mt-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-[#75a93a] h-full rounded-full"
-              style={{ width: '0%' }}
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin" />
+        </div>
+      )}
+
+      {!loading && lists.length === 0 && (
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
+          <svg
+            className="w-12 h-12 mx-auto text-zinc-300 dark:text-zinc-600 mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
             />
+          </svg>
+          <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            {t('empty')}
+          </h3>
+        </div>
+      )}
+
+      {!loading && lists.length > 0 && (
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {lists.map((list) => {
+            const totalWeight = getTotalWeight(list);
+            const itemsCount = getItemsCount(list);
+            const progress = getPackingProgress(list);
+
+            return (
+              <div
+                key={list.id}
+                onClick={() => router.push(`/lists/${list.id}`)}
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-[#75a93a]/50 transition-colors cursor-pointer"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-medium text-zinc-900 dark:text-zinc-100 pr-2">
+                    {list.name}
+                  </h3>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDelete(list.id);
+                    }}
+                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
+                    title={tCommon('delete')}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 mb-3">
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${SEASON_COLORS[list.season]?.light ?? ''} ${SEASON_COLORS[list.season]?.dark ?? ''}`}
+                  >
+                    {tGear(`season.${list.season}`)}
+                  </span>
+                  {list.trip_date && (
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                      {formatDate(list.trip_date)}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+                  <span>
+                    {itemsCount} {t('items')}
+                  </span>
+                  <span>
+                    {formatWeight(totalWeight)}
+                  </span>
+                </div>
+
+                <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-[#75a93a] h-full rounded-full transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                {t('add')}
+              </h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('name')}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleFormChange('name', e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    placeholder={t('name')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {tGear('season_label')}
+                  </label>
+                  <select
+                    value={formData.season}
+                    onChange={(e) => handleFormChange('season', e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  >
+                    {SEASONS.map((s) => (
+                      <option key={s} value={s}>
+                        {tGear(`season.${s}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('trip_date')}
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.trip_date}
+                    onChange={(e) => handleFormChange('trip_date', e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                >
+                  {tCommon('cancel')}
+                </button>
+                <button
+                  onClick={handleCreate}
+                  disabled={saving || !formData.name.trim()}
+                  className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+                >
+                  {saving ? tCommon('loading') : tCommon('save')}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              {tCommon('delete')}
+            </h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+              {t('delete_confirm')}
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+              >
+                {tCommon('cancel')}
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDelete)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+              >
+                {tCommon('delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

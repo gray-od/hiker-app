@@ -29,6 +29,10 @@ export interface ListItem {
   consumable: boolean;
 }
 
+export interface ListItemWithGear extends ListItem {
+  gear_item: GearItem;
+}
+
 export interface MealPlan {
   id: string;
   user_id: string;

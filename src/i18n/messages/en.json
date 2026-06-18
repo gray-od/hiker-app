@@ -1,4 +1,5 @@
 {
+  "app_name": "ProHikes",
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -73,7 +74,24 @@
     "duplicate": "Duplicate",
     "base_weight": "Base Weight",
     "worn_weight": "Worn Weight",
-    "consumable_weight": "Consumable Weight"
+    "consumable_weight": "Consumable Weight",
+    "edit_list": "Edit List",
+    "delete_list": "Delete List",
+    "delete_confirm": "Are you sure you want to delete this list? All items will be deleted too.",
+    "name": "Name",
+    "season": "Season",
+    "trip_date": "Trip Date",
+    "add_items": "Add Items",
+    "remove_item": "Remove from list",
+    "quantity": "Quantity",
+    "no_items": "List is empty. Add gear from your library.",
+    "select_items": "Select Items",
+    "search_gear": "Search gear…",
+    "no_gear_hint": "You don't have any gear yet. Add items to your library first.",
+    "all_added": "All gear already added to the list",
+    "back_to_lists": "Back to lists",
+    "packing_progress": "Packing Progress",
+    "deleted_item": "Deleted item"
   },
   "meals": {
     "title": "Meal Plans",
