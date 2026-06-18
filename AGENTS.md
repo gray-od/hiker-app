@@ -78,15 +78,17 @@ Auto-creates profile via trigger on auth.users insert.
 | 1 | 17.06.2026 | Project scaffold: Next.js, Supabase schema, i18n (uk/ru/en), Google OAuth auth, responsive Navbar, placeholder pages (dashboard/gear/lists/meals). | 34 files created |
 | 2 | 17.06.2026 | Gear module CRUD: client component with Supabase data fetching, add/edit modal form, delete confirmation, loading/empty states, responsive table, i18n (uk/ru/en). | 5 files changed |
 | 3 | 18.06.2026 | Bug fixes + stabilization: Gear CRUD error handling, weight in kg (smart format), login redirect fix, logout buttons fix, language switching fix (cookie reading), settings page created, app renamed to ProHikes. | 9 files changed |
+| 4 | 18.06.2026 | Navigation restructure: AppShell (conditional navbar), no nav on login page, simplified mobile header, safe-area support, GRANT fix for RLS, deployed to Vercel. | 5 files changed |
 
 ## Open Issues
 - [x] Применить SQL-миграцию (выполнено 17.06.2026 — через pooler eu-west-1)
 - [x] Настроить Google OAuth Provider в Supabase (выполнено 17.06.2026)
 - [x] Реализовать CRUD для модуля снаряжения (Раунд 2) — исправлено в Раунде 3
-- [ ] Реализовать модуль раскладок питания (Раунд 4)
-- [ ] PWA: Service Worker + офлайн-режим (Раунд 4)
-- [ ] Деплой на Vercel
-- [ ] Supabase OAuth redirect URI: `https://lcqsbjflososfglajydw.supabase.co/auth/v1/callback`
+- [x] Деплой на Vercel — `https://hiker-app.vercel.app` (выполнено 18.06.2026)
+- [x] Supabase OAuth redirect URI добавлен для Vercel домена
+- [ ] Реализовать модуль списков снаряжения (Раунд 5)
+- [ ] Реализовать модуль раскладок питания (Раунд 6)
+- [ ] PWA: Service Worker + офлайн-режим
 
 ## Known Issues (тестирование 18.06.2026)
 
@@ -102,5 +104,12 @@ Auto-creates profile via trigger on auth.users insert.
 ### Что работает
 - ✅ Вход через Google OAuth
 - ✅ Редирект с `/` на `/login` (без сессии)
-- ✅ Страница `/gear` рендерится (UI виден: заголовок, кнопка, таблица, модалка)
-- ✅ i18n (uk/ru/en) — переводы загружаются
+- ✅ Gear CRUD (добавление, редактирование, удаление) — данные сохраняются в Supabase
+- ✅ Вес в кг (smart format: ≥1кг → "3.25 кг", <1кг → "250 г")
+- ✅ Logout (desktop sidebar + mobile header)
+- ✅ i18n (uk/ru/en) — переключение через Settings или sidebar
+- ✅ Страница Settings (язык + email профиля)
+- ✅ Навигация: sidebar (desktop), bottom bar + header (mobile), без дублирования
+- ✅ Login page без навбара
+- ✅ Vercel deploy: https://hiker-app.vercel.app
+- ✅ Мобильная адаптация работает
