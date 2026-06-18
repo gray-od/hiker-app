@@ -39,6 +39,10 @@ export interface MealPlan {
   name: string;
   days_count: number;
   total_weight_g: number;
+  plan_type: string;
+  people_count: number;
+  target_calories: number;
+  target_weight_g: number;
   created_at: string;
 }
 
@@ -60,4 +64,8 @@ export interface MealEntry {
   protein_g: number;
   fat_g: number;
   carbs_g: number;
+}
+
+export interface MealDayWithEntries extends MealDay {
+  meal_entries: MealEntry[];
 }

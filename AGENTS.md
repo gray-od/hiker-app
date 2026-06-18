@@ -80,6 +80,8 @@ Auto-creates profile via trigger on auth.users insert.
 | 3 | 18.06.2026 | Bug fixes + stabilization: Gear CRUD error handling, weight in kg (smart format), login redirect fix, logout buttons fix, language switching fix (cookie reading), settings page created, app renamed to ProHikes. | 9 files changed |
 | 4 | 18.06.2026 | Navigation restructure: AppShell (conditional navbar), no nav on login page, simplified mobile header, safe-area support, GRANT fix for RLS, deployed to Vercel. | 5 files changed |
 | 5 | 18.06.2026 | Gear lists module: lists overview (cards grid, create/delete, season badges, packing progress), list detail page (add items from gear library, toggle packed/worn/consumable, quantity ±, weight summary panel, edit/delete list), i18n +17 keys, ListItemWithGear type. | 6 files changed |
+| 6 | 18.06.2026 | Meal plans module: overview page (cards grid, create with auto-days, delete), detail page (collapsible day accordions, 4 meal-type groups, add/edit/delete entries, nutrition macros P/F/C, summary cards with totals + daily averages, add/remove days, edit/delete plan), i18n +18 keys per locale, MealDayWithEntries type. | 6 files changed |
+| 7 | 18.06.2026 | Smart meal planning: food catalog (75 products, KBJU per 100g, 13 categories), 3 plan types (comfort/standard/ultralight with norms), 3 meal templates (cyclic rotation), group calculation (people_count), catalog picker with auto-KBJU calculation, daily progress bars (calories/weight vs target), adaptation coefficients by day, enhanced summary cards (per-person/per-group). | 10 files changed |
 
 ## Open Issues
 - [x] Применить SQL-миграцию (выполнено 17.06.2026 — через pooler eu-west-1)
@@ -89,7 +91,7 @@ Auto-creates profile via trigger on auth.users insert.
 - [x] Supabase OAuth redirect URI добавлен для Vercel домена
 - [x] Реализовать модуль списков снаряжения (Раунд 5)
 - [ ] UX: тултипы-подсказки на страницах (Хаб снаряжения → "ваш склад походного спорядження"), переименовать "Бібліотека" → "Хаб"
-- [ ] Реализовать модуль раскладок питания (Раунд 6)
+- [x] Реализовать модуль раскладок питания (Раунд 6)
 - [ ] PWA: Service Worker + офлайн-режим
 
 ## Known Issues (тестирование 18.06.2026)
@@ -97,7 +99,7 @@ Auto-creates profile via trigger on auth.users insert.
 | # | Проблема | Детали |
 |---|---|---|
 | KI-1 | ~~Сохранение данных не работает~~ | **FIXED R3** — добавлен error handling на insert/update/delete |
-| KI-2 | ~~Вкладка Списки — мёртвая~~ | **FIXED R5** — полный CRUD + детальная страница. **Питание** — всё ещё заглушка |
+| KI-2 | ~~Вкладка Списки — мёртвая~~ | **FIXED R5** — списки. **FIXED R6** — питание: полный CRUD + детальная страница |
 | KI-3 | ~~Настройки — 404~~ | **FIXED R3** — создан `src/app/settings/page.tsx` |
 | KI-4 | ~~Переключение языка не работает~~ | **FIXED R3** — `request.ts` теперь читает cookie `NEXT_LOCALE` |
 | KI-5 | **next-intl middleware удалён** | `createMiddleware` из next-intl несовместим с Next.js 16 proxy. i18n работает через cookie в request.ts |
@@ -119,4 +121,17 @@ Auto-creates profile via trigger on auth.users insert.
 - ✅ List Detail (добавление предметов из библиотеки, packed/worn/consumable, количество, вес)
 - ✅ Панель весов (базова/на собі/розхідники/загальна)
 - ✅ Прогрес-бар упаковки
-- ✅ i18n для списков (uk/ru/en)
+- ✅ i18n для списків (uk/ru/en)
+- ✅ Meal Plans CRUD (створення/видалення розкладок, карточки з калоріями/вагою)
+- ✅ Meal Plan Detail (дні-акордеони, 4 типи прийомів їжі, додавання/редагування/видалення страв)
+- ✅ Нутрієнти: калорії, вага, білки/жири/вуглеводи для кожної страви
+- ✅ Панель підсумків (загальні калорії/вага + середнє на день)
+- ✅ Додавання/видалення днів у розкладці
+- ✅ i18n для розкладок (uk/ru/en)
+- ✅ Каталог продуктів (75 позицій з КБЖВ на 100г, 13 категорій)
+- ✅ 3 типи розкладок (комфортна/стандартна/легка) з цільовими нормами
+- ✅ 3 шаблони розкладок (циклічна ротація днів)
+- ✅ Розрахунок на групу (кількість людей)
+- ✅ Вибір продуктів з каталогу + авто-розрахунок КБЖВ
+- ✅ Прогрес-бари денних норм (калорії/вага vs ціль)
+- ✅ Коефіцієнти адаптації по днях (дні 1-3 → ×0.8)
