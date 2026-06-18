@@ -46,6 +46,18 @@ Created full project structure:
 **Agents involved:** debugger (infrastructure), code-reviewer (UI + i18n)
 **Build result:** ✅ TypeScript clean, 9 pages, Turbopack
 
+### Round 5 (18.06.2026) — Gear Lists Module ✅
+
+Implemented full gear lists functionality:
+- `lists/page.tsx` — rewritten from placeholder to client-side CRUD (416 lines): cards grid, create/delete lists, season badges with colors, packing progress bars, weight summaries
+- `lists/[id]/page.tsx` — new detail page (778 lines): add items from gear library (multi-select with search), toggle packed/worn/consumable (worn & consumable mutually exclusive), quantity ±, weight summary panel (base/worn/consumable/total), edit/delete list
+- `types.ts` — added `ListItemWithGear` type (ListItem + joined GearItem)
+- i18n — +17 new keys across all 3 locales (uk/ru/en)
+
+**Agents involved:** debugger ×2 (parallel: lists page + detail page), orchestrator (types + i18n)
+**Build result:** ✅ TypeScript clean, 10 pages (including /lists/[id]), Turbopack
+**User testing:** ✅ Lists create, items add from library, language switching — all work
+
 ## Manual Steps Pending
 
 1. ~~Apply SQL migration in Supabase SQL Editor~~ Done 17.06.2026 — via pooler eu-west-1
@@ -55,12 +67,12 @@ Created full project structure:
 
 | # | Проблема | Статус |
 |---|---|---|
-| KI-1 | Gear CRUD: INSERT/UPDATE не сохраняет данные в Supabase | 🔴 |
-| KI-2 | Страницы Списки/Питание — заглушки без функционала | 🔴 |
-| KI-3 | Настройки — 404 (нет файла page.tsx) | 🔴 |
-| KI-4 | Переключение языка не работает (NEXT_LOCALE игнорируется) | 🔴 |
-| KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🔴 |
-| KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 |
+| KI-1 | Gear CRUD: INSERT/UPDATE не сохраняет данные в Supabase | ✅ Fixed R3 |
+| KI-2 | Страницы Списки/Питание — заглушки без функционала | ✅ Списки Fixed R5. Питание — заглушка |
+| KI-3 | Настройки — 404 (нет файла page.tsx) | ✅ Fixed R3 |
+| KI-4 | Переключение языка не работает (NEXT_LOCALE игнорируется) | ✅ Fixed R3 |
+| KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🟡 Архитектурное решение |
+| KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 Архитектурное решение |
 
 ### Что работает после Раунда 2
 - ✅ Вход через Google OAuth
@@ -72,50 +84,40 @@ Created full project structure:
 
 | Round | Planned |
 |-------|---------|
-| 2 | Gear module: CRUD operations, gear library table, add/edit/delete items|
-| 3 | Meal planning: calorie calculator, day-by-day meal schedule, macros |
-| 4 | PWA: Service Worker, offline mode via Dexie.js, install prompt |
-| 5 | Polish: export/share, Reddit-friendly links, Vercel deploy |
+| 6 | Meal planning: calorie calculator, day-by-day meal schedule, macros |
+| 7 | UX: tooltips/hints on pages, rename "Бібліотека" → "Хаб снаряжения" |
+| 8 | PWA: Service Worker, offline mode via Dexie.js, install prompt |
+| 9 | Polish: export/share, Reddit-friendly links |
 
-## File Structure (as of Round 1)
+## File Structure (as of Round 5)
 
 ```
 hiker-app/
 ├── .env.local                          # Supabase URL + anon key
-├── .gitignore
 ├── AGENTS.md                           # Project conventions + round history
 ├── wiki_map_project.md                 # This file
-├── eslint.config.mjs
-├── next.config.ts                      # next-intl plugin
-├── package.json                        # Next 16, Supabase, next-intl, Dexie, Lucide
-├── tsconfig.json
-├── public/
-│   └── *.svg                           # Next.js boilerplate icons
 ├── src/
 │   ├── app/
 │   │   ├── auth/callback/route.ts      # OAuth code exchange → session
-│   │   ├── gear/page.tsx               # Gear library (placeholder)
-│   │   ├── lists/page.tsx              # Packing lists (placeholder)
+│   │   ├── gear/page.tsx               # Gear library (full CRUD)
+│   │   ├── lists/page.tsx              # Gear lists overview (cards, create/delete)
+│   │   ├── lists/[id]/page.tsx         # List detail (items, weights, packing)
 │   │   ├── login/page.tsx              # Google sign-in button
 │   │   ├── meals/page.tsx              # Meal plans (placeholder)
-│   │   ├── layout.tsx                  # Root layout (i18n + PWA + Navbar)
-│   │   ├── page.tsx                    # Dashboard (auth guard + quick actions)
-│   │   ├── globals.css                 # Tailwind v4 + theme variables
-│   │   └── favicon.ico
+│   │   ├── settings/page.tsx           # Settings (language, profile)
+│   │   ├── layout.tsx                  # Root layout (i18n + PWA)
+│   │   ├── page.tsx                    # Dashboard (auth guard)
+│   │   └── globals.css                 # Tailwind v4 + theme
 │   ├── components/
-│   │   └── Navbar.tsx                  # Responsive nav (desktop sidebar + mobile bottom)
+│   │   ├── AppShell.tsx                # Conditional navbar wrapper
+│   │   └── Navbar.tsx                  # Responsive nav (sidebar + bottom bar)
 │   ├── i18n/
 │   │   ├── messages/{uk,ru,en}.json    # Translation dictionaries
 │   │   ├── request.ts                  # next-intl message loader
 │   │   └── routing.ts                  # Locale routing config
 │   ├── lib/
-│   │   ├── supabase/
-│   │   │   ├── client.ts               # Browser Supabase client
-│   │   │   ├── server.ts               # Server Supabase client (cookies)
-│   │   │   └── middleware.ts           # updateSession() helper
-│   │   └── types.ts                    # TypeScript DB interfaces
-│   └── proxy.ts                       # Next.js 16 proxy (Supabase session refresh, /auth/* excluded)
-└── supabase/
-    └── migrations/
-        └── 00001_init.sql              # Full DB schema + RLS
+│   │   ├── supabase/{client,server,middleware}.ts
+│   │   └── types.ts                    # DB interfaces + ListItemWithGear
+│   └── proxy.ts                        # Next.js 16 proxy (Supabase session)
+└── supabase/migrations/00001_init.sql  # Full DB schema + RLS
 ```

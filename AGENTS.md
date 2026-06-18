@@ -79,6 +79,7 @@ Auto-creates profile via trigger on auth.users insert.
 | 2 | 17.06.2026 | Gear module CRUD: client component with Supabase data fetching, add/edit modal form, delete confirmation, loading/empty states, responsive table, i18n (uk/ru/en). | 5 files changed |
 | 3 | 18.06.2026 | Bug fixes + stabilization: Gear CRUD error handling, weight in kg (smart format), login redirect fix, logout buttons fix, language switching fix (cookie reading), settings page created, app renamed to ProHikes. | 9 files changed |
 | 4 | 18.06.2026 | Navigation restructure: AppShell (conditional navbar), no nav on login page, simplified mobile header, safe-area support, GRANT fix for RLS, deployed to Vercel. | 5 files changed |
+| 5 | 18.06.2026 | Gear lists module: lists overview (cards grid, create/delete, season badges, packing progress), list detail page (add items from gear library, toggle packed/worn/consumable, quantity ±, weight summary panel, edit/delete list), i18n +17 keys, ListItemWithGear type. | 6 files changed |
 
 ## Open Issues
 - [x] Применить SQL-миграцию (выполнено 17.06.2026 — через pooler eu-west-1)
@@ -86,7 +87,8 @@ Auto-creates profile via trigger on auth.users insert.
 - [x] Реализовать CRUD для модуля снаряжения (Раунд 2) — исправлено в Раунде 3
 - [x] Деплой на Vercel — `https://hiker-app.vercel.app` (выполнено 18.06.2026)
 - [x] Supabase OAuth redirect URI добавлен для Vercel домена
-- [ ] Реализовать модуль списков снаряжения (Раунд 5)
+- [x] Реализовать модуль списков снаряжения (Раунд 5)
+- [ ] UX: тултипы-подсказки на страницах (Хаб снаряжения → "ваш склад походного спорядження"), переименовать "Бібліотека" → "Хаб"
 - [ ] Реализовать модуль раскладок питания (Раунд 6)
 - [ ] PWA: Service Worker + офлайн-режим
 
@@ -95,7 +97,7 @@ Auto-creates profile via trigger on auth.users insert.
 | # | Проблема | Детали |
 |---|---|---|
 | KI-1 | ~~Сохранение данных не работает~~ | **FIXED R3** — добавлен error handling на insert/update/delete |
-| KI-2 | **Вкладки Списки/Питание — мёртвые** | Страницы-заглушки из Раунда 1, без функционала |
+| KI-2 | ~~Вкладка Списки — мёртвая~~ | **FIXED R5** — полный CRUD + детальная страница. **Питание** — всё ещё заглушка |
 | KI-3 | ~~Настройки — 404~~ | **FIXED R3** — создан `src/app/settings/page.tsx` |
 | KI-4 | ~~Переключение языка не работает~~ | **FIXED R3** — `request.ts` теперь читает cookie `NEXT_LOCALE` |
 | KI-5 | **next-intl middleware удалён** | `createMiddleware` из next-intl несовместим с Next.js 16 proxy. i18n работает через cookie в request.ts |
@@ -113,3 +115,8 @@ Auto-creates profile via trigger on auth.users insert.
 - ✅ Login page без навбара
 - ✅ Vercel deploy: https://hiker-app.vercel.app
 - ✅ Мобильная адаптация работает
+- ✅ Gear Lists CRUD (создание, удаление списков, карточки с сезон-бейджами)
+- ✅ List Detail (добавление предметов из библиотеки, packed/worn/consumable, количество, вес)
+- ✅ Панель весов (базова/на собі/розхідники/загальна)
+- ✅ Прогрес-бар упаковки
+- ✅ i18n для списков (uk/ru/en)
