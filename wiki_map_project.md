@@ -83,7 +83,7 @@ Major enhancement of meal planning with hiking nutrition standards:
 
 **Agents involved:** debugger ×2 (parallel: overview + detail page), orchestrator (data files + types + i18n + migration)
 **Build result:** ✅ TypeScript clean (tsc --noEmit 0 errors)
-**Manual step required:** User must run `00003_meal_plan_enhancements.sql` in Supabase SQL Editor
+**Manual step required:** ~~User must run `00003_meal_plan_enhancements.sql` in Supabase SQL Editor~~ Done 18.06.2026 — via pg pooler script
 
 ## Manual Steps Pending
 
@@ -111,11 +111,11 @@ Major enhancement of meal planning with hiking nutrition standards:
 
 | Round | Planned |
 |-------|---------|
-| 7 | UX: tooltips/hints on pages, rename "Бібліотека" → "Хаб снаряжения" |
-| 8 | PWA: Service Worker, offline mode via Dexie.js, install prompt |
-| 9 | Polish: export/share, Reddit-friendly links |
+| 8 | UX-полировка: тултипы-подсказки, переименование "Бібліотека" → "Хаб спорядження" |
+| 9 | PWA: Service Worker, offline mode via Dexie.js, install prompt |
+| 10 | Экспорт/шеринг: поделиться раскладкой по ссылке, экспорт в PDF/текст |
 
-## File Structure (as of Round 6)
+## File Structure (as of Round 7)
 
 ```
 hiker-app/
@@ -129,11 +129,11 @@ hiker-app/
 │   │   ├── lists/page.tsx              # Gear lists overview (cards, create/delete)
 │   │   ├── lists/[id]/page.tsx         # List detail (items, weights, packing)
 │   │   ├── login/page.tsx              # Google sign-in button
-│   │   ├── meals/page.tsx              # Meal plans overview (full CRUD)
-│   │   ├── meals/[id]/page.tsx        # Meal plan detail (days, entries, nutrition)
+│   │   ├── meals/page.tsx              # Meal plans overview (smart CRUD, templates)
+│   │   ├── meals/[id]/page.tsx         # Meal plan detail (catalog picker, progress bars)
 │   │   ├── settings/page.tsx           # Settings (language, profile)
 │   │   ├── layout.tsx                  # Root layout (i18n + PWA)
-│   │   ├── page.tsx                    # Dashboard (auth guard)
+│   │   ├── page.tsx                    # Dashboard (recent lists + meals)
 │   │   └── globals.css                 # Tailwind v4 + theme
 │   ├── components/
 │   │   ├── AppShell.tsx                # Conditional navbar wrapper
@@ -143,8 +143,14 @@ hiker-app/
 │   │   ├── request.ts                  # next-intl message loader
 │   │   └── routing.ts                  # Locale routing config
 │   ├── lib/
+│   │   ├── food-catalog.ts             # 75 hiking food products with KBJU
+│   │   ├── hiking-standards.ts         # Plan types, norms, adaptation coefficients
+│   │   ├── meal-templates.ts           # 3 cyclic meal plan templates
 │   │   ├── supabase/{client,server,middleware}.ts
-│   │   └── types.ts                    # DB interfaces + ListItemWithGear + MealDayWithEntries
+│   │   └── types.ts                    # DB interfaces + MealDayWithEntries
 │   └── proxy.ts                        # Next.js 16 proxy (Supabase session)
-└── supabase/migrations/00001_init.sql  # Full DB schema + RLS
+└── supabase/migrations/
+    ├── 00001_init.sql                  # Full DB schema + RLS
+    ├── 00002_grant_authenticated.sql   # GRANT on all tables
+    └── 00003_meal_plan_enhancements.sql # plan_type, people_count, targets
 ```
