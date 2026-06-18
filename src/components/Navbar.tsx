@@ -55,7 +55,7 @@ export default function Navbar() {
     router.push('/login');
   };
 
-  const bottomNav = navItems.slice(0, 5);
+  const bottomNav = navItems;
 
   return (
     <>
@@ -134,7 +134,7 @@ export default function Navbar() {
       </aside>
 
       {/* ── Mobile bottom bar ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-40">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-40 safe-area-bottom">
         <div className="flex items-center justify-around py-1">
           {bottomNav.map((item) => {
             const Icon = item.icon;
@@ -158,29 +158,18 @@ export default function Navbar() {
       </nav>
 
       {/* ── Mobile top header ── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40">
+      <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40 safe-area-top">
         <div className="flex items-center justify-between px-4 h-12">
           <Link href="/" className="text-lg font-bold text-[#75a93a] tracking-tight">
             ProHikes
           </Link>
-          <div className="flex items-center gap-1">
-            {locales.map((loc) => (
-              <button
-                key={loc.code}
-                onClick={() => switchLocale(loc.code)}
-                className="text-xs font-medium px-2 py-1 rounded text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                {loc.label}
-              </button>
-            ))}
-            <button
-              onClick={handleLogout}
-              className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              title={tcommon('logout')}
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title={tcommon('logout')}
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
     </>

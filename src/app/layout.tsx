@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import Navbar from '@/components/Navbar';
+import AppShell from '@/components/AppShell';
 import './globals.css';
 
 const geistSans = Geist({
@@ -63,10 +63,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 antialiased font-sans">
         <NextIntlClientProvider messages={messages}>
-          <Navbar />
-          <main className="pt-12 md:pt-0 pb-16 md:pb-0 md:pl-64 min-h-screen">
-            {children}
-          </main>
+          <AppShell>{children}</AppShell>
         </NextIntlClientProvider>
       </body>
     </html>
