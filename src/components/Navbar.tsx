@@ -69,7 +69,7 @@ export default function Navbar() {
   return (
     <>
       {/* ── Desktop side nav ── */}
-      <aside className="hidden md:flex md:flex-col md:w-64 md:h-screen md:fixed md:left-0 md:top-0 md:bg-white md:dark:bg-zinc-900 md:border-r md:border-zinc-200 md:dark:border-zinc-800 md:z-40">
+      <aside className="hidden md:flex md:flex-col md:w-64 md:h-screen md:fixed md:left-0 md:top-0 md:bg-white md:dark:bg-zinc-900 md:border-r md:border-zinc-200 md:dark:border-zinc-800 md:z-40 print:!hidden">
         {/* App name */}
         <div className="px-6 py-6 border-b border-zinc-200 dark:border-zinc-800">
           <Link href="/" className="flex items-center gap-3 text-xl font-bold text-[#75a93a] tracking-tight">
@@ -156,7 +156,7 @@ export default function Navbar() {
       </aside>
 
       {/* ── Mobile bottom bar ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-40 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-40 safe-area-bottom print:!hidden">
         <div className="flex items-center justify-around py-1.5">
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
@@ -180,7 +180,7 @@ export default function Navbar() {
       </nav>
 
       {/* ── Mobile top header ── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40 safe-area-top">
+      <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40 safe-area-top print:!hidden">
         <div className="flex items-center justify-between px-4 h-14">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold text-[#75a93a] tracking-tight">
             <img src="/logo-circle.png" alt="" className="w-7 h-7 rounded-full" />

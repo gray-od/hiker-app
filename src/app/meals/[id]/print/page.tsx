@@ -71,12 +71,6 @@ export default function MealPlanPrintPage() {
     });
   }, [id, router]);
 
-  useEffect(() => {
-    if (!loading && plan) {
-      setTimeout(() => window.print(), 500);
-    }
-  }, [loading, plan]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">

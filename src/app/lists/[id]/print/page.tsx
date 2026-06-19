@@ -67,12 +67,6 @@ export default function PrintListPage({ params }: { params: Promise<{ id: string
     });
   }, [id, router]);
 
-  useEffect(() => {
-    if (!loading && list) {
-      setTimeout(() => window.print(), 500);
-    }
-  }, [loading, list]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">

@@ -20,7 +20,7 @@ export default function ChatWidget() {
   }, [messages]);
 
   return (
-    <>
+    <div className="print:!hidden">
       {!open && (
         <button
           onClick={() => setOpen(true)}
@@ -147,6 +147,6 @@ export default function ChatWidget() {
           </form>
         </div>
       )}
-    </>
+    </div>
   );
 }
