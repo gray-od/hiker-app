@@ -18,6 +18,7 @@
 - Tailwind utility classes, no CSS modules
 - Season values: `summer`, `winter`, `demi`
 - Gear categories: `backpack`, `shelter`, `sleep_system`, `cooking`, `water`, `clothing`, `footwear`, `lighting`, `navigation`, `safety`, `hygiene`, `electronics`, `tools`, `documents`, `technical`, `other`
+- Food categories: `cereals`, `pasta`, `meat`, `dairy`, `nuts`, `dried_fruits`, `sweets`, `bread`, `drinks`, `fats`, `spices`, `soups`, `sublimated`, `other`
 - Meal types: `breakfast`, `lunch`, `snack`, `dinner`
 - Weight always in grams (weight_g), calories in kcal
 - Brand color: `#75a93a` (green)
@@ -33,9 +34,9 @@ hiker-app/
 │   ├── app/
 │   │   ├── auth/callback/      # OAuth callback
 │   │   ├── gear/               # Gear hub (cards mobile, table desktop)
-│   │   ├── lists/              # Packing lists + [id] detail
+│   │   ├── lists/              # Packing lists + [id] detail + [id]/print
 │   │   ├── login/              # Google OAuth login
-│   │   ├── meals/              # Meal plans + [id] detail
+│   │   ├── meals/              # Meal plans + [id] detail + [id]/print
 │   │   ├── settings/           # Settings (lang, theme, profile)
 │   │   ├── api/chat/           # AI chat API route (DeepSeek + Tavily)
 │   │   ├── food/               # Custom food items CRUD
@@ -44,12 +45,12 @@ hiker-app/
 │   │   ├── page.tsx            # Dashboard
 │   │   ├── icon.png            # Favicon (192×192)
 │   │   ├── apple-icon.png      # Apple touch icon (180×180)
-│   │   └── globals.css         # Tailwind v4 + dark mode + safe-area
+│   │   └── globals.css         # Tailwind v4 + dark mode + safe-area + @media print
 │   ├── components/
-│   │   ├── AppShell.tsx        # Conditional navbar wrapper
-│   │   ├── Navbar.tsx          # Responsive nav (sidebar + bottom bar + logo)
+│   │   ├── AppShell.tsx        # Conditional navbar wrapper (print:hidden support)
+│   │   ├── Navbar.tsx          # Responsive nav (sidebar + bottom bar + logo, print:hidden)
 │   │   └── Providers.tsx       # ThemeProvider wrapper
-│   │   └── ChatWidget.tsx     # AI chat floating widget
+│   │   └── ChatWidget.tsx     # AI chat floating widget (print:hidden)
 │   ├── i18n/
 │   │   ├── messages/           # uk.json, ru.json, en.json
 │   │   ├── request.ts          # next-intl config (cookie-based)
@@ -66,7 +67,7 @@ hiker-app/
 │   ├── icon-{16,32,180,192,512}x*.png  # PWA icons
 │   └── logo-circle.png         # Circular logo for navbar
 ├── logo/                       # Source logo files (6 variants)
-└── supabase/migrations/        # SQL migrations (5 files)
+└── supabase/migrations/        # SQL migrations (6 files)
 ```
 
 ## Database Schema (Supabase)

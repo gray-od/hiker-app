@@ -138,11 +138,12 @@ Three fixes from user testing:
 | KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🟡 Архитектурное решение |
 | KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 Архитектурное решение |
 
-### Что работает после Раунда 13
+### Що працює після Раунду 15
 - ✅ Auth: Google OAuth, login/logout, session refresh
 - ✅ Gear Hub: full CRUD, cards mobile / table desktop, 16 professional categories, weight formatting
-- ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar, direct quantity input
-- ✅ Meal Plans: smart planning (75-product catalog, 3 plan types, templates, group calc, KBJU, progress bars), all fields editable after creation
+- ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar, direct quantity input, print/PDF export
+- ✅ Meal Plans: smart planning (75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars), all fields editable after creation, print/PDF export
+- ✅ Custom Food: user food library (/food), full CRUD, 14 categories, KBJU per 100g, default portion, integrated into meal plan entry modal as "My Products" tab
 - ✅ Dashboard: greeting from profile name (editable), recent lists + meals cards
 - ✅ i18n: uk/ru/en, cookie + DB sync, greeting translates
 - ✅ Settings: language switcher (saves to DB), theme toggle (Light/Dark/System), name editing
@@ -151,6 +152,7 @@ Three fixes from user testing:
 - ✅ Dark mode: class-based (next-themes), supports Light/Dark/System
 - ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
 - ✅ AI Monetization: 15 msg/day free for all, Monobank donation button, ai_usage tracking
+- ✅ Print/PDF: printable meal plans (KBJU tables per day) and packing lists (☐ checkboxes for paper), @media print CSS
 - ✅ Deploy: Vercel auto-deploy from GitHub `main` branch
 - ✅ Page subtitles on gear/lists/meals pages
 
@@ -218,7 +220,37 @@ Rate limiting и добровольные пожертвования:
 
 **Миграция:** выполнена через pg pooler
 
-### Раунд 14 — PWA: Service Worker + офлайн-режим
+### Раунд 14 (19.06.2026) — Кастомні продукти харчування ✅
+
+Повноцінний модуль користувацьких продуктів:
+- `supabase/migrations/00006_user_food_items.sql` — нова таблиця user_food_items (name, category, КБЖВ per100g, default_portion_g), RLS, GRANT
+- `src/lib/types.ts` — додано інтерфейс `UserFoodItem`
+- `src/app/food/page.tsx` — нова CRUD-сторінка (537 рядків): картки mobile / таблиця desktop, 14 категорій продуктів, форма з КБЖВ на 100г
+- `src/components/Navbar.tsx` — додано іконку Apple для /food у desktop sidebar (не в mobile bottom bar — 6 елементів забагато)
+- `src/app/meals/[id]/page.tsx` — модальне вікно додавання страв тепер має 3 вкладки: "З каталогу" / "Мої продукти" / "Вручну". catalogMode (boolean) замінено на entryMode ('catalog' | 'my_products' | 'custom')
+- i18n: секція "food" з 14 категоріями, ключ meals.my_products у всіх 3 локалях
+- Міграція виконана через pg pooler eu-west-1
+
+**Build result:** ✅ Compiled successfully
+
+### Раунд 15 (19.06.2026) — Друк/PDF експорт ✅
+
+Друк раскладок та списків на папір:
+- `src/app/meals/[id]/print/page.tsx` — print-оптимізована сторінка раскладки (250 рядків): таблиці по днях з групуванням за типом їжі, КБЖВ, підсумки по дню та загальні
+- `src/app/lists/[id]/print/page.tsx` — print-оптимізована сторінка списку (251 рядок): таблиця з ☐ чекбоксами, категорії, вага, worn/consumable, підсумок ваги
+- `src/app/meals/[id]/page.tsx` — кнопка "Друк" (іконка принтера) → відкриває /print в новій вкладці
+- `src/app/lists/[id]/page.tsx` — аналогічна кнопка
+- `src/app/globals.css` — `@media print { @page { margin: 1cm } }`
+- `src/components/Navbar.tsx` — `print:!hidden` на aside, nav, header
+- `src/components/ChatWidget.tsx` — `print:!hidden` на контейнер
+- `src/components/AppShell.tsx` — `print:!pt-0 print:!pb-0 print:!pl-0` на main
+- i18n: ключі print, generated
+
+**Підхід:** `window.print()` — кирилиця нативно, нуль залежностей, "Save as PDF" на мобільних. Автодрук видалено за feedback — юзер сам натискає кнопку.
+
+**Build result:** ✅ Compiled successfully
+
+### Раунд 16 — PWA: Service Worker + офлайн-режим
 
 **Концепція:** Повноцінний PWA з офлайн-доступом.
 
@@ -233,15 +265,16 @@ Rate limiting и добровольные пожертвования:
 
 **Статус:** Планується
 
-### Раунд 15+ — Експорт/шерінг
+### Раунд 17+ — Шерінг (shared links)
 
-- Поділитися раскладкою по посиланню (shared_link в gear_lists)
-- Експорт списку спорядження в PDF/текст
-- Експорт раскладки харчування в PDF/текст
+- Генерація унікального токена (UUID) для раскладки/списку
+- Публічний роут `/shared/[token]` без авторизації
+- RLS-політика для доступу по shared_link
+- Кнопка "Копіювати посилання" + можливість вимкнути шерінг
 
 **Статус:** Планується
 
-## File Structure (as of Round 12)
+## File Structure (as of Round 15)
 
 ```
 hiker-app/
@@ -257,26 +290,29 @@ hiker-app/
 │   ├── app/
 │   │   ├── api/chat/route.ts           # AI chat API (DeepSeek + Tavily search + user context)
 │   │   ├── auth/callback/route.ts      # OAuth code exchange → session
+│   │   ├── food/page.tsx               # Custom food items CRUD (cards+table, 14 categories)
 │   │   ├── gear/page.tsx               # Gear hub (cards mobile, table desktop)
 │   │   ├── lists/page.tsx              # Gear lists overview (cards, create/delete)
 │   │   ├── lists/[id]/page.tsx         # List detail (items, weights, packing)
+│   │   ├── lists/[id]/print/page.tsx   # Printable packing list (☐ checkboxes, weights)
 │   │   ├── login/page.tsx              # Google sign-in button
 │   │   ├── meals/page.tsx              # Meal plans overview (smart CRUD, templates)
-│   │   ├── meals/[id]/page.tsx         # Meal plan detail (catalog picker, progress bars)
+│   │   ├── meals/[id]/page.tsx         # Meal plan detail (3-tab: catalog/my products/custom)
+│   │   ├── meals/[id]/print/page.tsx   # Printable meal plan (KBJU tables per day)
 │   │   ├── settings/page.tsx           # Settings (language, theme, name, profile)
 │   │   ├── layout.tsx                  # Root layout (i18n + ThemeProvider + PWA)
 │   │   ├── manifest.ts                 # PWA manifest (name, theme_color, icons)
 │   │   ├── page.tsx                    # Dashboard (greeting from profile, recent lists/meals)
 │   │   ├── icon.png                    # Favicon (192×192, green gradient)
 │   │   ├── apple-icon.png              # Apple touch icon (180×180)
-│   │   └── globals.css                 # Tailwind v4 + class-based dark mode + safe-area + mobile 17px
+│   │   └── globals.css                 # Tailwind v4 + dark mode + safe-area + @media print
 │   ├── components/
-│   │   ├── AppShell.tsx                # Conditional navbar wrapper + ChatWidget (pt-14 mobile)
-│   │   ├── ChatWidget.tsx              # AI chat floating widget (Sparkles button → chat panel)
-│   │   ├── Navbar.tsx                  # Responsive nav (sidebar + bottom bar + logo)
+│   │   ├── AppShell.tsx                # Conditional navbar wrapper + ChatWidget (print:hidden)
+│   │   ├── ChatWidget.tsx              # AI chat floating widget (print:hidden)
+│   │   ├── Navbar.tsx                  # Responsive nav (sidebar + bottom bar + logo, print:hidden)
 │   │   └── Providers.tsx               # ThemeProvider wrapper (next-themes)
 │   ├── i18n/
-│   │   ├── messages/{uk,ru,en}.json    # Translation dictionaries (~190 keys each)
+│   │   ├── messages/{uk,ru,en}.json    # Translation dictionaries (~230 keys each)
 │   │   ├── request.ts                  # next-intl message loader (cookie-based)
 │   │   └── routing.ts                  # Locale routing config
 │   ├── lib/
@@ -285,10 +321,13 @@ hiker-app/
 │   │   ├── hiking-standards.ts         # Plan types, norms, adaptation coefficients
 │   │   ├── meal-templates.ts           # 3 cyclic meal plan templates
 │   │   ├── supabase/{client,server,middleware}.ts
-│   │   └── types.ts                    # DB interfaces + ListItemWithGear + MealDayWithEntries
+│   │   └── types.ts                    # DB interfaces + UserFoodItem + ListItemWithGear + MealDayWithEntries
 │   └── proxy.ts                        # Next.js 16 proxy (Supabase session)
 └── supabase/migrations/
     ├── 00001_init.sql                  # Full DB schema + RLS + auto-profile trigger
     ├── 00002_grant_authenticated.sql   # GRANT on all tables
-    └── 00003_meal_plan_enhancements.sql # plan_type, people_count, targets
+    ├── 00003_meal_plan_enhancements.sql # plan_type, people_count, targets
+    ├── 00004_update_gear_categories.sql # Rename tent→shelter, kitchen→cooking etc.
+    ├── 00005_ai_usage_rate_limit.sql   # ai_usage table + is_premium flag
+    └── 00006_user_food_items.sql       # user_food_items table + RLS
 ```
