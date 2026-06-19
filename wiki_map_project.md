@@ -138,15 +138,15 @@ Three fixes from user testing:
 | KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🟡 Архитектурное решение |
 | KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 Архитектурное решение |
 
-### Что работает после Раунда 11
+### Что работает после Раунда 12
 - ✅ Auth: Google OAuth, login/logout, session refresh
-- ✅ Gear Hub: full CRUD, cards mobile / table desktop, seasons, weight formatting (smart kg/г)
-- ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar
-- ✅ Meal Plans: smart planning (75-product catalog, 3 plan types, templates, group calc, KBJU, progress bars)
+- ✅ Gear Hub: full CRUD, cards mobile / table desktop, 16 professional categories, weight formatting
+- ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar, direct quantity input
+- ✅ Meal Plans: smart planning (75-product catalog, 3 plan types, templates, group calc, KBJU, progress bars), all fields editable after creation
 - ✅ Dashboard: greeting from profile name (editable), recent lists + meals cards
 - ✅ i18n: uk/ru/en, cookie + DB sync, greeting translates
 - ✅ Settings: language switcher (saves to DB), theme toggle (Light/Dark/System), name editing
-- ✅ Branding: custom favicon + PWA icons from user's mountain logo, manifest.ts, logo in sidebar/header
+- ✅ Branding: custom favicon + PWA icons, manifest.ts, logo in sidebar/header, Beta badge
 - ✅ Mobile UX: touch targets ≥44px, 17px base font, safe-area, card layouts, two-row controls
 - ✅ Dark mode: class-based (next-themes), supports Light/Dark/System
 - ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
@@ -183,7 +183,22 @@ Three fixes from user testing:
 
 **Статус:** ✅ Працює на production (Vercel)
 
-### Раунд 12 — PWA: Service Worker + офлайн-режим
+### Раунд 12 — Профессиональные категории + редактируемость (19.06.2026) ✅
+
+**Что сделано:**
+- `gear/page.tsx` — обновлены категории 12→16 профессиональных: добавлены shelter, cooking, water, lighting, safety, tools, technical. Категории теперь по функции, не по предмету ("Укриття" вместо "Намет")
+- `meals/[id]/page.tsx` — edit modal расширен: plan_type, people_count, target_calories, target_weight_g теперь редактируемы после создания (было заморожено)
+- `lists/[id]/page.tsx` — количество теперь вводится напрямую (input number), не только ±1 кнопками. Добавлен handleSetQuantity
+- `Navbar.tsx` — добавлен бейдж "beta" в сайдбар и мобильный хедер
+- i18n — обновлены gear.categories во всех 3 локалях (uk/ru/en)
+- `supabase/migrations/00004_update_gear_categories.sql` — миграция для переименования существующих данных
+- Миграция выполнена через pg pooler (1 запись обновлена: tent→shelter)
+
+**Исследование:** проанализированы LighterPack, Reddit r/Ultralight, OutdoorGearLab — система категорий основана на функции (shelter, cooking, safety) вместо предмета (tent, kitchen, first_aid)
+
+**Build result:** ✅ TypeScript clean
+
+### Раунд 13 — PWA: Service Worker + офлайн-режим
 
 **Концепція:** Повноцінний PWA з офлайн-доступом.
 
@@ -196,9 +211,9 @@ Three fixes from user testing:
 - Синхронізація: при відновленні зʼєднання — sync локальних змін з Supabase
 - Install prompt: пропозиція встановити PWA на домашній екран
 
-**Статус:** Планується після AI-помічника
+**Статус:** Планується
 
-### Раунд 13+ — Експорт/шерінг
+### Раунд 14+ — Експорт/шерінг
 
 - Поділитися раскладкою по посиланню (shared_link в gear_lists)
 - Експорт списку спорядження в PDF/текст
@@ -206,7 +221,7 @@ Three fixes from user testing:
 
 **Статус:** Планується
 
-## File Structure (as of Round 11)
+## File Structure (as of Round 12)
 
 ```
 hiker-app/

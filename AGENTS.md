@@ -17,7 +17,7 @@
 - No comments in code unless critical
 - Tailwind utility classes, no CSS modules
 - Season values: `summer`, `winter`, `demi`
-- Gear categories: `backpack`, `sleep_system`, `tent`, `clothing`, `footwear`, `kitchen`, `hygiene`, `first_aid`, `navigation`, `documents`, `electronics`, `other`
+- Gear categories: `backpack`, `shelter`, `sleep_system`, `cooking`, `water`, `clothing`, `footwear`, `lighting`, `navigation`, `safety`, `hygiene`, `electronics`, `tools`, `documents`, `technical`, `other`
 - Meal types: `breakfast`, `lunch`, `snack`, `dinner`
 - Weight always in grams (weight_g), calories in kcal
 - Brand color: `#75a93a` (green)
@@ -104,6 +104,7 @@ All tables have RLS — users can only access their own data.
 | 9 | 19.06 | Page subtitles, rename "Бібліотека" → "Хаб спорядження" |
 | 10 | 19.06 | Dashboard name from profile, mobile font 17px, dark mode toggle (next-themes) |
 | 11 | 19.06 | AI-помічник ProHikes: DeepSeek chat + Tavily web search, system prompt (5 рівнів експертизи), markdown rendering, user context injection |
+| 12 | 19.06 | Professional gear categories (16), editable meal plans after creation, direct quantity input, Beta badge |
 
 ## Open Issues
 - [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 12
@@ -111,9 +112,9 @@ All tables have RLS — users can only access their own data.
 
 ## What Works (summary)
 - Auth: Google OAuth, login/logout, session refresh
-- Gear Hub: full CRUD, cards on mobile, table on desktop, seasons, weight formatting
-- Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress
-- Meal Plans: smart planning with 75-product catalog, 3 plan types, templates, group calc, KBJU, progress bars
+- Gear Hub: full CRUD, cards on mobile, table on desktop, 16 professional categories, weight formatting
+- Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress, direct quantity input
+- Meal Plans: smart planning with 75-product catalog, 3 plan types, templates, group calc, KBJU, progress bars, all fields editable after creation
 - i18n: uk/ru/en, greeting translation, lang saves to DB
 - Settings: language switcher, theme toggle (Light/Dark/System), name editing
 - Branding: custom favicon, PWA icons, manifest, logo in navbar
