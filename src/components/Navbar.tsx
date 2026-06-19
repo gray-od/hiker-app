@@ -146,7 +146,7 @@ export default function Navbar() {
               href={process.env.NEXT_PUBLIC_DONATE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
             >
               <Heart className="w-5 h-5 shrink-0" />
               <span>{tcommon('donate')}</span>
@@ -193,7 +193,7 @@ export default function Navbar() {
                 href={process.env.NEXT_PUBLIC_DONATE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-pink-500 p-2.5 rounded-lg hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"
+                className="text-amber-600 dark:text-amber-400 p-2.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
               >
                 <Heart className="w-5 h-5" />
               </a>

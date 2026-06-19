@@ -9,15 +9,16 @@ import ReactMarkdown from 'react-markdown';
 export default function ChatWidget() {
   const t = useTranslations('chat');
   const [open, setOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: '/api/chat',
   });
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, isLoading]);
 
   return (
     <div className="print:!hidden">
@@ -32,7 +33,7 @@ export default function ChatWidget() {
       )}
 
       {open && (
-        <div className="fixed inset-0 md:inset-auto md:bottom-6 md:right-6 md:w-[400px] md:h-[600px] md:max-h-[80vh] z-50 flex flex-col bg-white dark:bg-zinc-900 md:rounded-2xl md:shadow-2xl md:border md:border-zinc-200 md:dark:border-zinc-800">
+        <div className="fixed inset-0 md:inset-auto md:bottom-6 md:right-6 md:w-[480px] md:h-[600px] md:max-h-[80vh] z-50 flex flex-col bg-white dark:bg-zinc-900 md:rounded-2xl md:shadow-2xl md:border md:border-zinc-200 md:dark:border-zinc-800">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[#75a93a]" />
@@ -46,7 +47,7 @@ export default function ChatWidget() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {messages.length === 0 && (
               <div className="text-center py-8">
                 <Sparkles className="w-10 h-10 mx-auto text-[#75a93a]/40 mb-3" />
@@ -121,12 +122,12 @@ export default function ChatWidget() {
               )
             )}
 
-            <div ref={messagesEndRef} />
           </div>
 
           <form
             onSubmit={handleSubmit}
-            className="px-4 py-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0 safe-area-bottom"
+            className="px-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
           >
             <div className="flex items-center gap-2">
               <input
