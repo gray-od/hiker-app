@@ -7,9 +7,9 @@ import { createClient } from '@/lib/supabase/client';
 import type { GearItem } from '@/lib/types';
 
 const CATEGORIES = [
-  'backpack', 'sleep_system', 'tent', 'clothing', 'footwear',
-  'kitchen', 'hygiene', 'first_aid', 'navigation', 'documents',
-  'electronics', 'other',
+  'backpack', 'shelter', 'sleep_system', 'cooking', 'water',
+  'clothing', 'footwear', 'lighting', 'navigation', 'safety',
+  'hygiene', 'electronics', 'tools', 'documents', 'technical', 'other',
 ] as const;
 
 const SEASONS = ['all', 'summer', 'winter', 'demi'] as const;

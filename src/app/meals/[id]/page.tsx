@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { MealPlan, MealDay, MealEntry, MealDayWithEntries } from '@/lib/types';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
-import { getAdaptationCoefficient } from '@/lib/hiking-standards';
+import { getAdaptationCoefficient, PLAN_TYPES } from '@/lib/hiking-standards';
 import type { PlanTypeId } from '@/lib/hiking-standards';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
@@ -44,7 +44,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     carbs_g: 0,
   });
   const [editPlanModalOpen, setEditPlanModalOpen] = useState(false);
-  const [editPlanName, setEditPlanName] = useState('');
+  const [editForm, setEditForm] = useState({
+    name: '',
+    plan_type: 'standard',
+    people_count: 1,
+    target_calories: 3000,
+    target_weight_g: 650,
+  });
   const [confirmDeletePlan, setConfirmDeletePlan] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -298,7 +304,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   }
 
   async function handleUpdatePlan() {
-    if (!editPlanName.trim()) return;
+    if (!editForm.name.trim()) return;
 
     const supabase = createClient();
     setSaving(true);
@@ -306,7 +312,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
     const { error: updateError } = await supabase
       .from('meal_plans')
-      .update({ name: editPlanName.trim() })
+      .update({
+        name: editForm.name.trim(),
+        plan_type: editForm.plan_type,
+        people_count: editForm.people_count,
+        target_calories: editForm.target_calories,
+        target_weight_g: editForm.target_weight_g,
+      })
       .eq('id', id);
 
     if (updateError) {
@@ -315,7 +327,14 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       return;
     }
 
-    setPlan(prev => prev ? { ...prev, name: editPlanName.trim() } : null);
+    setPlan(prev => prev ? {
+      ...prev,
+      name: editForm.name.trim(),
+      plan_type: editForm.plan_type,
+      people_count: editForm.people_count,
+      target_calories: editForm.target_calories,
+      target_weight_g: editForm.target_weight_g,
+    } : null);
     setSaving(false);
     setEditPlanModalOpen(false);
   }
@@ -458,7 +477,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              setEditPlanName(plan!.name);
+              setEditForm({
+                name: plan!.name,
+                plan_type: plan!.plan_type || 'standard',
+                people_count: plan!.people_count || 1,
+                target_calories: plan!.target_calories || 3000,
+                target_weight_g: plan!.target_weight_g || 650,
+              });
               setEditPlanModalOpen(true);
               setActionError(null);
             }}
@@ -1021,17 +1046,78 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  {t('name')}
-                </label>
-                <input
-                  type="text"
-                  value={editPlanName}
-                  onChange={(e) => setEditPlanName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('name')}
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('plan_type')}
+                  </label>
+                  <select
+                    value={editForm.plan_type}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, plan_type: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  >
+                    {PLAN_TYPES.map((pt) => (
+                      <option key={pt.id} value={pt.id}>
+                        {pt.name[locale]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('people_count')}
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.people_count}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, people_count: Number(e.target.value) }))}
+                    min="1"
+                    step="1"
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('target_calories')}
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.target_calories}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, target_calories: Number(e.target.value) }))}
+                    min="0"
+                    step="1"
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('target_weight')}
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.target_weight_g}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, target_weight_g: Number(e.target.value) }))}
+                    min="0"
+                    step="1"
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 mt-6">
@@ -1043,7 +1129,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                 </button>
                 <button
                   onClick={handleUpdatePlan}
-                  disabled={saving || !editPlanName.trim()}
+                  disabled={saving || !editForm.name.trim()}
                   className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {saving ? tCommon('loading') : tCommon('save')}

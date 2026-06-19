@@ -66,6 +66,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center gap-3 text-xl font-bold text-[#75a93a] tracking-tight">
             <img src="/logo-circle.png" alt="" className="w-8 h-8 rounded-full" />
             ProHikes
+            <span className="text-[10px] font-medium bg-[#75a93a]/15 text-[#75a93a] px-1.5 py-0.5 rounded-md">beta</span>
           </Link>
         </div>
 
@@ -164,6 +165,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center gap-2 text-lg font-bold text-[#75a93a] tracking-tight">
             <img src="/logo-circle.png" alt="" className="w-7 h-7 rounded-full" />
             ProHikes
+            <span className="text-[9px] font-medium bg-[#75a93a]/15 text-[#75a93a] px-1.5 py-0.5 rounded-md">beta</span>
           </Link>
           <button
             onClick={handleLogout}

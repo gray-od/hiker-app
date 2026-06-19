@@ -257,6 +257,25 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: newQuantity } : li));
   }
 
+  async function handleSetQuantity(itemId: string, newQuantity: number) {
+    const supabase = createClient();
+    const q = Math.max(1, newQuantity);
+    const item = listItems.find(li => li.id === itemId);
+    if (!item || q === item.quantity) return;
+
+    const { error: updateError } = await supabase
+      .from('list_items')
+      .update({ quantity: q })
+      .eq('id', itemId);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: q } : li));
+  }
+
   async function handleRemoveItem(itemId: string) {
     const supabase = createClient();
 
@@ -525,9 +544,13 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   >
                     −
                   </button>
-                  <span className="w-6 text-center text-sm text-zinc-700 dark:text-zinc-300 tabular-nums">
-                    {item.quantity}
-                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) => handleSetQuantity(item.id, parseInt(e.target.value) || 1)}
+                    className="w-10 text-center text-sm font-medium text-zinc-900 dark:text-zinc-100 bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
                   <button
                     onClick={() => handleUpdateQuantity(item.id, 1)}
                     className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium"
