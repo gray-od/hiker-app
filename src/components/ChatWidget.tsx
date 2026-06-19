@@ -10,7 +10,7 @@ export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: '/api/chat',
   });
 
@@ -77,6 +77,12 @@ export default function ChatWidget() {
                 <div className="bg-zinc-100 dark:bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-md">
                   <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
                 </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-400">
+                {error.message}
               </div>
             )}
 

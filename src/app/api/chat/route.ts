@@ -10,7 +10,12 @@ const deepseek = createOpenAI({
 });
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  if (!process.env.DEEPSEEK_API_KEY) {
+    return new Response('DEEPSEEK_API_KEY not configured', { status: 500 });
+  }
+
+  try {
+    const { messages } = await req.json();
 
   const cookieStore = await cookies();
 
@@ -94,4 +99,8 @@ export async function POST(req: Request) {
   });
 
   return result.toDataStreamResponse();
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(message, { status: 500 });
+  }
 }
