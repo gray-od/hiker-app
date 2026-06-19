@@ -40,7 +40,7 @@ export default async function DashboardPage() {
 
   const locale = await getLocale();
 
-  const [{ data: recentListsRaw }, { data: recentMealsRaw }] = await Promise.all([
+  const [{ data: recentListsRaw }, { data: recentMealsRaw }, { data: profileData }] = await Promise.all([
     supabase
       .from('gear_lists')
       .select('id, name, season, created_at')
@@ -51,6 +51,11 @@ export default async function DashboardPage() {
       .select('id, name, plan_type, days_count, created_at')
       .order('created_at', { ascending: false })
       .limit(3),
+    supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', session.user.id)
+      .single(),
   ]);
 
   const recentLists = recentListsRaw as GearList[] | null;
@@ -60,6 +65,7 @@ export default async function DashboardPage() {
   const tGear = await getTranslations('gear');
   const tMeals = await getTranslations('meals');
   const user = session.user;
+  const displayName = profileData?.name || user.user_metadata?.full_name;
 
   function formatDate(dateStr: string): string {
     const d = new Date(dateStr);
@@ -89,8 +95,8 @@ export default async function DashboardPage() {
           {t('title')}
         </h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-          {user.user_metadata?.full_name
-            ? t('welcome', { name: user.user_metadata.full_name })
+          {displayName
+            ? t('welcome', { name: displayName })
             : t('welcome_anonymous')}
         </p>
       </div>

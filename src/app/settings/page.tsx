@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 
 const locales = [
@@ -23,6 +24,12 @@ export default function SettingsPage() {
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -109,6 +116,29 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            {t('theme')}
+          </h2>
+          {mounted && (
+            <div className="flex gap-2">
+              {(['light', 'dark', 'system'] as const).map((th) => (
+                <button
+                  key={th}
+                  onClick={() => setTheme(th)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    theme === th
+                      ? 'bg-[#75a93a] text-white'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  {t(th)}
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
