@@ -173,5 +173,11 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "chat": {
+    "title": "AI Assistant",
+    "placeholder": "Ask about your hike...",
+    "welcome": "Hi! I'm ProHikes AI — an outdoor and survival specialist. I'll help you prepare for your hike, check your gear, and advise on routes and safety.",
+    "send": "Send"
   }
 }
