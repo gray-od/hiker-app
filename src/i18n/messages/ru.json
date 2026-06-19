@@ -20,7 +20,8 @@
     "weight_kg": "кг",
     "calories": "кал",
     "day": "день",
-    "days": "дни"
+    "days": "дни",
+    "donate": "Поддержать проект"
   },
   "nav": {
     "dashboard": "Главная",

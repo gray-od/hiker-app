@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Globe,
+  Heart,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
 
@@ -132,6 +133,17 @@ export default function Navbar() {
             <LogOut className="w-5 h-5 shrink-0" />
             <span>{tcommon('logout')}</span>
           </button>
+          {process.env.NEXT_PUBLIC_DONATE_URL && (
+            <a
+              href={process.env.NEXT_PUBLIC_DONATE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"
+            >
+              <Heart className="w-5 h-5 shrink-0" />
+              <span>{tcommon('donate')}</span>
+            </a>
+          )}
         </div>
       </aside>
 
@@ -167,13 +179,25 @@ export default function Navbar() {
             ProHikes
             <span className="text-[9px] font-medium bg-[#75a93a]/15 text-[#75a93a] px-1.5 py-0.5 rounded-md">beta</span>
           </Link>
-          <button
-            onClick={handleLogout}
-            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-2.5 -mr-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            title={tcommon('logout')}
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center">
+            {process.env.NEXT_PUBLIC_DONATE_URL && (
+              <a
+                href={process.env.NEXT_PUBLIC_DONATE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-pink-500 p-2.5 rounded-lg hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"
+              >
+                <Heart className="w-5 h-5" />
+              </a>
+            )}
+            <button
+              onClick={handleLogout}
+              className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-2.5 -mr-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              title={tcommon('logout')}
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
     </>

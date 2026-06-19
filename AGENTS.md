@@ -65,19 +65,20 @@ hiker-app/
 │   ├── icon-{16,32,180,192,512}x*.png  # PWA icons
 │   └── logo-circle.png         # Circular logo for navbar
 ├── logo/                       # Source logo files (6 variants)
-└── supabase/migrations/        # SQL migrations (3 files)
+└── supabase/migrations/        # SQL migrations (5 files)
 ```
 
 ## Database Schema (Supabase)
 
 ```
-profiles        — id (FK→auth.users), email, name, lang, created_at
+profiles        — id (FK→auth.users), email, name, lang, is_premium, created_at
 gear_items      — id, user_id, name, category, weight_g, season, notes, created_at
 gear_lists      — id, user_id, name, season, trip_date, shared_link, created_at
 list_items      — id, list_id, gear_item_id, quantity, is_packed, worn, consumable
 meal_plans      — id, user_id, name, plan_type, people_count, days_count, target_calories, target_weight_g, created_at
 meal_days       — id, plan_id, day_number, total_calories, total_weight_g
 meal_entries    — id, day_id, meal_type, name, weight_g, calories, protein_g, fat_g, carbs_g
+ai_usage        — id, user_id, date, message_count (UNIQUE user_id+date)
 ```
 
 All tables have RLS — users can only access their own data.
@@ -105,10 +106,12 @@ All tables have RLS — users can only access their own data.
 | 10 | 19.06 | Dashboard name from profile, mobile font 17px, dark mode toggle (next-themes) |
 | 11 | 19.06 | AI-помічник ProHikes: DeepSeek chat + Tavily web search, system prompt (5 рівнів експертизи), markdown rendering, user context injection |
 | 12 | 19.06 | Professional gear categories (16), editable meal plans after creation, direct quantity input, Beta badge |
+| 13 | 19.06 | AI rate limit (15 msg/day), Monobank donation button, ai_usage table, voluntary monetization model |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 12
-- [ ] Експорт/шерінг (PDF, посилання) — Раунд 13+
+- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 14
+- [ ] Експорт/шерінг (PDF, посилання) — Раунд 15+
+- [ ] Пользовательские продукты питания (user_food_items таблица + UI) — Раунд 15+
 
 ## What Works (summary)
 - Auth: Google OAuth, login/logout, session refresh
@@ -120,4 +123,5 @@ All tables have RLS — users can only access their own data.
 - Branding: custom favicon, PWA icons, manifest, logo in navbar
 - Mobile: touch targets ≥44px, 17px base font, safe-area, card layouts
 - AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
+- AI Monetization: 15 msg/day free for all, Monobank donation button, ai_usage tracking
 - Deploy: Vercel auto-deploy from GitHub main branch

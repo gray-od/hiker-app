@@ -20,7 +20,8 @@
     "weight_kg": "kg",
     "calories": "cal",
     "day": "day",
-    "days": "days"
+    "days": "days",
+    "donate": "Support the project"
   },
   "nav": {
     "dashboard": "Dashboard",
