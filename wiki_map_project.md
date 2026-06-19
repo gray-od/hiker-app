@@ -150,7 +150,7 @@ Three fixes from user testing:
 - ✅ Branding: custom favicon + PWA icons, manifest.ts, logo in sidebar/header, Beta badge
 - ✅ Mobile UX: touch targets ≥44px, 17px base font, safe-area, card layouts, two-row controls
 - ✅ Dark mode: class-based (next-themes), supports Light/Dark/System
-- ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
+- ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context, desktop expand toggle (480↔700px), textarea input with auto-height, word-wrap for long content
 - ✅ AI Monetization: 15 msg/day free for all, Monobank donation button (amber, color harmony), ai_usage tracking
 - ✅ Print/PDF: printable meal plans (KBJU tables per day) and packing lists (☐ checkboxes for paper), @media print CSS
 - ✅ Chat UX: instant auto-scroll (no jumping), safe-area input padding, 480px desktop width, enlarged desktop icons (md:w-5)
@@ -256,7 +256,9 @@ Rate limiting и добровольные пожертвования:
 5 фіксів UI/UX чату та загальних іконок:
 - `ChatWidget.tsx` — **fix scroll jumping**: замінено `scrollIntoView({ behavior: 'smooth' })` на `container.scrollTop = container.scrollHeight`. Під час стрімінгу `smooth` створював конфліктуючі анімації (~50ms між токенами vs ~300ms анімація) → прыжки. Instant scroll вирішує це повністю. Додано `isLoading` до deps useEffect
 - `ChatWidget.tsx` — **fix mobile input behind shelf**: форма мала `py-3 safe-area-bottom`, але `.safe-area-bottom` перезаписувала padding-bottom з `py-3` (12px) на `env(safe-area-inset-bottom)` (0px на Android без notch). Рішення: `pt-3` + inline style `paddingBottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem))` — гарантує мінімум 12px
-- `ChatWidget.tsx` — **desktop chat width**: `md:w-[400px]` → `md:w-[480px]` (+80px для комфортного читання)
+- `ChatWidget.tsx` — **desktop expand toggle**: кнопка Maximize2/Minimize2 в хедері, переключає ширину `md:w-[480px]` ↔ `md:w-[700px]` з `transition-[width] duration-200`. Видима тільки на desktop (`hidden md:flex`)
+- `ChatWidget.tsx` — **textarea замість input**: `<input>` замінено на `<textarea rows={1}>` з автовисотою (до 120px / ~5 рядків), `resize-none`, Enter=відправити, Shift+Enter=новий рядок. Кнопка Send вирівняна по низу (`items-end`)
+- `ChatWidget.tsx` — **text overflow fix**: додано `overflow-x-hidden` на контейнер повідомлень, `min-w-0 break-words overflow-hidden` на пузирі, `break-all` на inline code, `overflow-x-auto` на pre-блоки. Текст AI тепер завжди переноситься
 - `gear/page.tsx`, `food/page.tsx`, `lists/[id]/page.tsx`, `meals/[id]/page.tsx` — **desktop icons**: SVG іконки edit/print/delete `w-4 h-4` → `w-4 h-4 md:w-5 md:h-5` (16→20px на десктопі)
 - `Navbar.tsx` — **donate button color**: `text-pink-*` → `text-amber-*` (аналогова гармонія з зеленим брендом #75a93a, теорія кольорів: сусіди на колі)
 

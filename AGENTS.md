@@ -112,7 +112,7 @@ All tables have RLS — users can only access their own data.
 | 13 | 19.06 | AI rate limit (15 msg/day), Monobank donation button, ai_usage table, voluntary monetization model |
 | 14 | 19.06 | Custom food items: user_food_items table, /food CRUD page (cards+table), 3-tab meal entry modal (catalog/my products/custom), 14 food categories, KBJU per 100g, navbar update |
 | 15 | 19.06 | Print/PDF export: printable meal plans and packing lists (/meals/[id]/print, /lists/[id]/print), print buttons, @media print CSS |
-| 16 | 19.06 | Chat UX polish: fix streaming scroll jump (instant scrollTop), fix mobile input behind shelf (CSS max() safe-area), widen desktop chat 400→480px, enlarge desktop icons w-4→md:w-5, donate button pink→amber |
+| 16 | 19.06 | Chat UX polish: fix streaming scroll jump (instant scrollTop), fix mobile input behind shelf (CSS max() safe-area), desktop chat expand toggle (480↔700px), textarea with auto-height, text overflow/word-wrap fix, enlarge desktop icons w-4→md:w-5, donate button pink→amber |
 
 ## Open Issues
 - [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 17
@@ -128,6 +128,6 @@ All tables have RLS — users can only access their own data.
 - Settings: language switcher, theme toggle (Light/Dark/System), name editing
 - Branding: custom favicon, PWA icons, manifest, logo in navbar
 - Mobile: touch targets ≥44px, 17px base font, safe-area, card layouts
-- AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
+- AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context, desktop expand toggle, textarea input with auto-height, word-wrap for long content
 - AI Monetization: 15 msg/day free for all, Monobank donation button (amber), ai_usage tracking
 - Deploy: Vercel auto-deploy from GitHub main branch
