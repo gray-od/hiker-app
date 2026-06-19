@@ -21,7 +21,9 @@
     "calories": "cal",
     "day": "day",
     "days": "days",
-    "donate": "Support the project"
+    "donate": "Support the project",
+    "print": "Print",
+    "generated": "Generated"
   },
   "nav": {
     "dashboard": "Dashboard",

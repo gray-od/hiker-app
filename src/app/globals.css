@@ -71,3 +71,15 @@ body {
     padding-top: env(safe-area-inset-top);
   }
 }
+
+@media print {
+  @page {
+    margin: 1cm;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt !important;
+    padding: 0 !important;
+  }
+}

@@ -110,16 +110,17 @@ All tables have RLS — users can only access their own data.
 | 12 | 19.06 | Professional gear categories (16), editable meal plans after creation, direct quantity input, Beta badge |
 | 13 | 19.06 | AI rate limit (15 msg/day), Monobank donation button, ai_usage table, voluntary monetization model |
 | 14 | 19.06 | Custom food items: user_food_items table, /food CRUD page (cards+table), 3-tab meal entry modal (catalog/my products/custom), 14 food categories, KBJU per 100g, navbar update |
+| 15 | 19.06 | Print/PDF export: printable meal plans and packing lists (/meals/[id]/print, /lists/[id]/print), print buttons, @media print CSS |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 15
-- [ ] Експорт/шерінг (PDF, посилання) — Раунд 16+
+- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 16
+- [ ] Шерінг (shared links, публічний доступ) — Раунд 17+
 
 ## What Works (summary)
 - Auth: Google OAuth, login/logout, session refresh
 - Gear Hub: full CRUD, cards on mobile, table on desktop, 16 professional categories, weight formatting
-- Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress, direct quantity input
-- Meal Plans: smart planning with 75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars, all fields editable after creation
+- Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress, direct quantity input, print/PDF export
+- Meal Plans: smart planning with 75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars, all fields editable after creation, print/PDF export
 - Custom Food: user food library (/food), full CRUD, 14 categories, KBJU per 100g, default portion, integrated into meal plan entry modal as "My Products" tab
 - i18n: uk/ru/en, greeting translation, lang saves to DB
 - Settings: language switcher, theme toggle (Light/Dark/System), name editing
