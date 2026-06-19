@@ -138,7 +138,7 @@ Three fixes from user testing:
 | KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🟡 Архитектурное решение |
 | KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 Архитектурное решение |
 
-### Что работает после Раунда 10
+### Что работает после Раунда 11
 - ✅ Auth: Google OAuth, login/logout, session refresh
 - ✅ Gear Hub: full CRUD, cards mobile / table desktop, seasons, weight formatting (smart kg/г)
 - ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar
@@ -149,42 +149,39 @@ Three fixes from user testing:
 - ✅ Branding: custom favicon + PWA icons from user's mountain logo, manifest.ts, logo in sidebar/header
 - ✅ Mobile UX: touch targets ≥44px, 17px base font, safe-area, card layouts, two-row controls
 - ✅ Dark mode: class-based (next-themes), supports Light/Dark/System
+- ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
 - ✅ Deploy: Vercel auto-deploy from GitHub `main` branch
 - ✅ Page subtitles on gear/lists/meals pages
 
 ## Next Steps
 
-### Раунд 11 — AI-помічник ProHikes (очікує DEEPSEEK_API_KEY)
+### Раунд 11 — AI-помічник ProHikes ✅ (19.06.2026)
 
 **Концепція:** Вбудований спеціаліст з туризму та виживання — як YouTube AI знає свою платформу. Не загальний чатбот, а вузько направлений експерт.
 
 **5 рівнів експертизи:**
-1. **Навігатор по ProHikes** — знає додаток, допомагає користуватися ("Щоб створити список — Списки → +")
-2. **Аналітик даних** — бачить gear/lists/meals, знаходить прогалини ("Зимовий похід, але немає термобілизни")
+1. **Навігатор по ProHikes** — знає додаток, допомагає користуватися
+2. **Аналітик даних** — бачить gear/lists/meals, знаходить прогалини
 3. **Консультант по спорядженню** — підбір під маршрут/сезон/рівень
-4. **Спец по маршруту** — аналіз місцевості, рельєф, небезпеки, броди, погода
-5. **Спец по виживанню** — рятувальні служби, телефони ДСНС, найближча точка евакуації, перша допомога
+4. **Спец по маршруту** — аналіз місцевості, рельєф, небезпеки
+5. **Спец по виживанню** — рятувальні служби, евакуація, перша допомога
 
-**Поведінка:**
-- Уточнює тип походу (гірський, лісовий, альпінізм, кемпінг, легкохід, зимовий, водний)
-- Уточнює рівень досвіду
-- Проактивний: сам помічає прогалини у спорядженні, раскладці, безпеці
-- Допомагає з суміжними темами: як дістатися до точки старту, погода, маршрут
-- Рекомендує зафіксувати телефони рятувальних служб за регіоном
-- Говорить мовою користувача (uk/ru/en)
-- Мʼяко перенаправляє питання повністю поза нішою (політика, код, тощо)
+**Реалізовано:**
+- `src/lib/chat-system-prompt.ts` — системний промпт з 5 рівнями експертизи, конкретні номери рятувальних служб (Карпати, Європа), корисні ресурси (yr.no, windy.com, maps.me)
+- `src/app/api/chat/route.ts` — API route: DeepSeek стрімінг + Tavily web search tool + user context injection (gear/lists/meals з Supabase)
+- `src/components/ChatWidget.tsx` — плаваюча кнопка Sparkles (✨) → панель чату, markdown rendering (react-markdown), error handling
+- `src/components/AppShell.tsx` — віджет додано глобально (крім /login)
+- i18n: ключі chat (title, placeholder, welcome, send) у всіх 3 локалях
+- Залежності: `ai@4.3.19`, `@ai-sdk/openai@1`, `react-markdown`
+- Env: `DEEPSEEK_API_KEY` + `TAVILY_API_KEY` на Vercel
 
-**Технічна реалізація:**
-- Провайдер: **DeepSeek** (OpenAI-сумісний API, дешевий, добре працює uk/ru/en)
-- Залежності: `ai`, `@ai-sdk/openai`
-- API route: `src/app/api/chat/route.ts` — стрімінг, інжектить контекст користувача (gear, lists, meals)
-- Промпт: `src/lib/chat-system-prompt.ts` — окремий файл для ітерацій
-- UI: `src/components/ChatWidget.tsx` — кнопка Sparkles (✨) → панель чату
-- Layout: віджет глобально (крім /login)
-- i18n: ключі chat.placeholder, chat.title, chat.send, chat.thinking
-- Env: `DEEPSEEK_API_KEY` в `.env.local` + Vercel
+**Ітерації під час розробки:**
+- AI SDK v6 → downgrade до v4 (v6 має складний UIMessage API, несумісний з простим useChat)
+- Додано error handling після першого тесту (API key not configured → чітке повідомлення)
+- Додано react-markdown після тесту (raw markdown символи замість форматування)
+- Додано Tavily web search після feedback (AI не мав доступу до інтернету для актуальних даних)
 
-**Статус:** Очікує API ключ від користувача
+**Статус:** ✅ Працює на production (Vercel)
 
 ### Раунд 12 — PWA: Service Worker + офлайн-режим
 
@@ -209,11 +206,11 @@ Three fixes from user testing:
 
 **Статус:** Планується
 
-## File Structure (as of Round 10)
+## File Structure (as of Round 11)
 
 ```
 hiker-app/
-├── .env.local                          # Supabase URL + anon key
+├── .env.local                          # Supabase URL + anon key + DEEPSEEK_API_KEY + TAVILY_API_KEY
 ├── .gitignore                          # Includes secrets file
 ├── AGENTS.md                           # Project conventions + round history (compact)
 ├── wiki_map_project.md                 # Detailed project chronology (this file)
@@ -223,6 +220,7 @@ hiker-app/
 │   └── logo-circle.png                 # Circular logo for navbar
 ├── src/
 │   ├── app/
+│   │   ├── api/chat/route.ts           # AI chat API (DeepSeek + Tavily search + user context)
 │   │   ├── auth/callback/route.ts      # OAuth code exchange → session
 │   │   ├── gear/page.tsx               # Gear hub (cards mobile, table desktop)
 │   │   ├── lists/page.tsx              # Gear lists overview (cards, create/delete)
@@ -238,14 +236,16 @@ hiker-app/
 │   │   ├── apple-icon.png              # Apple touch icon (180×180)
 │   │   └── globals.css                 # Tailwind v4 + class-based dark mode + safe-area + mobile 17px
 │   ├── components/
-│   │   ├── AppShell.tsx                # Conditional navbar wrapper (pt-14 mobile)
+│   │   ├── AppShell.tsx                # Conditional navbar wrapper + ChatWidget (pt-14 mobile)
+│   │   ├── ChatWidget.tsx              # AI chat floating widget (Sparkles button → chat panel)
 │   │   ├── Navbar.tsx                  # Responsive nav (sidebar + bottom bar + logo)
 │   │   └── Providers.tsx               # ThemeProvider wrapper (next-themes)
 │   ├── i18n/
-│   │   ├── messages/{uk,ru,en}.json    # Translation dictionaries (~180 keys each)
+│   │   ├── messages/{uk,ru,en}.json    # Translation dictionaries (~190 keys each)
 │   │   ├── request.ts                  # next-intl message loader (cookie-based)
 │   │   └── routing.ts                  # Locale routing config
 │   ├── lib/
+│   │   ├── chat-system-prompt.ts       # AI system prompt (5-level survival specialist)
 │   │   ├── food-catalog.ts             # 75 hiking food products with KBJU
 │   │   ├── hiking-standards.ts         # Plan types, norms, adaptation coefficients
 │   │   ├── meal-templates.ts           # 3 cyclic meal plan templates

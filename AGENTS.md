@@ -5,6 +5,8 @@
 - **Backend:** Supabase (PostgreSQL, Auth, RLS)
 - **i18n:** next-intl v4 (uk/ru/en)
 - **Theme:** next-themes (class-based dark mode)
+- **AI:** DeepSeek API (chat) + Tavily API (web search)
+- **AI SDK:** Vercel AI SDK v4 (`ai`, `@ai-sdk/openai`)
 - **Offline:** Dexie.js (IndexedDB) — planned, not yet implemented
 - **Hosting:** Vercel (free tier)
 - **Repo:** github.com/gray-od/hiker-app
@@ -35,6 +37,7 @@ hiker-app/
 │   │   ├── login/              # Google OAuth login
 │   │   ├── meals/              # Meal plans + [id] detail
 │   │   ├── settings/           # Settings (lang, theme, profile)
+│   │   ├── api/chat/           # AI chat API route (DeepSeek + Tavily)
 │   │   ├── layout.tsx          # Root layout (i18n + ThemeProvider)
 │   │   ├── manifest.ts         # PWA manifest
 │   │   ├── page.tsx            # Dashboard
@@ -45,6 +48,7 @@ hiker-app/
 │   │   ├── AppShell.tsx        # Conditional navbar wrapper
 │   │   ├── Navbar.tsx          # Responsive nav (sidebar + bottom bar + logo)
 │   │   └── Providers.tsx       # ThemeProvider wrapper
+│   │   └── ChatWidget.tsx     # AI chat floating widget
 │   ├── i18n/
 │   │   ├── messages/           # uk.json, ru.json, en.json
 │   │   ├── request.ts          # next-intl config (cookie-based)
@@ -53,6 +57,7 @@ hiker-app/
 │   │   ├── food-catalog.ts     # 75 hiking food products with KBJU
 │   │   ├── hiking-standards.ts # Plan types, norms, adaptation
 │   │   ├── meal-templates.ts   # 3 cyclic meal plan templates
+│   │   ├── chat-system-prompt.ts # AI system prompt (survival specialist)
 │   │   ├── supabase/           # client.ts, server.ts, middleware.ts
 │   │   └── types.ts            # DB type interfaces
 │   └── proxy.ts                # Next.js 16 proxy (Supabase session)
@@ -98,10 +103,10 @@ All tables have RLS — users can only access their own data.
 | 8 | 19.06 | Mobile UX: touch targets ≥44px, gear cards, i18n greeting, lang switcher fix, name editing, favicon/PWA icons, logo, manifest |
 | 9 | 19.06 | Page subtitles, rename "Бібліотека" → "Хаб спорядження" |
 | 10 | 19.06 | Dashboard name from profile, mobile font 17px, dark mode toggle (next-themes) |
+| 11 | 19.06 | AI-помічник ProHikes: DeepSeek chat + Tavily web search, system prompt (5 рівнів експертизи), markdown rendering, user context injection |
 
 ## Open Issues
 - [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 12
-- [ ] AI-помічник ProHikes (DeepSeek, Vercel AI SDK) — Раунд 11
 - [ ] Експорт/шерінг (PDF, посилання) — Раунд 13+
 
 ## What Works (summary)
@@ -113,4 +118,5 @@ All tables have RLS — users can only access their own data.
 - Settings: language switcher, theme toggle (Light/Dark/System), name editing
 - Branding: custom favicon, PWA icons, manifest, logo in navbar
 - Mobile: touch targets ≥44px, 17px base font, safe-area, card layouts
+- AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
 - Deploy: Vercel auto-deploy from GitHub main branch
