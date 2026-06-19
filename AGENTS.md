@@ -6,68 +6,64 @@
 - **i18n:** next-intl v4 (uk/ru/en)
 - **Theme:** next-themes (class-based dark mode)
 - **AI:** DeepSeek API (chat) + Tavily API (web search)
-- **AI SDK:** Vercel AI SDK v4 (`ai`, `@ai-sdk/openai`)
-- **Offline:** Dexie.js (IndexedDB) — planned, not yet implemented
-- **Hosting:** Vercel (free tier)
+- **AI SDK:** Vercel AI SDK v4 (`ai@4.3.19`, `@ai-sdk/openai@1`) — НЕ v6 (несовместим с useChat)
+- **Hosting:** Vercel (free tier, auto-deploy from `main`)
 - **Repo:** github.com/gray-od/hiker-app
 
 ## Conventions
 - Ukrainian base language (uk), with ru/en translations
-- Code: TypeScript, strict mode
-- No comments in code unless critical
+- Code: TypeScript strict, no comments unless critical
 - Tailwind utility classes, no CSS modules
-- Season values: `summer`, `winter`, `demi`
-- Gear categories: `backpack`, `shelter`, `sleep_system`, `cooking`, `water`, `clothing`, `footwear`, `lighting`, `navigation`, `safety`, `hygiene`, `electronics`, `tools`, `documents`, `technical`, `other`
-- Food categories: `cereals`, `pasta`, `meat`, `dairy`, `nuts`, `dried_fruits`, `sweets`, `bread`, `drinks`, `fats`, `spices`, `soups`, `sublimated`, `other`
-- Meal types: `breakfast`, `lunch`, `snack`, `dinner`
-- Weight always in grams (weight_g), calories in kcal
-- Brand color: `#75a93a` (green)
-- Season colors: summer `#ffec6d`, winter `#6db3ff`, demi `#f5a623`
-- Mobile touch targets: min 44×44px
+- Weight always in grams (`weight_g`), calories in kcal
+- Mobile touch targets: min 44×44px (`min-w-[44px] min-h-[44px]`)
 - Mobile base font: 17px (desktop 16px)
+- Icons: `w-5 h-5` mobile cards, `w-4 h-4 md:w-5 md:h-5` desktop table/header actions
+- Enum values see wiki_map_project.md (seasons, gear categories, food categories, meal types)
+
+## Color System
+- **Brand:** `#75a93a` (green) — buttons, links, focus rings, logo accent
+- **Seasons:** summer `#ffec6d`, winter `#6db3ff`, demi `#f5a623`
+- **Donate/CTA:** `text-amber-600 dark:text-amber-400` (аналогова гармонія з зеленим)
+- **Danger:** `text-red-400 hover:text-red-600` (delete buttons)
+- **Dark mode:** `dark:bg-zinc-900`, `dark:bg-zinc-800` (cards/inputs), `dark:text-zinc-100`
 
 ## Architecture
 
 ```
-hiker-app/
-├── src/
-│   ├── app/
-│   │   ├── auth/callback/      # OAuth callback
-│   │   ├── gear/               # Gear hub (cards mobile, table desktop)
-│   │   ├── lists/              # Packing lists + [id] detail + [id]/print
-│   │   ├── login/              # Google OAuth login
-│   │   ├── meals/              # Meal plans + [id] detail + [id]/print
-│   │   ├── settings/           # Settings (lang, theme, profile)
-│   │   ├── api/chat/           # AI chat API route (DeepSeek + Tavily)
-│   │   ├── food/               # Custom food items CRUD
-│   │   ├── layout.tsx          # Root layout (i18n + ThemeProvider)
-│   │   ├── manifest.ts         # PWA manifest
-│   │   ├── page.tsx            # Dashboard
-│   │   ├── icon.png            # Favicon (192×192)
-│   │   ├── apple-icon.png      # Apple touch icon (180×180)
-│   │   └── globals.css         # Tailwind v4 + dark mode + safe-area + @media print
-│   ├── components/
-│   │   ├── AppShell.tsx        # Conditional navbar wrapper (print:hidden support)
-│   │   ├── Navbar.tsx          # Responsive nav (sidebar + bottom bar + logo, print:hidden)
-│   │   └── Providers.tsx       # ThemeProvider wrapper
-│   │   └── ChatWidget.tsx     # AI chat floating widget (print:hidden)
-│   ├── i18n/
-│   │   ├── messages/           # uk.json, ru.json, en.json
-│   │   ├── request.ts          # next-intl config (cookie-based)
-│   │   └── routing.ts          # Locale routing
-│   ├── lib/
-│   │   ├── food-catalog.ts     # 75 hiking food products with KBJU
-│   │   ├── hiking-standards.ts # Plan types, norms, adaptation
-│   │   ├── meal-templates.ts   # 3 cyclic meal plan templates
-│   │   ├── chat-system-prompt.ts # AI system prompt (survival specialist)
-│   │   ├── supabase/           # client.ts, server.ts, middleware.ts
-│   │   └── types.ts            # DB type interfaces
-│   └── proxy.ts                # Next.js 16 proxy (Supabase session)
-├── public/
-│   ├── icon-{16,32,180,192,512}x*.png  # PWA icons
-│   └── logo-circle.png         # Circular logo for navbar
-├── logo/                       # Source logo files (6 variants)
-└── supabase/migrations/        # SQL migrations (6 files)
+src/app/
+  api/chat/route.ts        # AI: DeepSeek streaming + Tavily search + user context + rate limit
+  auth/callback/route.ts   # OAuth code exchange
+  gear/page.tsx             # Gear hub (cards mobile, table desktop) — ~490 lines
+  food/page.tsx             # Custom food CRUD (cards+table) — ~537 lines
+  lists/page.tsx            # Packing lists overview
+  lists/[id]/page.tsx       # List detail (items, weights, packing) — ~818 lines
+  lists/[id]/print/page.tsx # Printable packing list
+  meals/page.tsx            # Meal plans overview (smart CRUD, templates)
+  meals/[id]/page.tsx       # Meal plan detail (3-tab entry modal) — ~1350 lines
+  meals/[id]/print/page.tsx # Printable meal plan
+  settings/page.tsx         # Language, theme, name
+  login/page.tsx            # Google sign-in
+  page.tsx                  # Dashboard
+  layout.tsx                # Root (i18n + ThemeProvider, viewportFit: 'cover')
+  globals.css               # Tailwind v4 + dark mode + safe-area + @media print
+  manifest.ts               # PWA manifest
+
+src/components/
+  AppShell.tsx              # Navbar wrapper + ChatWidget (print:hidden)
+  ChatWidget.tsx            # AI chat floating widget (~180 lines)
+  Navbar.tsx                # Sidebar + bottom bar + header (~213 lines)
+  Providers.tsx             # ThemeProvider (next-themes)
+
+src/lib/
+  supabase/{client,server,middleware}.ts
+  types.ts                  # DB interfaces
+  food-catalog.ts           # 75 products with KBJU
+  hiking-standards.ts       # 3 plan types, norms, adaptation
+  meal-templates.ts         # 3 cyclic templates
+  chat-system-prompt.ts     # AI system prompt (5-level expertise)
+
+src/i18n/messages/{uk,ru,en}.json  # ~230 keys each
+src/proxy.ts               # Next.js 16 proxy (Supabase session refresh)
 ```
 
 ## Database Schema (Supabase)
@@ -84,50 +80,90 @@ ai_usage        — id, user_id, date, message_count (UNIQUE user_id+date)
 user_food_items — id, user_id, name, category, calories_per100g, protein_per100g, fat_per100g, carbs_per100g, default_portion_g, created_at
 ```
 
-All tables have RLS — users can only access their own data.
+All tables have RLS — users can only access their own data. 6 migration files in `supabase/migrations/`.
 
-## Key Decisions
-1. **Next.js App Router + Supabase SSR** — server-side auth, client-side CRUD
-2. **next-intl v4 localePrefix: 'never'** — clean URLs, cookie-based locale switching
-3. **next-themes (class-based)** — manual Light/Dark/System toggle in settings
-4. **PWA-ready** — manifest.ts, custom icons, safe-area CSS. Service Worker pending.
-5. **proxy.ts** — next-intl middleware removed (incompatible with Next.js 16), i18n via cookie in request.ts
+## Key Patterns & Gotchas
+
+### Routing & i18n
+- `localePrefix: 'never'` — clean URLs, locale from cookie (not URL path)
+- `proxy.ts` replaces middleware — next-intl middleware incompatible with Next.js 16
+- Language switch: cookie + DB save to `profiles.lang`
+
+### CSS & Layout
+- **Safe area:** `viewportFit: 'cover'` in layout.tsx, CSS vars in globals.css
+- **Safe area gotcha:** `.safe-area-bottom` class OVERRIDES `py-*` padding — use `max()` inline style instead: `paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))'`
+- **Print:** `print:!hidden` on Navbar, ChatWidget, AppShell padding. Print pages at `/print` subroutes
+- **Dark mode:** `@custom-variant dark` in globals.css, class-based via next-themes
+
+### Chat Widget (ChatWidget.tsx)
+- **Scroll:** `container.scrollTop = container.scrollHeight` (NOT `scrollIntoView({smooth})` — causes jumping during streaming)
+- **Input:** `<textarea>` with auto-height, Enter=submit, Shift+Enter=newline
+- **Desktop expand:** toggle 480px ↔ 700px via state, `transition-[width]`
+- **Text overflow:** `break-words overflow-hidden min-w-0` on bubbles, `overflow-x-hidden` on container
+- **Rate limit:** 15 msg/day (`FREE_DAILY_LIMIT` in `api/chat/route.ts`), amber banner + donate link
+
+### Component Patterns
+- **Mobile cards + desktop table:** gear/page.tsx, food/page.tsx use `md:hidden` / `hidden md:block`
+- **Modal forms:** state-driven (`modalOpen`), form object in state, submit → Supabase insert/update → refetch
+- **Touch targets:** all interactive elements min 44×44px on mobile
+
+## Environment Variables
+
+```
+# .env.local (not in git)
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+DEEPSEEK_API_KEY=
+TAVILY_API_KEY=
+NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou
+```
 
 ## Round History
 
 | Round | Date | Summary |
 |---|---|---|
-| 1 | 17.06 | Project scaffold: Next.js 16, Supabase schema (7 tables), i18n, Google OAuth, Navbar |
-| 2 | 17.06 | Gear CRUD: add/edit/delete, table, modal form |
-| 3 | 18.06 | Bug fixes: error handling, weight kg format, login redirect, settings page |
+| 1 | 17.06 | Project scaffold: Next.js 16, Supabase (7 tables), i18n, OAuth, Navbar |
+| 2 | 17.06 | Gear CRUD: add/edit/delete, table, modal |
+| 3 | 18.06 | Bug fixes: error handling, weight format, login redirect, settings |
 | 4 | 18.06 | Nav restructure: AppShell, safe-area, Vercel deploy |
-| 5 | 18.06 | Gear lists module: overview + detail (add items, packed/worn/consumable, weights) |
-| 6 | 18.06 | Meal plans module: overview + detail (days, 4 meal types, KBJU, summary) |
-| 7 | 18.06 | Smart meals: food catalog (75 items), 3 plan types, templates, group calc, progress bars |
-| 8 | 19.06 | Mobile UX: touch targets ≥44px, gear cards, i18n greeting, lang switcher fix, name editing, favicon/PWA icons, logo, manifest |
+| 5 | 18.06 | Gear lists: overview + detail (items, packed/worn/consumable, weights) |
+| 6 | 18.06 | Meal plans: overview + detail (days, 4 meal types, KBJU) |
+| 7 | 18.06 | Smart meals: 75-product catalog, 3 plan types, templates, progress bars |
+| 8 | 19.06 | Mobile UX: touch 44px, gear cards, icons/logo, PWA manifest |
 | 9 | 19.06 | Page subtitles, rename "Бібліотека" → "Хаб спорядження" |
-| 10 | 19.06 | Dashboard name from profile, mobile font 17px, dark mode toggle (next-themes) |
-| 11 | 19.06 | AI-помічник ProHikes: DeepSeek chat + Tavily web search, system prompt (5 рівнів експертизи), markdown rendering, user context injection |
-| 12 | 19.06 | Professional gear categories (16), editable meal plans after creation, direct quantity input, Beta badge |
-| 13 | 19.06 | AI rate limit (15 msg/day), Monobank donation button, ai_usage table, voluntary monetization model |
-| 14 | 19.06 | Custom food items: user_food_items table, /food CRUD page (cards+table), 3-tab meal entry modal (catalog/my products/custom), 14 food categories, KBJU per 100g, navbar update |
-| 15 | 19.06 | Print/PDF export: printable meal plans and packing lists (/meals/[id]/print, /lists/[id]/print), print buttons, @media print CSS |
-| 16 | 19.06 | Chat UX polish: fix streaming scroll jump (instant scrollTop), fix mobile input behind shelf (CSS max() safe-area), desktop chat expand toggle (480↔700px), textarea with auto-height, text overflow/word-wrap fix, enlarge desktop icons w-4→md:w-5, donate button pink→amber |
+| 10 | 19.06 | Dashboard profile name, 17px mobile font, dark mode (next-themes) |
+| 11 | 19.06 | AI chat: DeepSeek + Tavily, 5-level expertise, markdown, user context |
+| 12 | 19.06 | 16 gear categories, editable meal plans, direct quantity input, Beta badge |
+| 13 | 19.06 | AI rate limit (15/day), Monobank donate, ai_usage table |
+| 14 | 19.06 | Custom food: user_food_items, /food CRUD, 3-tab meal entry modal |
+| 15 | 19.06 | Print/PDF: /meals/[id]/print, /lists/[id]/print, @media print CSS |
+| 16 | 19.06 | Chat UX: scroll fix, safe-area input, expand toggle, textarea, word-wrap, desktop icons md:w-5, donate pink→amber |
 
 ## Open Issues
 - [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 17
 - [ ] Шерінг (shared links, публічний доступ) — Раунд 18+
 
-## What Works (summary)
-- Auth: Google OAuth, login/logout, session refresh
-- Gear Hub: full CRUD, cards on mobile, table on desktop, 16 professional categories, weight formatting
-- Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress, direct quantity input, print/PDF export
-- Meal Plans: smart planning with 75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars, all fields editable after creation, print/PDF export
-- Custom Food: user food library (/food), full CRUD, 14 categories, KBJU per 100g, default portion, integrated into meal plan entry modal as "My Products" tab
-- i18n: uk/ru/en, greeting translation, lang saves to DB
-- Settings: language switcher, theme toggle (Light/Dark/System), name editing
-- Branding: custom favicon, PWA icons, manifest, logo in navbar
-- Mobile: touch targets ≥44px, 17px base font, safe-area, card layouts
-- AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context, desktop expand toggle, textarea input with auto-height, word-wrap for long content
-- AI Monetization: 15 msg/day free for all, Monobank donation button (amber), ai_usage tracking
-- Deploy: Vercel auto-deploy from GitHub main branch
+## What Works
+
+**Core modules:**
+- Gear Hub — full CRUD, cards mobile / table desktop, 16 categories, weight formatting
+- Packing Lists — create/delete, add from gear, packed/worn/consumable, weights, progress, print
+- Meal Plans — 75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars, editable after creation, print
+- Custom Food — /food CRUD, 14 categories, KBJU per 100g, integrated into meal entry modal
+
+**Infrastructure:**
+- Auth: Google OAuth, session refresh via proxy.ts
+- i18n: uk/ru/en, cookie + DB sync
+- Dark mode: Light/Dark/System via next-themes
+- Branding: favicon, PWA icons, manifest, logo, Beta badge
+- Mobile: 44px targets, 17px font, safe-area, card layouts
+- Deploy: Vercel auto-deploy from GitHub main
+
+**AI Assistant:**
+- DeepSeek chat + Tavily web search, 5-level hiking expertise
+- Proactive gear/meal analysis (reads user data from Supabase)
+- Markdown rendering (react-markdown), word-wrap, text overflow handling
+- Desktop expand toggle (480↔700px), textarea with auto-height
+- 15 msg/day rate limit, Monobank donation (amber CTA)
+
+> Для подробной истории раундов, архитектурных решений и что было испробовано → `wiki_map_project.md`
