@@ -182,6 +182,8 @@
     "title": "AI Assistant",
     "placeholder": "Ask about your hike...",
     "welcome": "Hi! I'm ProHikes AI — an outdoor and survival specialist. I'll help you prepare for your hike, check your gear, and advise on routes and safety.",
-    "send": "Send"
+    "send": "Send",
+    "limit_reached": "Daily message limit reached (15/day). Support the project for more access!",
+    "donate": "Support the project"
   }
 }

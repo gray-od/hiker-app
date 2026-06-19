@@ -39,6 +39,25 @@ export async function POST(req: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  const FREE_DAILY_LIMIT = 15;
+
+  const [{ data: profile }, { data: usage }] = await Promise.all([
+    supabase.from('profiles').select('is_premium').eq('id', session.user.id).single(),
+    supabase.from('ai_usage').select('message_count').eq('user_id', session.user.id).eq('date', new Date().toISOString().split('T')[0]).single(),
+  ]);
+
+  const isPremium = profile?.is_premium === true;
+  const todayCount = usage?.message_count || 0;
+
+  if (!isPremium && todayCount >= FREE_DAILY_LIMIT) {
+    return new Response('RATE_LIMIT', { status: 429 });
+  }
+
+  await supabase.from('ai_usage').upsert(
+    { user_id: session.user.id, date: new Date().toISOString().split('T')[0], message_count: todayCount + 1 },
+    { onConflict: 'user_id,date' }
+  );
+
   const locale = cookieStore.get('NEXT_LOCALE')?.value || 'uk';
 
   const [{ data: gear }, { data: lists }, { data: meals }] = await Promise.all([

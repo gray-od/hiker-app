@@ -100,9 +100,25 @@ export default function ChatWidget() {
             )}
 
             {error && (
-              <div className="px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-400">
-                {error.message}
-              </div>
+              error.message?.includes('RATE_LIMIT') ? (
+                <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm">
+                  <p className="text-amber-700 dark:text-amber-400 font-medium mb-2">{t('limit_reached')}</p>
+                  {process.env.NEXT_PUBLIC_DONATE_URL && (
+                    <a
+                      href={process.env.NEXT_PUBLIC_DONATE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      {t('donate')}
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-400">
+                  {error.message}
+                </div>
+              )
             )}
 
             <div ref={messagesEndRef} />
