@@ -115,8 +115,8 @@ All tables have RLS — users can only access their own data.
 | 16 | 19.06 | Chat UX polish: fix streaming scroll jump (instant scrollTop), fix mobile input behind shelf (CSS max() safe-area), widen desktop chat 400→480px, enlarge desktop icons w-4→md:w-5, donate button pink→amber |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 16
-- [ ] Шерінг (shared links, публічний доступ) — Раунд 17+
+- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 17
+- [ ] Шерінг (shared links, публічний доступ) — Раунд 18+
 
 ## What Works (summary)
 - Auth: Google OAuth, login/logout, session refresh
@@ -129,5 +129,5 @@ All tables have RLS — users can only access their own data.
 - Branding: custom favicon, PWA icons, manifest, logo in navbar
 - Mobile: touch targets ≥44px, 17px base font, safe-area, card layouts
 - AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
-- AI Monetization: 15 msg/day free for all, Monobank donation button, ai_usage tracking
+- AI Monetization: 15 msg/day free for all, Monobank donation button (amber), ai_usage tracking
 - Deploy: Vercel auto-deploy from GitHub main branch
