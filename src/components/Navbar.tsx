@@ -63,7 +63,8 @@ export default function Navbar() {
       <aside className="hidden md:flex md:flex-col md:w-64 md:h-screen md:fixed md:left-0 md:top-0 md:bg-white md:dark:bg-zinc-900 md:border-r md:border-zinc-200 md:dark:border-zinc-800 md:z-40">
         {/* App name */}
         <div className="px-6 py-6 border-b border-zinc-200 dark:border-zinc-800">
-          <Link href="/" className="text-xl font-bold text-[#75a93a] tracking-tight">
+          <Link href="/" className="flex items-center gap-3 text-xl font-bold text-[#75a93a] tracking-tight">
+            <img src="/logo-circle.png" alt="" className="w-8 h-8 rounded-full" />
             ProHikes
           </Link>
         </div>
@@ -135,7 +136,7 @@ export default function Navbar() {
 
       {/* ── Mobile bottom bar ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-40 safe-area-bottom">
-        <div className="flex items-center justify-around py-1">
+        <div className="flex items-center justify-around py-1.5">
           {bottomNav.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -143,12 +144,12 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-0 ${
+                className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors min-w-0 ${
                   active ? 'text-[#75a93a]' : 'text-zinc-500 dark:text-zinc-400'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium leading-tight">
+                <Icon className="w-6 h-6" />
+                <span className="text-[11px] font-medium leading-tight truncate max-w-[56px]">
                   {tnav(item.labelKey)}
                 </span>
               </Link>
@@ -159,16 +160,17 @@ export default function Navbar() {
 
       {/* ── Mobile top header ── */}
       <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40 safe-area-top">
-        <div className="flex items-center justify-between px-4 h-12">
-          <Link href="/" className="text-lg font-bold text-[#75a93a] tracking-tight">
+        <div className="flex items-center justify-between px-4 h-14">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-[#75a93a] tracking-tight">
+            <img src="/logo-circle.png" alt="" className="w-7 h-7 rounded-full" />
             ProHikes
           </Link>
           <button
             onClick={handleLogout}
-            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-2.5 -mr-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             title={tcommon('logout')}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </header>

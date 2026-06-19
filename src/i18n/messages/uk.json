@@ -155,7 +155,9 @@
     "recent_lists": "Останні списки",
     "recent_meals": "Останні розкладки",
     "create_list": "Створити список",
-    "create_meal": "Створити розкладку"
+    "create_meal": "Створити розкладку",
+    "welcome": "Вітаємо, {name}!",
+    "welcome_anonymous": "Вітаємо!"
   },
   "settings": {
     "title": "Налаштування",

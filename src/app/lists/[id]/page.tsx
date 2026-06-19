@@ -479,89 +479,95 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           {listItems.map((item) => (
             <div
               key={item.id}
-              className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 flex items-center gap-3"
+              className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 flex flex-col"
             >
-              <button
-                onClick={() => handleTogglePacked(item.id)}
-                className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                  item.is_packed
-                    ? 'bg-[#75a93a] border-[#75a93a] text-white'
-                    : 'border-zinc-300 dark:border-zinc-600'
-                }`}
-              >
-                {item.is_packed && (
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-
-              <div className="flex-1 min-w-0">
-                <div className={`text-sm font-medium truncate ${item.is_packed ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-900 dark:text-zinc-100'}`}>
-                  {item.gear_item ? item.gear_item.name : t('deleted_item')}
+              <div className="flex items-center gap-3">
+                <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+                  <button
+                    onClick={() => handleTogglePacked(item.id)}
+                    className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                      item.is_packed
+                        ? 'bg-[#75a93a] border-[#75a93a] text-white'
+                        : 'border-zinc-300 dark:border-zinc-600'
+                    }`}
+                  >
+                    {item.is_packed && (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {item.gear_item && (
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                      {tGear(`categories.${item.gear_item.category}`)}
+
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-medium truncate ${item.is_packed ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                    {item.gear_item ? item.gear_item.name : t('deleted_item')}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {item.gear_item && (
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {tGear(`categories.${item.gear_item.category}`)}
+                      </span>
+                    )}
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
+                      {formatWeight((item.gear_item?.weight_g || 0) * item.quantity)}
                     </span>
-                  )}
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                    {formatWeight((item.gear_item?.weight_g || 0) * item.quantity)}
-                  </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2 mt-2 ml-8">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleUpdateQuantity(item.id, -1)}
+                    disabled={item.quantity <= 1}
+                    className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center text-sm text-zinc-700 dark:text-zinc-300 tabular-nums">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => handleUpdateQuantity(item.id, 1)}
+                    className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium"
+                  >
+                    +
+                  </button>
+                </div>
+
                 <button
-                  onClick={() => handleUpdateQuantity(item.id, -1)}
-                  disabled={item.quantity <= 1}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                  onClick={() => handleToggleWorn(item.id)}
+                  className={`text-xs font-medium px-3 py-2 min-h-[44px] rounded-lg transition-colors ${
+                    item.worn
+                      ? 'bg-[#6db3ff]/20 text-[#2563eb] dark:bg-[#6db3ff]/10 dark:text-[#6db3ff]'
+                      : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  }`}
                 >
-                  −
+                  {t('worn')}
                 </button>
-                <span className="w-6 text-center text-sm text-zinc-700 dark:text-zinc-300 tabular-nums">
-                  {item.quantity}
-                </span>
+
                 <button
-                  onClick={() => handleUpdateQuantity(item.id, 1)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium"
+                  onClick={() => handleToggleConsumable(item.id)}
+                  className={`text-xs font-medium px-3 py-2 min-h-[44px] rounded-lg transition-colors ${
+                    item.consumable
+                      ? 'bg-[#f5a623]/20 text-[#c2841a] dark:bg-[#f5a623]/10 dark:text-[#f5a623]'
+                      : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  }`}
                 >
-                  +
+                  {t('consumable')}
+                </button>
+
+                <button
+                  onClick={() => handleRemoveItem(item.id)}
+                  className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  title={t('remove_item')}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
-
-              <button
-                onClick={() => handleToggleWorn(item.id)}
-                className={`text-xs font-medium px-2 py-1 rounded-lg transition-colors ${
-                  item.worn
-                    ? 'bg-[#6db3ff]/20 text-[#2563eb] dark:bg-[#6db3ff]/10 dark:text-[#6db3ff]'
-                    : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                }`}
-              >
-                {t('worn')}
-              </button>
-
-              <button
-                onClick={() => handleToggleConsumable(item.id)}
-                className={`text-xs font-medium px-2 py-1 rounded-lg transition-colors ${
-                  item.consumable
-                    ? 'bg-[#f5a623]/20 text-[#c2841a] dark:bg-[#f5a623]/10 dark:text-[#f5a623]'
-                    : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                }`}
-              >
-                {t('consumable')}
-              </button>
-
-              <button
-                onClick={() => handleRemoveItem(item.id)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                title={t('remove_item')}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
             </div>
           ))}
         </div>

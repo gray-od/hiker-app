@@ -82,6 +82,7 @@ Auto-creates profile via trigger on auth.users insert.
 | 5 | 18.06.2026 | Gear lists module: lists overview (cards grid, create/delete, season badges, packing progress), list detail page (add items from gear library, toggle packed/worn/consumable, quantity ±, weight summary panel, edit/delete list), i18n +17 keys, ListItemWithGear type. | 6 files changed |
 | 6 | 18.06.2026 | Meal plans module: overview page (cards grid, create with auto-days, delete), detail page (collapsible day accordions, 4 meal-type groups, add/edit/delete entries, nutrition macros P/F/C, summary cards with totals + daily averages, add/remove days, edit/delete plan), i18n +18 keys per locale, MealDayWithEntries type. | 6 files changed |
 | 7 | 18.06.2026 | Smart meal planning: food catalog (75 products, KBJU per 100g, 13 categories), 3 plan types (comfort/standard/ultralight with norms), 3 meal templates (cyclic rotation), group calculation (people_count), catalog picker with auto-KBJU calculation, daily progress bars (calories/weight vs target), adaptation coefficients by day, enhanced summary cards (per-person/per-group). | 10 files changed |
+| 8 | 19.06.2026 | Mobile UX + i18n + Branding: all touch targets ≥44px (gear cards on mobile, list detail two-row layout, meals buttons, navbar), i18n greeting fix (dashboard), language switcher highlight fix (cookie priority + save to DB), name editing in settings, custom favicon/PWA icons from logo, manifest.ts, logo in sidebar/header. | 13 files changed, 9 files created |
 
 ## Open Issues
 - [x] Применить SQL-миграцию (выполнено 17.06.2026 — через pooler eu-west-1)
@@ -137,3 +138,11 @@ Auto-creates profile via trigger on auth.users insert.
 - ✅ Коефіцієнти адаптації по днях (дні 1-3 → ×0.8)
 - ✅ Дашборд: останні списки та розкладки з карточками та бейджами
 - ✅ Усі модулі задеплоєні на Vercel: https://hiker-app.vercel.app
+- ✅ Мобільні touch targets ≥44px на всіх сторінках (gear cards, list detail, meals, navbar)
+- ✅ Gear: карточки на мобільному замість таблиці (без горизонтального скролу)
+- ✅ i18n привітання на дашборді (uk/ru/en)
+- ✅ Підсвітка мови в налаштуваннях працює коректно (зберігає в БД)
+- ✅ Редагування імені в налаштуваннях
+- ✅ Кастомний favicon + PWA іконки з логотипу
+- ✅ PWA manifest.ts (name, theme_color, icons)
+- ✅ Логотип в сайдбарі та мобільному хедері

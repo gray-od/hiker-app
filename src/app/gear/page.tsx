@@ -232,75 +232,123 @@ export default function GearPage() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Gear items */}
       {!loading && items.length > 0 && (
-        <div className="mt-6 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-                  <th className="text-left px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
-                    {tGear('name')}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
-                    {tGear('category')}
-                  </th>
-                  <th className="text-right px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
-                    {tGear('weight')}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
-                    {tGear('season_label')}
-                  </th>
-                  <th className="text-right px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-zinc-100 dark:border-zinc-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-                  >
-                    <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+        <>
+          <div className="mt-6 space-y-3 md:hidden">
+            {items.map((item) => (
+              <div key={item.id} className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
                       {item.name}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
-                      {tGear(`categories.${item.category}`)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                      {formatWeight(item.weight_g)}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
-                      {tGear(`season.${item.season}`)}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
-                          title={tCommon('edit')}
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete(item.id)}
-                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          title={tCommon('delete')}
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {tGear(`categories.${item.category}`)}
+                      </span>
+                      <span className="text-zinc-300 dark:text-zinc-600">·</span>
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
+                        {formatWeight(item.weight_g)}
+                      </span>
+                      <span className="text-zinc-300 dark:text-zinc-600">·</span>
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {tGear(`season.${item.season}`)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => openEditModal(item)}
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+                      title={tCommon('edit')}
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(item.id)}
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      title={tCommon('delete')}
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+          <div className="mt-6 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                    <th className="text-left px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
+                      {tGear('name')}
+                    </th>
+                    <th className="text-left px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
+                      {tGear('category')}
+                    </th>
+                    <th className="text-right px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
+                      {tGear('weight')}
+                    </th>
+                    <th className="text-left px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
+                      {tGear('season_label')}
+                    </th>
+                    <th className="text-right px-4 py-3 font-medium text-zinc-500 dark:text-zinc-400">
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b border-zinc-100 dark:border-zinc-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+                        {item.name}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                        {tGear(`categories.${item.category}`)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
+                        {formatWeight(item.weight_g)}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                        {tGear(`season.${item.season}`)}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+                            title={tCommon('edit')}
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(item.id)}
+                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title={tCommon('delete')}
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Add/Edit Modal */}

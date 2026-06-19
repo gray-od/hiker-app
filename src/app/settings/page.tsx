@@ -14,14 +14,27 @@ const locales = [
 export default function SettingsPage() {
   const router = useRouter();
   const t = useTranslations('settings');
+  const tCommon = useTranslations('common');
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [currentLocale, setCurrentLocale] = useState('uk');
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
+
+    const cookieLocale = document.cookie
+      .split('; ')
+      .find(c => c.startsWith('NEXT_LOCALE='))
+      ?.split('=')[1];
+
+    if (cookieLocale) {
+      setCurrentLocale(cookieLocale);
+    }
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
@@ -30,6 +43,7 @@ export default function SettingsPage() {
       }
 
       setEmail(user.email || '');
+      setName(user.user_metadata?.full_name || '');
 
       supabase
         .from('profiles')
@@ -38,24 +52,24 @@ export default function SettingsPage() {
         .single()
         .then(({ data }) => {
           if (data) {
-            setName(data.name || '');
-            setCurrentLocale(data.lang || 'uk');
+            if (data.name) setName(data.name);
+            if (!cookieLocale && data.lang) {
+              setCurrentLocale(data.lang);
+            }
           }
           setLoading(false);
         });
     });
-
-    const cookie = document.cookie
-      .split('; ')
-      .find(c => c.startsWith('NEXT_LOCALE='));
-    if (cookie) {
-      setCurrentLocale(cookie.split('=')[1]);
-    }
   }, [router]);
 
-  const switchLocale = (locale: string) => {
+  const switchLocale = async (locale: string) => {
     document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
     setCurrentLocale(locale);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('profiles').update({ lang: locale }).eq('id', user.id);
+    }
     window.location.reload();
   };
 
@@ -108,14 +122,54 @@ export default function SettingsPage() {
               </label>
               <p className="text-sm text-zinc-900 dark:text-zinc-100">{email}</p>
             </div>
-            {name && (
-              <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-                  {t('name')}
-                </label>
-                <p className="text-sm text-zinc-900 dark:text-zinc-100">{name}</p>
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                {t('name')}
+              </label>
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  />
+                  <button
+                    onClick={async () => {
+                      setSavingName(true);
+                      const supabase = createClient();
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (user) {
+                        await supabase.from('profiles').update({ name: nameInput }).eq('id', user.id);
+                      }
+                      setName(nameInput);
+                      setEditingName(false);
+                      setSavingName(false);
+                    }}
+                    disabled={savingName}
+                    className="px-3 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {savingName ? '...' : tCommon('save')}
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    className="px-3 py-2 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  >
+                    {tCommon('cancel')}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-zinc-900 dark:text-zinc-100">{name || '—'}</p>
+                  <button
+                    onClick={() => { setNameInput(name); setEditingName(true); }}
+                    className="text-sm text-[#75a93a] hover:text-[#5d8a2e] font-medium"
+                  >
+                    {tCommon('edit')}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </div>

@@ -455,14 +455,14 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
           {plan!.name}
         </h1>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setEditPlanName(plan!.name);
               setEditPlanModalOpen(true);
               setActionError(null);
             }}
-            className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
             title={tCommon('edit')}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -471,7 +471,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           </button>
           <button
             onClick={() => setConfirmDeletePlan(true)}
-            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title={tCommon('delete')}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -655,19 +655,19 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                             </div>
                             <button
                               onClick={() => openEntryModal(day.id, entry)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-[#75a93a] hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex-shrink-0"
+                              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-[#75a93a] hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex-shrink-0"
                               title={t('edit_entry')}
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
                             <button
                               onClick={() => handleDeleteEntry(entry.id)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
                               title={t('remove_entry')}
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             </button>
@@ -679,9 +679,9 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
                   <button
                     onClick={() => openEntryModal(day.id)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-[#75a93a] hover:text-[#5d8a2e] transition-colors mt-2"
+                    className="min-h-[44px] inline-flex items-center gap-1.5 text-sm font-medium text-[#75a93a] hover:text-[#5d8a2e] transition-colors mt-2"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
                     {t('add_entry')}
@@ -696,7 +696,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       <div className="flex items-center gap-3">
         <button
           onClick={handleAddDay}
-          className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          className="min-h-[44px] flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -706,7 +706,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         <button
           onClick={handleRemoveDay}
           disabled={days.length <= 1}
-          className="flex items-center gap-2 px-4 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-red-600 hover:border-red-300 dark:hover:border-red-800 text-sm font-medium rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="min-h-[44px] flex items-center gap-2 px-4 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-red-600 hover:border-red-300 dark:hover:border-red-800 text-sm font-medium rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />

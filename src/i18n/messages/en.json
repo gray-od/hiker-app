@@ -155,7 +155,9 @@
     "recent_lists": "Recent Lists",
     "recent_meals": "Recent Meal Plans",
     "create_list": "Create List",
-    "create_meal": "Create Meal Plan"
+    "create_meal": "Create Meal Plan",
+    "welcome": "Welcome, {name}!",
+    "welcome_anonymous": "Welcome!"
   },
   "settings": {
     "title": "Settings",

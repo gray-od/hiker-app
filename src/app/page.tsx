@@ -90,8 +90,8 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-1">
           {user.user_metadata?.full_name
-            ? `Вітаємо, ${user.user_metadata.full_name}`
-            : 'Вітаємо!'}
+            ? t('welcome', { name: user.user_metadata.full_name })
+            : t('welcome_anonymous')}
         </p>
       </div>
 

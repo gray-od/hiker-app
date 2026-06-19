@@ -59,7 +59,6 @@ export default async function RootLayout({
           name="apple-mobile-web-app-status-bar-style"
           content="default"
         />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 antialiased font-sans">
         <NextIntlClientProvider messages={messages}>
