@@ -288,9 +288,12 @@ export default function MealsPage() {
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-          {t('title')}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            {t('title')}
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t('subtitle')}</p>
+        </div>
         <button
           onClick={openCreateModal}
           className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"

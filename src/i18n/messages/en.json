@@ -30,7 +30,8 @@
     "settings": "Settings"
   },
   "gear": {
-    "title": "Gear Library",
+    "title": "Gear Hub",
+    "subtitle": "Your hiking gear storage",
     "add_item": "Add Item",
     "edit_item": "Edit Item",
     "delete_confirm": "Are you sure you want to delete this item?",
@@ -64,6 +65,7 @@
   },
   "lists": {
     "title": "Packing Lists",
+    "subtitle": "Gear lists for your hikes",
     "add": "Create List",
     "empty": "You don't have any lists yet. Create your first packing list.",
     "total_weight": "Total Weight",
@@ -95,6 +97,7 @@
   },
   "meals": {
     "title": "Meal Plans",
+    "subtitle": "Meal planning for your hikes",
     "add": "Create Meal Plan",
     "empty": "You don't have any meal plans yet. Create your first meal plan.",
     "day": "Day",

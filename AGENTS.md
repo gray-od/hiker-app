@@ -83,6 +83,7 @@ Auto-creates profile via trigger on auth.users insert.
 | 6 | 18.06.2026 | Meal plans module: overview page (cards grid, create with auto-days, delete), detail page (collapsible day accordions, 4 meal-type groups, add/edit/delete entries, nutrition macros P/F/C, summary cards with totals + daily averages, add/remove days, edit/delete plan), i18n +18 keys per locale, MealDayWithEntries type. | 6 files changed |
 | 7 | 18.06.2026 | Smart meal planning: food catalog (75 products, KBJU per 100g, 13 categories), 3 plan types (comfort/standard/ultralight with norms), 3 meal templates (cyclic rotation), group calculation (people_count), catalog picker with auto-KBJU calculation, daily progress bars (calories/weight vs target), adaptation coefficients by day, enhanced summary cards (per-person/per-group). | 10 files changed |
 | 8 | 19.06.2026 | Mobile UX + i18n + Branding: all touch targets ≥44px (gear cards on mobile, list detail two-row layout, meals buttons, navbar), i18n greeting fix (dashboard), language switcher highlight fix (cookie priority + save to DB), name editing in settings, custom favicon/PWA icons from logo, manifest.ts, logo in sidebar/header. | 13 files changed, 9 files created |
+| 9 | 19.06.2026 | Page subtitles + rename: "Бібліотека спорядження" → "Хаб спорядження", added subtitle hints on gear/lists/meals pages (uk/ru/en). | 6 files changed |
 
 ## Open Issues
 - [x] Применить SQL-миграцию (выполнено 17.06.2026 — через pooler eu-west-1)
@@ -91,7 +92,7 @@ Auto-creates profile via trigger on auth.users insert.
 - [x] Деплой на Vercel — `https://hiker-app.vercel.app` (выполнено 18.06.2026)
 - [x] Supabase OAuth redirect URI добавлен для Vercel домена
 - [x] Реализовать модуль списков снаряжения (Раунд 5)
-- [ ] UX: тултипы-подсказки на страницах (Хаб снаряжения → "ваш склад походного спорядження"), переименовать "Бібліотека" → "Хаб"
+- [x] UX: тултипы-подсказки на страницах (Хаб снаряжения → "ваш склад походного спорядження"), переименовать "Бібліотека" → "Хаб" (Раунд 9)
 - [x] Реализовать модуль раскладок питания (Раунд 6)
 - [ ] PWA: Service Worker + офлайн-режим
 
