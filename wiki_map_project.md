@@ -138,7 +138,7 @@ Three fixes from user testing:
 | KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🟡 Архитектурное решение |
 | KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 Архитектурное решение |
 
-### Что работает после Раунда 12
+### Что работает после Раунда 13
 - ✅ Auth: Google OAuth, login/logout, session refresh
 - ✅ Gear Hub: full CRUD, cards mobile / table desktop, 16 professional categories, weight formatting
 - ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar, direct quantity input
@@ -150,6 +150,7 @@ Three fixes from user testing:
 - ✅ Mobile UX: touch targets ≥44px, 17px base font, safe-area, card layouts, two-row controls
 - ✅ Dark mode: class-based (next-themes), supports Light/Dark/System
 - ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context
+- ✅ AI Monetization: 15 msg/day free for all, Monobank donation button, ai_usage tracking
 - ✅ Deploy: Vercel auto-deploy from GitHub `main` branch
 - ✅ Page subtitles on gear/lists/meals pages
 
@@ -198,7 +199,26 @@ Three fixes from user testing:
 
 **Build result:** ✅ TypeScript clean
 
-### Раунд 13 — PWA: Service Worker + офлайн-режим
+### Раунд 13 (19.06.2026) — AI Rate Limit + Монетизация ✅
+
+Rate limiting и добровольные пожертвования:
+- `supabase/migrations/00005_ai_usage_rate_limit.sql` — таблица `ai_usage` (user_id, date, message_count, UNIQUE), RLS, поле `is_premium` в profiles
+- `api/chat/route.ts` — проверка лимита (15 msg/day) перед вызовом AI, upsert счётчика, возврат 429 RATE_LIMIT при превышении
+- `ChatWidget.tsx` — жёлтый баннер при лимите с кнопкой на Monobank банку, отдельно от общей ошибки
+- `Navbar.tsx` — постоянная ссылка "Підтримати проект" с иконкой Heart: в сайдбаре (desktop) и хедере (mobile), всегда на виду
+- i18n: ключи limit_reached, donate в chat и common секциях
+- Env: `NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou`
+
+**Модель монетизации (trust-based):**
+- 15 сообщений/день для ВСЕХ пользователей одинаково, без premium-обхода
+- Добровольные пожертвования через Monobank банку
+- Если пожертвования > расходы → увеличить лимит для всех
+- Если пожертвований нет → закрыть AI за оплату (ручная верификация: скрин → admin открывает)
+- Лимит регулируется одной константой `FREE_DAILY_LIMIT` в `api/chat/route.ts`
+
+**Миграция:** выполнена через pg pooler
+
+### Раунд 14 — PWA: Service Worker + офлайн-режим
 
 **Концепція:** Повноцінний PWA з офлайн-доступом.
 
@@ -213,7 +233,7 @@ Three fixes from user testing:
 
 **Статус:** Планується
 
-### Раунд 14+ — Експорт/шерінг
+### Раунд 15+ — Експорт/шерінг
 
 - Поділитися раскладкою по посиланню (shared_link в gear_lists)
 - Експорт списку спорядження в PDF/текст
