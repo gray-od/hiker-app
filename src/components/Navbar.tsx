@@ -12,6 +12,7 @@ import {
   LogOut,
   Globe,
   Heart,
+  Apple,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
 
@@ -21,7 +22,16 @@ const locales = [
   { code: 'en', label: 'EN' },
 ] as const;
 
-const navItems = [
+const sidebarItems = [
+  { href: '/', icon: Compass, labelKey: 'dashboard' as const },
+  { href: '/gear', icon: Backpack, labelKey: 'gear' as const },
+  { href: '/lists', icon: ClipboardList, labelKey: 'lists' as const },
+  { href: '/meals', icon: UtensilsCrossed, labelKey: 'meals' as const },
+  { href: '/food', icon: Apple, labelKey: 'food' as const },
+  { href: '/settings', icon: Settings, labelKey: 'settings' as const },
+];
+
+const bottomNavItems = [
   { href: '/', icon: Compass, labelKey: 'dashboard' as const },
   { href: '/gear', icon: Backpack, labelKey: 'gear' as const },
   { href: '/lists', icon: ClipboardList, labelKey: 'lists' as const },
@@ -56,8 +66,6 @@ export default function Navbar() {
     router.push('/login');
   };
 
-  const bottomNav = navItems;
-
   return (
     <>
       {/* ── Desktop side nav ── */}
@@ -73,7 +81,7 @@ export default function Navbar() {
 
         {/* Nav links */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map((item) => {
+          {sidebarItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
@@ -150,7 +158,7 @@ export default function Navbar() {
       {/* ── Mobile bottom bar ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-40 safe-area-bottom">
         <div className="flex items-center justify-around py-1.5">
-          {bottomNav.map((item) => {
+          {bottomNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (

@@ -69,3 +69,16 @@ export interface MealEntry {
 export interface MealDayWithEntries extends MealDay {
   meal_entries: MealEntry[];
 }
+
+export interface UserFoodItem {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string;
+  calories_per100g: number;
+  protein_per100g: number;
+  fat_per100g: number;
+  carbs_per100g: number;
+  default_portion_g: number;
+  created_at: string;
+}

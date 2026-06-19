@@ -38,6 +38,7 @@ hiker-app/
 │   │   ├── meals/              # Meal plans + [id] detail
 │   │   ├── settings/           # Settings (lang, theme, profile)
 │   │   ├── api/chat/           # AI chat API route (DeepSeek + Tavily)
+│   │   ├── food/               # Custom food items CRUD
 │   │   ├── layout.tsx          # Root layout (i18n + ThemeProvider)
 │   │   ├── manifest.ts         # PWA manifest
 │   │   ├── page.tsx            # Dashboard
@@ -79,6 +80,7 @@ meal_plans      — id, user_id, name, plan_type, people_count, days_count, targ
 meal_days       — id, plan_id, day_number, total_calories, total_weight_g
 meal_entries    — id, day_id, meal_type, name, weight_g, calories, protein_g, fat_g, carbs_g
 ai_usage        — id, user_id, date, message_count (UNIQUE user_id+date)
+user_food_items — id, user_id, name, category, calories_per100g, protein_per100g, fat_per100g, carbs_per100g, default_portion_g, created_at
 ```
 
 All tables have RLS — users can only access their own data.
@@ -107,17 +109,18 @@ All tables have RLS — users can only access their own data.
 | 11 | 19.06 | AI-помічник ProHikes: DeepSeek chat + Tavily web search, system prompt (5 рівнів експертизи), markdown rendering, user context injection |
 | 12 | 19.06 | Professional gear categories (16), editable meal plans after creation, direct quantity input, Beta badge |
 | 13 | 19.06 | AI rate limit (15 msg/day), Monobank donation button, ai_usage table, voluntary monetization model |
+| 14 | 19.06 | Custom food items: user_food_items table, /food CRUD page (cards+table), 3-tab meal entry modal (catalog/my products/custom), 14 food categories, KBJU per 100g, navbar update |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 14
-- [ ] Експорт/шерінг (PDF, посилання) — Раунд 15+
-- [ ] Пользовательские продукты питания (user_food_items таблица + UI) — Раунд 15+
+- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 15
+- [ ] Експорт/шерінг (PDF, посилання) — Раунд 16+
 
 ## What Works (summary)
 - Auth: Google OAuth, login/logout, session refresh
 - Gear Hub: full CRUD, cards on mobile, table on desktop, 16 professional categories, weight formatting
 - Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress, direct quantity input
-- Meal Plans: smart planning with 75-product catalog, 3 plan types, templates, group calc, KBJU, progress bars, all fields editable after creation
+- Meal Plans: smart planning with 75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars, all fields editable after creation
+- Custom Food: user food library (/food), full CRUD, 14 categories, KBJU per 100g, default portion, integrated into meal plan entry modal as "My Products" tab
 - i18n: uk/ru/en, greeting translation, lang saves to DB
 - Settings: language switcher, theme toggle (Light/Dark/System), name editing
 - Branding: custom favicon, PWA icons, manifest, logo in navbar

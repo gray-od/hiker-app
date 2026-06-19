@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-import type { MealPlan, MealDay, MealEntry, MealDayWithEntries } from '@/lib/types';
+import type { MealPlan, MealDay, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
 import { getAdaptationCoefficient, PLAN_TYPES } from '@/lib/hiking-standards';
@@ -55,11 +55,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
-  const [catalogMode, setCatalogMode] = useState(true);
+  const [entryMode, setEntryMode] = useState<'catalog' | 'my_products' | 'custom'>('catalog');
   const [selectedProduct, setSelectedProduct] = useState<FoodItem | null>(null);
   const [portionG, setPortionG] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState<FoodCategory | ''>('');
   const [productSearch, setProductSearch] = useState('');
+  const [userFoodItems, setUserFoodItems] = useState<UserFoodItem[]>([]);
+  const [selectedUserProduct, setSelectedUserProduct] = useState<UserFoodItem | null>(null);
 
   useEffect(() => {
     const match = document.cookie.match(/NEXT_LOCALE=(\w+)/);
@@ -99,6 +101,8 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
       if (daysData) {
         setDays(daysData as MealDayWithEntries[]);
+        const { data: userFoodData } = await supabase.from('user_food_items').select('*').eq('user_id', user!.id).order('name');
+        if (userFoodData) setUserFoodItems(userFoodData as UserFoodItem[]);
       }
 
       setLoading(false);
@@ -172,17 +176,23 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     setPortionG(basePortion * (plan?.people_count || 1));
   }
 
+  function selectUserProduct(product: UserFoodItem) {
+    setSelectedUserProduct(product);
+    setPortionG(product.default_portion_g * (plan?.people_count || 1));
+  }
+
   function openEntryModal(dayId: string, entry?: MealEntry) {
     setActiveDayId(dayId);
     setActionError(null);
     setSelectedProduct(null);
+    setSelectedUserProduct(null);
     setProductSearch('');
     setCategoryFilter('');
     setPortionG(0);
 
     if (entry) {
       setEditEntryId(entry.id);
-      setCatalogMode(false);
+      setEntryMode('custom');
       setEntryForm({
         meal_type: entry.meal_type,
         name: entry.name,
@@ -194,7 +204,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       });
     } else {
       setEditEntryId(null);
-      setCatalogMode(true);
+      setEntryMode('catalog');
       setEntryForm({
         meal_type: 'breakfast',
         name: '',
@@ -211,8 +221,9 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   async function handleSaveEntry() {
     if (!activeDayId) return;
 
-    if (!catalogMode && !entryForm.name.trim()) return;
-    if (catalogMode && !selectedProduct) return;
+    if (entryMode === 'custom' && !entryForm.name.trim()) return;
+    if (entryMode === 'catalog' && !selectedProduct) return;
+    if (entryMode === 'my_products' && !selectedUserProduct) return;
 
     const supabase = createClient();
     setSaving(true);
@@ -225,7 +236,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     let saveFat: number;
     let saveCarbs: number;
 
-    if (catalogMode && selectedProduct) {
+    if (entryMode === 'catalog' && selectedProduct) {
       const nutrition = calculateNutrition(selectedProduct, portionG);
       saveName = selectedProduct.name[locale];
       saveWeight = portionG;
@@ -233,6 +244,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       saveProtein = nutrition.protein;
       saveFat = nutrition.fat;
       saveCarbs = nutrition.carbs;
+    } else if (entryMode === 'my_products' && selectedUserProduct) {
+      saveName = selectedUserProduct.name;
+      saveWeight = portionG;
+      saveCalories = Math.round(selectedUserProduct.calories_per100g * portionG / 100);
+      saveProtein = Math.round(selectedUserProduct.protein_per100g * portionG / 100 * 10) / 10;
+      saveFat = Math.round(selectedUserProduct.fat_per100g * portionG / 100 * 10) / 10;
+      saveCarbs = Math.round(selectedUserProduct.carbs_per100g * portionG / 100 * 10) / 10;
     } else {
       saveName = entryForm.name.trim();
       saveWeight = entryForm.weight_g;
@@ -449,6 +467,22 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   });
 
   const catalogNutrition = selectedProduct ? calculateNutrition(selectedProduct, portionG) : null;
+
+  const filteredUserProducts = userFoodItems.filter(p => {
+    if (categoryFilter && p.category !== categoryFilter) return false;
+    if (productSearch) {
+      const search = productSearch.toLowerCase();
+      if (!p.name.toLowerCase().includes(search)) return false;
+    }
+    return true;
+  });
+
+  const userProductNutrition = selectedUserProduct ? {
+    calories: Math.round(selectedUserProduct.calories_per100g * portionG / 100),
+    protein: Math.round(selectedUserProduct.protein_per100g * portionG / 100 * 10) / 10,
+    fat: Math.round(selectedUserProduct.fat_per100g * portionG / 100 * 10) / 10,
+    carbs: Math.round(selectedUserProduct.carbs_per100g * portionG / 100 * 10) / 10,
+  } : null;
 
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
@@ -757,21 +791,27 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
               {!editEntryId && (
                 <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-4">
                   <button
-                    onClick={() => { setCatalogMode(true); setActionError(null); }}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${catalogMode ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    onClick={() => { setEntryMode('catalog'); setActionError(null); }}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'catalog' ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                   >
                     {t('from_catalog')}
                   </button>
                   <button
-                    onClick={() => { setCatalogMode(false); setActionError(null); }}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${!catalogMode ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    onClick={() => { setEntryMode('my_products'); setActionError(null); setSelectedUserProduct(null); setProductSearch(''); setCategoryFilter(''); }}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'my_products' ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                  >
+                    {t('my_products')}
+                  </button>
+                  <button
+                    onClick={() => { setEntryMode('custom'); setActionError(null); }}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'custom' ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                   >
                     {t('custom_entry')}
                   </button>
                 </div>
               )}
 
-              {catalogMode && !editEntryId ? (
+              {entryMode === 'catalog' && !editEntryId ? (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
@@ -891,6 +931,133 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                             <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('carbs')}</div>
                             <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
                               {catalogNutrition.carbs}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : entryMode === 'my_products' && !editEntryId ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      {t('meal_type')}
+                    </label>
+                    <select
+                      value={entryForm.meal_type}
+                      onChange={(e) =>
+                        setEntryForm((prev) => ({
+                          ...prev,
+                          meal_type: e.target.value as MealEntry['meal_type'],
+                        }))
+                      }
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    >
+                      {MEAL_TYPES.map((mt) => (
+                        <option key={mt} value={mt}>
+                          {t(mt)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      {t('category')}
+                    </label>
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value as FoodCategory | '')}
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    >
+                      <option value="">{t('all_categories')}</option>
+                      {foodCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {FOOD_CATEGORY_NAMES[cat][locale]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder={t('search_product')}
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {filteredUserProducts.length === 0 && (
+                      <p className="px-3 py-4 text-sm text-zinc-400 dark:text-zinc-500 text-center">
+                        {tCommon('empty')}
+                      </p>
+                    )}
+                    {filteredUserProducts.map((product) => (
+                      <button
+                        key={product.id}
+                        onClick={() => selectUserProduct(product)}
+                        className={`w-full text-left px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800 ${
+                          selectedUserProduct?.id === product.id
+                            ? 'bg-[#75a93a]/10 border-l-2 border-[#75a93a]'
+                            : ''
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          {product.name}
+                        </div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {product.calories_per100g} {t('kcal')}/{t('per_100g')}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedUserProduct && (
+                    <div className="space-y-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                      <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {selectedUserProduct.name}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                          {t('portion')}
+                        </label>
+                        <input
+                          type="number"
+                          value={portionG}
+                          onChange={(e) => setPortionG(Number(e.target.value))}
+                          min="0"
+                          step="1"
+                          className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                        />
+                      </div>
+                      {userProductNutrition && (
+                        <div className="grid grid-cols-4 gap-2">
+                          <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('kcal')}</div>
+                            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                              {userProductNutrition.calories}
+                            </div>
+                          </div>
+                          <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('protein')}</div>
+                            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                              {userProductNutrition.protein}
+                            </div>
+                          </div>
+                          <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('fat')}</div>
+                            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                              {userProductNutrition.fat}
+                            </div>
+                          </div>
+                          <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('carbs')}</div>
+                            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                              {userProductNutrition.carbs}
                             </div>
                           </div>
                         </div>
@@ -1019,8 +1186,9 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                   onClick={handleSaveEntry}
                   disabled={
                     saving ||
-                    (catalogMode && !editEntryId && (!selectedProduct || portionG <= 0)) ||
-                    (!catalogMode && !entryForm.name.trim())
+                    (entryMode === 'catalog' && !editEntryId && (!selectedProduct || portionG <= 0)) ||
+                    (entryMode === 'my_products' && !editEntryId && (!selectedUserProduct || portionG <= 0)) ||
+                    (entryMode === 'custom' && !entryForm.name.trim())
                   }
                   className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
