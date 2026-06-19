@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { streamText, tool } from 'ai';
+import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 
 const deepseek = createOpenAI({
@@ -96,6 +97,32 @@ export async function POST(req: Request) {
     model: deepseek('deepseek-chat'),
     system: systemPrompt,
     messages,
+    tools: process.env.TAVILY_API_KEY ? {
+      searchWeb: tool({
+        description: 'Search the internet for current information: weather forecasts, emergency service contacts, route conditions, transport schedules, regional info. Use this when user asks about specific locations, weather, or you need up-to-date data.',
+        parameters: z.object({
+          query: z.string().describe('Search query in the language most likely to return good results'),
+        }),
+        execute: async ({ query }) => {
+          const response = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: process.env.TAVILY_API_KEY,
+              query,
+              max_results: 5,
+              include_answer: true,
+            }),
+          });
+          const data = await response.json();
+          if (data.answer) {
+            return `Answer: ${data.answer}\n\nSources:\n${data.results?.map((r: { title: string; url: string; content: string }) => `- ${r.title}: ${r.content} (${r.url})`).join('\n') || ''}`;
+          }
+          return data.results?.map((r: { title: string; url: string; content: string }) => `- ${r.title}: ${r.content} (${r.url})`).join('\n') || 'No results found';
+        },
+      }),
+    } : undefined,
+    maxSteps: 3,
   });
 
   return result.toDataStreamResponse();
