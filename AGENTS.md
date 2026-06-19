@@ -100,8 +100,9 @@ All tables have RLS — users can only access their own data.
 | 10 | 19.06 | Dashboard name from profile, mobile font 17px, dark mode toggle (next-themes) |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js)
-- [ ] AI-інтеграція (деталі TBD)
+- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 12
+- [ ] AI-помічник ProHikes (DeepSeek, Vercel AI SDK) — Раунд 11
+- [ ] Експорт/шерінг (PDF, посилання) — Раунд 13+
 
 ## What Works (summary)
 - Auth: Google OAuth, login/logout, session refresh
