@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 
 const features = [
@@ -44,6 +44,12 @@ export default function LoginPage() {
   const t = useTranslations('common');
   const lt = useTranslations('landing');
   const router = useRouter();
+  const locale = useLocale();
+
+  const switchLocale = (loc: string) => {
+    document.cookie = `NEXT_LOCALE=${loc}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    window.location.reload();
+  };
 
   const [googleLoading, setGoogleLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
@@ -111,6 +117,19 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="max-w-2xl mx-auto px-4 py-12 md:py-20">
+        <div className="flex justify-end mb-6">
+          {(['uk', 'ru', 'en'] as const).map((loc, i) => (
+            <span key={loc} className="flex items-center">
+              {i > 0 && <span className="text-zinc-300 dark:text-zinc-700 mx-1">·</span>}
+              <button
+                onClick={() => switchLocale(loc)}
+                className={`px-1.5 py-1 text-sm font-medium rounded transition-colors ${locale === loc ? 'text-[#75a93a]' : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+              >
+                {loc === 'uk' ? 'UA' : loc.toUpperCase()}
+              </button>
+            </span>
+          ))}
+        </div>
         {/* Hero */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center mb-6">
