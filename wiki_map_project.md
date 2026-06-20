@@ -138,13 +138,13 @@ Three fixes from user testing:
 | KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🟡 Архитектурное решение |
 | KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 Архитектурное решение |
 
-### Що працює після Раунду 16
+### Що працює після Раунду 17
 - ✅ Auth: Google OAuth, login/logout, session refresh
 - ✅ Gear Hub: full CRUD, cards mobile / table desktop, 16 professional categories, weight formatting
 - ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar, direct quantity input, print/PDF export
 - ✅ Meal Plans: smart planning (75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars), all fields editable after creation, print/PDF export
 - ✅ Custom Food: user food library (/food), full CRUD, 14 categories, KBJU per 100g, default portion, integrated into meal plan entry modal as "My Products" tab
-- ✅ Dashboard: greeting from profile name (editable), recent lists + meals cards
+- ✅ Dashboard: greeting from profile name (editable), recent lists + meals cards, TripWeightCard (two dropdowns: gear list + meal plan, combined weight, localStorage persistence)
 - ✅ i18n: uk/ru/en, cookie + DB sync, greeting translates
 - ✅ Settings: language switcher (saves to DB), theme toggle (Light/Dark/System), name editing
 - ✅ Branding: custom favicon + PWA icons, manifest.ts, logo in sidebar/header, Beta badge
@@ -152,10 +152,12 @@ Three fixes from user testing:
 - ✅ Dark mode: class-based (next-themes), supports Light/Dark/System
 - ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context, desktop expand toggle (480↔700px), textarea input with auto-height, word-wrap for long content
 - ✅ AI Monetization: 15 msg/day free for all, Monobank donation button (amber, color harmony), ai_usage tracking
-- ✅ Print/PDF: printable meal plans (KBJU tables per day) and packing lists (☐ checkboxes for paper), @media print CSS
+- ✅ Print/PDF: printable meal plans (KBJU tables per day, responsive mobile preview) and packing lists (☐ checkboxes for paper), @media print CSS
 - ✅ Chat UX: instant auto-scroll (no jumping), safe-area input padding, 480px desktop width, enlarged desktop icons (md:w-5)
 - ✅ Deploy: Vercel auto-deploy from GitHub `main` branch
 - ✅ Page subtitles on gear/lists/meals pages
+- ✅ Weight tooltips: info icons on base/worn/consumable weight cards with hiking terminology explanations
+- ✅ Meal templates: hint at creation + "Apply Template" button on existing plans (replace all entries)
 
 ## Next Steps
 
@@ -264,7 +266,31 @@ Rate limiting и добровольные пожертвования:
 
 **Build result:** ✅ Compiled successfully
 
-### Раунд 17 — PWA: Service Worker + офлайн-режим
+### Раунд 17 (20.06.2026) — Print mobile fix + Weight tooltips + Templates UX + Dashboard weight ✅
+
+4 задачі з user feedback:
+
+**A. Print-превью responsive:**
+- `meals/[id]/print/page.tsx` — `max-w-4xl p-6` → `w-full max-w-4xl px-3 py-4 sm:p-6`, таблиці обгорнуто в `overflow-x-auto`, `text-xs sm:text-sm`, `max-w-[140px] break-words` на назвах, `whitespace-nowrap` на числах
+
+**B. Тултипи категорій ваги:**
+- `lists/[id]/page.tsx` — іконка `ⓘ` (кліклабельна) на картках Базова вага / На собі / Розхідне спорядження, показує підказку з прикладами. Чітке розмежування: розхідне спорядження ≠ їжа (їжу планувати у вкладці Харчування)
+- i18n: ключі `base_weight_hint`, `worn_weight_hint`, `consumable_weight_hint` у всіх 3 локалях
+- Перейменування: "Розхідники" → "Розхідне спорядження" (uk/ru), значення i18n ключів `consumable`, `consumable_weight`
+
+**C. Шаблони — видимість і доступність:**
+- `meals/page.tsx` — зелена підказка з іконкою лампочки "Є готові розкладки від досвідчених туристів" при наявності шаблонів для обраного типу
+- `meals/[id]/page.tsx` — кнопка "Застосувати шаблон" у шапці (іконка clipboard), модальне вікно з шаблонами (фільтр по plan_type), confirm "Це замінить усі поточні записи" → delete all entries/days → insert з шаблону (cyclic pattern × days_count × people_count)
+- i18n: `template_hint`, `apply_template`, `apply_template_confirm`
+
+**D. Карточка ваги на дашборді:**
+- `src/components/TripWeightCard.tsx` — новий client component: два `<select>` (список спорядження + розкладка), localStorage persistence, підрахунок суми (Спорядження + Харчування = Разом), `formatWeight()`, приховується якщо немає даних
+- `src/app/page.tsx` — розширені Supabase запити (join list_items + gear_items.weight_g, join meal_days.total_weight_g), обчислення `listsWithWeight` / `plansWithWeight` на сервері, `.slice(0, 3)` для recent секцій
+- i18n: `trip_weight`, `select_list`, `select_plan`, `gear_weight`, `food_weight`, `combined_weight`, `select_hint`
+
+**Build result:** ✅ TypeScript clean, 14 pages generated
+
+### Раунд 18 — PWA: Service Worker + офлайн-режим
 
 **Концепція:** Повноцінний PWA з офлайн-доступом.
 
@@ -279,7 +305,19 @@ Rate limiting и добровольные пожертвования:
 
 **Статус:** Планується
 
-### Раунд 18+ — Шерінг (shared links)
+### Раунд 19 — AI tool calling (ІІ вносить дані за користувача)
+
+**Концепція:** DeepSeek function calling через Vercel AI SDK tools. ІІ-помічник може створювати спорядження, плани, додавати записи за запитом користувача.
+
+**Що входить:**
+- 5-10 tools (addGearItem, createMealPlan, addMealEntry, createList, etc.)
+- Кожен tool = Supabase мутація з перевіркою auth
+- UI підтвердження: показати що AI зробив, дати скасувати
+- Режим confirm-before-execute для безпеки
+
+**Статус:** Планується
+
+### Раунд 20+ — Шерінг (shared links)
 
 - Генерація унікального токена (UUID) для раскладки/списку
 - Публічний роут `/shared/[token]` без авторизації
@@ -288,7 +326,7 @@ Rate limiting и добровольные пожертвования:
 
 **Статус:** Планується
 
-## File Structure (as of Round 16)
+## File Structure (as of Round 17)
 
 ```
 hiker-app/
@@ -324,7 +362,8 @@ hiker-app/
 │   │   ├── AppShell.tsx                # Conditional navbar wrapper + ChatWidget (print:hidden)
 │   │   ├── ChatWidget.tsx              # AI chat floating widget (print:hidden)
 │   │   ├── Navbar.tsx                  # Responsive nav (sidebar + bottom bar + logo, print:hidden)
-│   │   └── Providers.tsx               # ThemeProvider wrapper (next-themes)
+│   │   ├── Providers.tsx               # ThemeProvider wrapper (next-themes)
+│   │   └── TripWeightCard.tsx          # Dashboard weight card (gear + food selectors, localStorage)
 │   ├── i18n/
 │   │   ├── messages/{uk,ru,en}.json    # Translation dictionaries (~230 keys each)
 │   │   ├── request.ts                  # next-intl message loader (cookie-based)
