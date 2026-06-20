@@ -60,6 +60,13 @@ export default async function RootLayout({
           name="apple-mobile-web-app-status-bar-style"
           content="default"
         />
+        {process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN && (
+          <script
+            defer
+            data-domain={process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN}
+            src="https://plausible.io/js/script.js"
+          />
+        )}
       </head>
       <body className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 antialiased font-sans">
         <Providers>

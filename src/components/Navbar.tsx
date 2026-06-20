@@ -193,6 +193,7 @@ export default function Navbar() {
                 href={process.env.NEXT_PUBLIC_DONATE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label={tcommon('donate')}
                 className="text-amber-600 dark:text-amber-400 p-2.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
               >
                 <Heart className="w-5 h-5" />

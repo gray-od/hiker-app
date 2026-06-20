@@ -3,7 +3,7 @@
 import { useChat } from 'ai/react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Sparkles, X, Send, Loader2, Maximize2, Minimize2 } from 'lucide-react';
+import { Sparkles, X, Send, Loader2, Maximize2, Minimize2, Copy, Check, Paperclip } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 export default function ChatWidget() {
@@ -12,8 +12,11 @@ export default function ChatWidget() {
   const [expanded, setExpanded] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, append, setInput, isLoading, error } = useChat({
     api: '/api/chat',
   });
 
@@ -37,17 +40,35 @@ export default function ChatWidget() {
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
-    handleSubmit(e);
+    e.preventDefault();
+    if (!input.trim() && !attachedFile) return;
+    if (isLoading) return;
+
+    if (attachedFile) {
+      const fullContent = `[Файл: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
+      append({ role: 'user', content: fullContent });
+      setInput('');
+      setAttachedFile(null);
+    } else {
+      handleSubmit(e);
+    }
     resetTextareaHeight();
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (input.trim() && !isLoading) {
+      if ((!input.trim() && !attachedFile) || isLoading) return;
+
+      if (attachedFile) {
+        const fullContent = `[Файл: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
+        append({ role: 'user', content: fullContent });
+        setInput('');
+        setAttachedFile(null);
+      } else {
         handleSubmit(e);
-        resetTextareaHeight();
       }
+      resetTextareaHeight();
     }
   };
 
@@ -73,12 +94,14 @@ export default function ChatWidget() {
             <div className="flex items-center">
               <button
                 onClick={() => setExpanded(!expanded)}
+                aria-label={expanded ? t('collapse') : t('expand')}
                 className="hidden md:flex min-w-[44px] min-h-[44px] items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 {expanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
               <button
                 onClick={() => setOpen(false)}
+                aria-label={t('close')}
                 className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -96,41 +119,53 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+            {messages.map((msg) => {
+              const isCopied = copiedId === msg.id;
+              return (
                 <div
-                  className={`max-w-[85%] min-w-0 px-3 py-2 rounded-2xl text-sm leading-relaxed break-words overflow-hidden ${
-                    msg.role === 'user'
-                      ? 'bg-[#75a93a] text-white rounded-br-md whitespace-pre-wrap'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-md'
-                  }`}
+                  key={msg.id}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'user' ? (
-                    msg.content
-                  ) : (
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-0.5">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5">{children}</ol>,
-                        li: ({ children }) => <li>{children}</li>,
-                        h1: ({ children }) => <p className="font-bold text-base mb-1">{children}</p>,
-                        h2: ({ children }) => <p className="font-bold mb-1">{children}</p>,
-                        h3: ({ children }) => <p className="font-semibold mb-1">{children}</p>,
-                        code: ({ children }) => <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded text-xs break-all">{children}</code>,
-                        pre: ({ children }) => <pre className="overflow-x-auto mb-2 text-xs">{children}</pre>,
-                      }}
-                    >
+                    <div className="max-w-[85%] min-w-0 px-3 py-2 rounded-2xl text-sm leading-relaxed break-words overflow-hidden bg-[#75a93a] text-white rounded-br-md whitespace-pre-wrap">
                       {msg.content}
-                    </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="group max-w-[85%] min-w-0">
+                      <div className="px-3 py-2 rounded-2xl text-sm leading-relaxed break-words overflow-hidden bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-md">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                            strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                            ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-0.5">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5">{children}</ol>,
+                            li: ({ children }) => <li>{children}</li>,
+                            h1: ({ children }) => <p className="font-bold text-base mb-1">{children}</p>,
+                            h2: ({ children }) => <p className="font-bold mb-1">{children}</p>,
+                            h3: ({ children }) => <p className="font-semibold mb-1">{children}</p>,
+                            code: ({ children }) => <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded text-xs break-all">{children}</code>,
+                            pre: ({ children }) => <pre className="overflow-x-auto mb-2 text-xs">{children}</pre>,
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(msg.content);
+                          setCopiedId(msg.id);
+                          setTimeout(() => setCopiedId(null), 2000);
+                        }}
+                        aria-label={isCopied ? t('copied') : t('copy')}
+                        className="mt-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 p-1 rounded"
+                      >
+                        {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {isLoading && messages.length > 0 && (messages[messages.length - 1]?.role === 'user' || !messages[messages.length - 1]?.content) && (
               <div className="flex justify-start">
@@ -164,12 +199,55 @@ export default function ChatWidget() {
 
           </div>
 
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".csv,.txt,.tsv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 102400) {
+                alert(t('file_too_large'));
+                e.target.value = '';
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                setAttachedFile({ name: file.name, content: ev.target?.result as string });
+              };
+              reader.readAsText(file);
+              e.target.value = '';
+            }}
+          />
+
           <form
             onSubmit={onSubmit}
             className="px-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0"
             style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
           >
+            {attachedFile && (
+              <div className="mb-2 flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 text-xs px-2 py-1 rounded-lg">
+                <span className="truncate max-w-[200px]">{attachedFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setAttachedFile(null)}
+                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 shrink-0"
+                  aria-label={t('close')}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
             <div className="flex items-end gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label={t('attach_file')}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -183,7 +261,8 @@ export default function ChatWidget() {
               />
               <button
                 type="submit"
-                disabled={isLoading || !input.trim()}
+                disabled={isLoading || (!input.trim() && !attachedFile)}
+                aria-label={t('send')}
                 className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white rounded-xl transition-colors shrink-0"
               >
                 <Send className="w-4 h-4" />

@@ -23,7 +23,16 @@
     "days": "days",
     "donate": "Support the project",
     "print": "Print",
-    "generated": "Generated"
+    "generated": "Generated",
+    "or": "or",
+    "sign_in_with_email": "Sign in with Email",
+    "sign_up_with_email": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "check_email": "Check your email for confirmation",
+    "no_account": "No account?",
+    "have_account": "Already have an account?",
+    "privacy_policy": "Privacy Policy"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -239,6 +248,25 @@
     "welcome": "Hi! I'm ProHikes AI — an outdoor and survival specialist. I'll help you prepare for your hike, check your gear, and advise on routes and safety.",
     "send": "Send",
     "limit_reached": "Daily message limit reached (15/day). Support the project for more access!",
-    "donate": "Support the project"
+    "donate": "Support the project",
+    "copy": "Copy",
+    "copied": "Copied",
+    "attach_file": "Attach file",
+    "file_too_large": "File too large (max 100 KB)",
+    "close": "Close",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "landing": {
+    "tagline": "Plan your hike smart",
+    "subtitle": "Gear, meals and AI assistant — all in one app",
+    "feature_gear_title": "Gear Hub",
+    "feature_gear_desc": "Manage your gear, track every item's weight",
+    "feature_meals_title": "Meal Plans",
+    "feature_meals_desc": "75 products, macros, templates for comfort and ultralight",
+    "feature_lists_title": "Packing Lists",
+    "feature_lists_desc": "Pack, check off, control your backpack weight",
+    "feature_ai_title": "AI Assistant",
+    "feature_ai_desc": "Gear analysis, recommendations, data import via chat"
   }
 }
