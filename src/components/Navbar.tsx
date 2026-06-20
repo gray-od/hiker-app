@@ -15,7 +15,6 @@ import {
   Apple,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
-import OfflineCacheModal from '@/components/OfflineCacheModal';
 
 const locales = [
   { code: 'uk', label: 'UA' },
@@ -46,7 +45,6 @@ export default function Navbar() {
   const tcommon = useTranslations('common');
   const [langOpen, setLangOpen] = useState(false);
   const router = useRouter();
-  const [offlineCacheOpen, setOfflineCacheOpen] = useState(false);
 
   const isActive = useCallback(
     (href: string) => {
@@ -143,15 +141,6 @@ export default function Navbar() {
             <LogOut className="w-5 h-5 shrink-0" />
             <span>{tcommon('logout')}</span>
           </button>
-          <button
-            onClick={() => setOfflineCacheOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors w-full"
-          >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            {tcommon('offline_access')}
-          </button>
           {process.env.NEXT_PUBLIC_DONATE_URL && (
             <a
               href={process.env.NEXT_PUBLIC_DONATE_URL}
@@ -199,15 +188,6 @@ export default function Navbar() {
             <span className="text-[9px] font-medium bg-[#75a93a]/15 text-[#75a93a] px-1.5 py-0.5 rounded-md">beta</span>
           </Link>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setOfflineCacheOpen(true)}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-[#75a93a] transition-colors"
-              title={tcommon('offline_access')}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-            </button>
             {process.env.NEXT_PUBLIC_DONATE_URL && (
               <a
                 href={process.env.NEXT_PUBLIC_DONATE_URL}
@@ -228,7 +208,6 @@ export default function Navbar() {
           </div>
         </div>
       </header>
-      <OfflineCacheModal open={offlineCacheOpen} onClose={() => setOfflineCacheOpen(false)} />
     </>
   );
 }

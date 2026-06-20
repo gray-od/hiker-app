@@ -142,9 +142,11 @@ NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou
 | 17 | 20.06 | Print mobile fix, weight tooltips, "Розхідники"→"Розхідне спорядження", template hint+apply button, dashboard TripWeightCard |
 | 18 | 20.06 | AI tool calling: 4 tools (createMealPlan, addGearItems, createGearList, addItemsToList), system prompt English rewrite, smart language detection, tool-use guidelines |
 | 19 | 20.06 | PWA offline: Service Worker (app shell cache), localStorage data cache for meals/lists, offline banner, SWRegister, install prompt |
+| 20 | 20.06 | Откат R19: офлайн через SW несовместим з Next.js App Router (SSR). Видалено SW, SWRegister, offline.html, OfflineCacheModal, offline-cache.ts. Print/PDF — робоче рішення для офлайну |
 
 ## Open Issues
-- [ ] Групові походи (розподіл спорядження та їжі по учасниках, персональні списки) — Раунд 20+
+- [ ] Групові походи (розподіл спорядження та їжі по учасниках, персональні списки) — Раунд 21+
+- [ ] Офлайн: Next.js App Router (SSR) несумісний з Service Worker кешуванням сторінок. Print/PDF — поточне рішення. Для повноцінного офлайну потрібна зміна архітектури (SPA або React Native)
 
 ## What Works
 

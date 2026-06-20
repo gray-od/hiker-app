@@ -55,7 +55,6 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   const [confirmDeletePlan, setConfirmDeletePlan] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
@@ -73,22 +72,6 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && !navigator.onLine) {
-      try {
-        const cached = localStorage.getItem(`offline_meal_${id}`);
-        if (cached) {
-          const { plan: p, days: d } = JSON.parse(cached);
-          setPlan(p);
-          setDays(d);
-          setIsOffline(true);
-        } else {
-          setError('offline');
-        }
-      } catch { setError('offline'); }
-      setLoading(false);
-      return;
-    }
-
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -121,27 +104,10 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
       if (daysData) {
         setDays(daysData as MealDayWithEntries[]);
-        try { localStorage.setItem(`offline_meal_${id}`, JSON.stringify({ plan: planData, days: daysData, cachedAt: Date.now() })); } catch {}
-        fetch(window.location.href).catch(() => {});
         const { data: userFoodData } = await supabase.from('user_food_items').select('*').eq('user_id', user!.id).order('name');
         if (userFoodData) setUserFoodItems(userFoodData as UserFoodItem[]);
       }
 
-      setLoading(false);
-    }).catch(() => {
-      try {
-        const cached = localStorage.getItem(`offline_meal_${id}`);
-        if (cached) {
-          const { plan: p, days: d } = JSON.parse(cached);
-          setPlan(p);
-          setDays(d);
-          setIsOffline(true);
-        } else {
-          setError('offline');
-        }
-      } catch {
-        setError('offline');
-      }
       setLoading(false);
     });
   }, [id, router]);
@@ -617,12 +583,6 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           {t('back_to_plans')}
         </button>
       </div>
-
-      {isOffline && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-2 mb-4 text-sm text-amber-700 dark:text-amber-400">
-          {tCommon('offline_mode')}
-        </div>
-      )}
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">

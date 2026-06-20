@@ -28,25 +28,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [weightHint, setWeightHint] = useState<string | null>(null);
-  const [isOffline, setIsOffline] = useState(false);
-
   useEffect(() => {
-    if (typeof window !== 'undefined' && !navigator.onLine) {
-      try {
-        const cached = localStorage.getItem(`offline_list_${id}`);
-        if (cached) {
-          const { list: l, items: i } = JSON.parse(cached);
-          setList(l);
-          setListItems(i);
-          setIsOffline(true);
-        } else {
-          setError('offline');
-        }
-      } catch { setError('offline'); }
-      setLoading(false);
-      return;
-    }
-
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -78,8 +60,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (itemsData) {
         setListItems(itemsData as ListItemWithGear[]);
-        try { localStorage.setItem(`offline_list_${id}`, JSON.stringify({ list: listData, items: itemsData, cachedAt: Date.now() })); } catch {}
-        fetch(window.location.href).catch(() => {});
       }
 
       const { data: gearData } = await supabase
@@ -92,21 +72,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         setAllGear(gearData as GearItem[]);
       }
 
-      setLoading(false);
-    }).catch(() => {
-      try {
-        const cached = localStorage.getItem(`offline_list_${id}`);
-        if (cached) {
-          const { list: l, items: i } = JSON.parse(cached);
-          setList(l);
-          setListItems(i);
-          setIsOffline(true);
-        } else {
-          setError('offline');
-        }
-      } catch {
-        setError('offline');
-      }
       setLoading(false);
     });
   }, [id, router]);
@@ -415,12 +380,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       {error && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
           {error}
-        </div>
-      )}
-
-      {isOffline && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-2 mb-4 text-sm text-amber-700 dark:text-amber-400">
-          {tCommon('offline_mode')}
         </div>
       )}
 
