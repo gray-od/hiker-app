@@ -53,8 +53,8 @@ export default async function PrivacyPage() {
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('deletion_title')}</h2>
             <p>
               {p('deletion_text')}{' '}
-              <a href="mailto:support@prohikes.app" className="text-[#75a93a] hover:underline">
-                support@prohikes.app
+              <a href="https://github.com/gray-od/hiker-app/issues" target="_blank" rel="noopener noreferrer" className="text-[#75a93a] hover:underline">
+                GitHub Issues
               </a>.{' '}
               {p('deletion_period')}
             </p>

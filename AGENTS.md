@@ -143,25 +143,31 @@ NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou
 | 18 | 20.06 | AI tool calling: 4 tools (createMealPlan, addGearItems, createGearList, addItemsToList), system prompt English rewrite, smart language detection, tool-use guidelines |
 | 19 | 20.06 | PWA offline: Service Worker (app shell cache), localStorage data cache for meals/lists, offline banner, SWRegister, install prompt |
 | 20 | 20.06 | Откат R19: офлайн через SW несовместим з Next.js App Router (SSR). Видалено SW, SWRegister, offline.html, OfflineCacheModal, offline-cache.ts. Print/PDF — робоче рішення для офлайну |
+| 21 | 20.06 | Pre-launch: landing page (hero+фичи+email auth), privacy policy (i18n), print gear/food, chat copy+file upload, a11y aria-labels, Vercel Analytics, README manifesto, language switcher on landing |
 
 ## Open Issues
-- [ ] Групові походи (розподіл спорядження та їжі по учасниках, персональні списки) — Раунд 21+
-- [ ] Офлайн: Next.js App Router (SSR) несумісний з Service Worker кешуванням сторінок. Print/PDF — поточне рішення. Для повноцінного офлайну потрібна зміна архітектури (SPA або React Native)
+- [ ] Видалення акаунту — кнопка в Настройках + API route для каскадного видалення даних з усіх таблиць — Раунд 22
+- [ ] Групові походи (розподіл спорядження та їжі по учасниках, персональні списки) — Раунд 23+
+- [ ] Офлайн: Next.js App Router (SSR) несумісний з Service Worker кешуванням сторінок. Print/PDF — поточне рішення
 
 ## What Works
 
 **Core modules:**
-- Gear Hub — full CRUD, cards mobile / table desktop, 16 categories, weight formatting
+- Gear Hub — full CRUD, cards mobile / table desktop, 16 categories, weight formatting, print
 - Packing Lists — create/delete, add from gear, packed/worn/consumable, weights, progress, print
 - Meal Plans — 75-product catalog + custom user products, 3 plan types, templates, group calc, KBJU, progress bars, editable after creation, print
-- Custom Food — /food CRUD, 14 categories, KBJU per 100g, integrated into meal entry modal
+- Custom Food — /food CRUD, 14 categories, KBJU per 100g, integrated into meal entry modal, print
 
 **Infrastructure:**
-- Auth: Google OAuth, session refresh via proxy.ts
+- Auth: Google OAuth + Email/password, session refresh via proxy.ts
+- Landing page: hero, 4 feature cards, Google + email auth, language switcher
+- Privacy policy: /privacy, i18n (uk/ru/en), GitHub Issues for data deletion
 - i18n: uk/ru/en, cookie + DB sync
 - Dark mode: Light/Dark/System via next-themes
 - Branding: favicon, PWA icons, manifest, logo, Beta badge
 - Mobile: 44px targets, 17px font, safe-area, card layouts
+- A11y: aria-labels on all icon-only buttons
+- Analytics: Vercel Analytics (@vercel/analytics)
 - Deploy: Vercel auto-deploy from GitHub main
 
 **AI Assistant:**
@@ -169,6 +175,9 @@ NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou
 - Proactive gear/meal analysis (reads user data from Supabase)
 - Markdown rendering (react-markdown), word-wrap, text overflow handling
 - Desktop expand toggle (480↔700px), textarea with auto-height
+- Copy button on AI messages (clipboard + Check feedback)
+- File upload in chat (📎 CSV/TXT ≤100KB, FileReader → append to message)
 - 15 msg/day rate limit, Monobank donation (amber CTA)
+- 4 tools: createMealPlan, addGearItems, createGearList, addItemsToList
 
 > Для подробной истории раундов, архитектурных решений и что было испробовано → `wiki_map_project.md`
