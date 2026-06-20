@@ -24,6 +24,10 @@ export default function SettingsPage() {
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteEmailInput, setDeleteEmailInput] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -78,6 +82,30 @@ export default function SettingsPage() {
       await supabase.from('profiles').update({ lang: locale }).eq('id', user.id);
     }
     window.location.reload();
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: deleteEmailInput }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setDeleteError(err.error || t('delete_error'));
+        setDeleting(false);
+        return;
+      }
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch {
+      setDeleteError(t('delete_error'));
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -203,6 +231,60 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      <div className="mt-10 border-t border-red-200 dark:border-red-900 pt-6">
+        <h2 className="text-base font-semibold text-red-600 dark:text-red-400 mb-2">
+          {t('danger_zone')}
+        </h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+          {t('delete_account_description')}
+        </p>
+        <button
+          onClick={() => { setDeleteModalOpen(true); setDeleteEmailInput(''); setDeleteError(''); }}
+          className="px-4 py-2 min-w-[44px] min-h-[44px] bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          {t('delete_account')}
+        </button>
+      </div>
+
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              {t('delete_confirm_title')}
+            </h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              {t('delete_confirm_text', { email })}
+            </p>
+            <input
+              type="email"
+              value={deleteEmailInput}
+              onChange={(e) => setDeleteEmailInput(e.target.value)}
+              placeholder={t('delete_confirm_placeholder')}
+              className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
+            />
+            {deleteError && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-4">{deleteError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deleting}
+                className="px-4 py-2 min-w-[44px] min-h-[44px] text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                {tCommon('cancel')}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteEmailInput.toLowerCase() !== email.toLowerCase()}
+                className="px-4 py-2 min-w-[44px] min-h-[44px] bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {deleting ? '...' : t('delete_confirm_button')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

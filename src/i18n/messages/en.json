@@ -240,7 +240,15 @@
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "danger_zone": "Danger Zone",
+    "delete_account": "Delete Account",
+    "delete_account_description": "After deleting your account, all your data (gear, lists, meal plans, food items) will be permanently removed.",
+    "delete_confirm_title": "Delete Account",
+    "delete_confirm_text": "Enter {email} to confirm deletion. This action cannot be undone.",
+    "delete_confirm_placeholder": "Enter your email",
+    "delete_confirm_button": "Delete permanently",
+    "delete_error": "Failed to delete account. Please try again later."
   },
   "chat": {
     "title": "AI Assistant",
