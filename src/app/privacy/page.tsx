@@ -51,7 +51,8 @@ export default async function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('deletion_title')}</h2>
-            <p>
+            <p>{p('deletion_self_service')}</p>
+            <p className="mt-2">
               {p('deletion_text')}{' '}
               <a href="https://github.com/gray-od/hiker-app/issues" target="_blank" rel="noopener noreferrer" className="text-[#75a93a] hover:underline">
                 GitHub Issues
