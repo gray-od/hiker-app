@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://hiker-app-six.vercel.app'),
+  metadataBase: new URL('https://hiker-app.vercel.app'),
   title: 'ProHikes — Планування походів',
   description:
     'Застосунок для планування туристичного спорядження та розкладок харчування',

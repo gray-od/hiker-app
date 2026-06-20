@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/gear', '/food', '/lists', '/meals', '/settings'],
     },
-    sitemap: 'https://hiker-app-six.vercel.app/sitemap.xml',
+    sitemap: 'https://hiker-app.vercel.app/sitemap.xml',
   };
 }

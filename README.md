@@ -4,7 +4,7 @@
 
 Built by a hiker. Coded by AI. Open source.
 
-[Live App](https://hiker-app-six.vercel.app) · [Report Bug](https://github.com/gray-od/hiker-app/issues)
+[Live App](https://hiker-app.vercel.app) · [Report Bug](https://github.com/gray-od/hiker-app/issues)
 
 ---
 
