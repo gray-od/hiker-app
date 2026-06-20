@@ -147,6 +147,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 | 20 | 20.06 | Откат R19: офлайн через SW несовместим з Next.js App Router (SSR). Видалено SW, SWRegister, offline.html, OfflineCacheModal, offline-cache.ts. Print/PDF — робоче рішення для офлайну |
 | 21 | 20.06 | Pre-launch: landing page (hero+фичи+email auth), privacy policy (i18n), print gear/food, chat copy+file upload, a11y aria-labels, Vercel Analytics, README manifesto, language switcher on landing |
 | 22 | 20.06 | Account deletion: danger zone in Settings, email-confirm modal, POST /api/account/delete (service_role admin), DB cascade cleanup, i18n |
+| 23 | 20.06 | Pre-launch hardening: error pages (404/error/global-error), OG meta tags, opengraph-image, robots.txt, sitemap.xml, LIKE wildcard escape, DB error leak fix |
 
 ## Open Issues
 - [x] Видалення акаунту — кнопка в Настройках + API route для каскадного видалення даних з усіх таблиць — Раунд 22 ✅
@@ -165,6 +166,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 - Auth: Google OAuth + Email/password, session refresh via proxy.ts, account deletion (service_role admin)
 - Landing page: hero, 4 feature cards, Google + email auth, language switcher
 - Privacy policy: /privacy, i18n (uk/ru/en), self-service deletion + GitHub Issues fallback
+- SEO: OG meta tags, twitter card, opengraph-image (dynamic), robots.txt, sitemap.xml, metadataBase
+- Error pages: branded 404 (not-found.tsx), error boundary (error.tsx), global error (global-error.tsx)
 - i18n: uk/ru/en, cookie + DB sync
 - Dark mode: Light/Dark/System via next-themes
 - Branding: favicon, PWA icons, manifest, logo, Beta badge
