@@ -189,29 +189,22 @@ export async function POST(req: Request) {
 
           const template = templateId ? getMealTemplate(templateId) : null;
 
-          for (let i = 0; i < daysCount; i++) {
-            const { data: dayData } = await supabase
-              .from('meal_days')
-              .insert({ plan_id: plan.id, day_number: i + 1, total_calories: 0, total_weight_g: 0 })
-              .select()
-              .single();
+          const daysToInsert: { plan_id: string; day_number: number; total_calories: number; total_weight_g: number }[] = [];
+          const entriesByDay: { meal_type: string; name: string; weight_g: number; calories: number; protein_g: number; fat_g: number; carbs_g: number }[][] = [];
 
-            if (!dayData) continue;
+          for (let i = 0; i < daysCount; i++) {
+            let dayCalories = 0;
+            let dayWeight = 0;
+            const dayEntries: typeof entriesByDay[0] = [];
 
             if (template) {
               const pattern = template.dayPatterns[i % template.dayPatterns.length];
-              let dayCalories = 0;
-              let dayWeight = 0;
-
               for (const entry of pattern.entries) {
                 const foodItem = FOOD_CATALOG.find(f => f.id === entry.catalogId);
                 if (!foodItem) continue;
-
                 const portionG = Math.round(foodItem.defaultPortion[planType] * (entry.portionMultiplier || 1) * peopleCount);
                 const nutrition = calculateNutrition(foodItem, portionG);
-
-                await supabase.from('meal_entries').insert({
-                  day_id: dayData.id,
+                dayEntries.push({
                   meal_type: entry.mealType,
                   name: foodItem.name[dataLocale],
                   weight_g: portionG,
@@ -220,18 +213,28 @@ export async function POST(req: Request) {
                   fat_g: nutrition.fat,
                   carbs_g: nutrition.carbs,
                 });
-
                 dayCalories += nutrition.calories;
                 dayWeight += portionG;
-                totalEntries++;
               }
+            }
 
-              totalWeight += dayWeight;
+            daysToInsert.push({ plan_id: plan.id, day_number: i + 1, total_calories: dayCalories, total_weight_g: dayWeight });
+            entriesByDay.push(dayEntries);
+            totalEntries += dayEntries.length;
+            totalWeight += dayWeight;
+          }
 
-              await supabase
-                .from('meal_days')
-                .update({ total_calories: dayCalories, total_weight_g: dayWeight })
-                .eq('id', dayData.id);
+          const { data: insertedDays } = await supabase
+            .from('meal_days')
+            .insert(daysToInsert)
+            .select('id');
+
+          if (insertedDays && template) {
+            const allEntries = insertedDays.flatMap((day, i) =>
+              entriesByDay[i].map(entry => ({ ...entry, day_id: day.id }))
+            );
+            if (allEntries.length > 0) {
+              await supabase.from('meal_entries').insert(allEntries);
             }
           }
 
@@ -262,28 +265,22 @@ export async function POST(req: Request) {
           })).describe('Array of gear items to add'),
         }),
         execute: async ({ items }) => {
-          const inserted = [];
-          let totalWeight = 0;
+          const itemsToInsert = items.map(item => ({
+            user_id: userId,
+            name: item.name,
+            category: item.category,
+            weight_g: item.weightG,
+            season: item.season,
+            notes: item.notes || null,
+          }));
 
-          for (const item of items) {
-            const { data, error } = await supabase
-              .from('gear_items')
-              .insert({
-                user_id: userId,
-                name: item.name,
-                category: item.category,
-                weight_g: item.weightG,
-                season: item.season,
-                notes: item.notes || null,
-              })
-              .select('id, name, weight_g')
-              .single();
+          const { data } = await supabase
+            .from('gear_items')
+            .insert(itemsToInsert)
+            .select('id, name, weight_g');
 
-            if (data) {
-              inserted.push({ id: data.id, name: data.name, weightG: data.weight_g });
-              totalWeight += data.weight_g;
-            }
-          }
+          const inserted = (data || []).map(d => ({ id: d.id, name: d.name, weightG: d.weight_g }));
+          const totalWeight = inserted.reduce((sum, i) => sum + i.weightG, 0);
 
           return {
             success: true,

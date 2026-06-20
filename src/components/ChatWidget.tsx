@@ -132,7 +132,7 @@ export default function ChatWidget() {
               </div>
             ))}
 
-            {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
+            {isLoading && messages.length > 0 && (messages[messages.length - 1]?.role === 'user' || !messages[messages.length - 1]?.content) && (
               <div className="flex justify-start">
                 <div className="bg-zinc-100 dark:bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-md">
                   <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
