@@ -7,6 +7,10 @@ import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
 import { getMealTemplate } from '@/lib/meal-templates';
 
+function escapeLike(str: string): string {
+  return str.replace(/[%_\\]/g, '\\$&');
+}
+
 const deepseek = createOpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY!,
   baseURL: 'https://api.deepseek.com',
@@ -182,7 +186,7 @@ export async function POST(req: Request) {
             .select()
             .single();
 
-          if (planError || !plan) return { error: planError?.message || 'Failed to create plan' };
+          if (planError || !plan) return { error: 'Failed to create plan' };
 
           let totalEntries = 0;
           let totalWeight = 0;
@@ -311,7 +315,7 @@ export async function POST(req: Request) {
             .select()
             .single();
 
-          if (error || !list) return { error: error?.message || 'Failed to create list' };
+          if (error || !list) return { error: 'Failed to create list' };
 
           return {
             success: true,
@@ -339,7 +343,7 @@ export async function POST(req: Request) {
               .from('gear_items')
               .select('id, name, weight_g')
               .eq('user_id', userId)
-              .ilike('name', `%${itemName}%`)
+              .ilike('name', `%${escapeLike(itemName)}%`)
               .limit(1)
               .single();
 
@@ -379,8 +383,7 @@ export async function POST(req: Request) {
   });
 
   return result.toDataStreamResponse();
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(message, { status: 500 });
+  } catch {
+    return new Response('Internal server error', { status: 500 });
   }
 }

@@ -230,6 +230,12 @@
     "combined_weight": "Разом",
     "select_hint": "Оберіть список та розкладку для підрахунку"
   },
+  "errors": {
+    "not_found": "Сторінку не знайдено",
+    "something_went_wrong": "Щось пішло не так",
+    "try_again": "Спробувати ще",
+    "go_home": "На головну"
+  },
   "settings": {
     "title": "Налаштування",
     "language": "Мова інтерфейсу",

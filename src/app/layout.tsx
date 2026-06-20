@@ -18,9 +18,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://hiker-app-six.vercel.app'),
   title: 'ProHikes — Планування походів',
   description:
     'Застосунок для планування туристичного спорядження та розкладок харчування',
+  openGraph: {
+    title: 'ProHikes — Планування походів',
+    description: 'Застосунок для планування туристичного спорядження та розкладок харчування',
+    type: 'website',
+    locale: 'uk_UA',
+    siteName: 'ProHikes',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ProHikes — Планування походів',
+    description: 'Застосунок для планування туристичного спорядження та розкладок харчування',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

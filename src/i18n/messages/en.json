@@ -230,6 +230,12 @@
     "combined_weight": "Total",
     "select_hint": "Select a list and meal plan to calculate"
   },
+  "errors": {
+    "not_found": "Page not found",
+    "something_went_wrong": "Something went wrong",
+    "try_again": "Try again",
+    "go_home": "Go home"
+  },
   "settings": {
     "title": "Settings",
     "language": "Interface language",

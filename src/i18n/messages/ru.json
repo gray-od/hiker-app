@@ -230,6 +230,12 @@
     "combined_weight": "Итого",
     "select_hint": "Выберите список и раскладку для подсчёта"
   },
+  "errors": {
+    "not_found": "Страница не найдена",
+    "something_went_wrong": "Что-то пошло не так",
+    "try_again": "Попробовать ещё",
+    "go_home": "На главную"
+  },
   "settings": {
     "title": "Настройки",
     "language": "Язык интерфейса",
