@@ -73,6 +73,22 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   }, []);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      try {
+        const cached = localStorage.getItem(`offline_meal_${id}`);
+        if (cached) {
+          const { plan: p, days: d } = JSON.parse(cached);
+          setPlan(p);
+          setDays(d);
+          setIsOffline(true);
+        } else {
+          setError('offline');
+        }
+      } catch { setError('offline'); }
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {

@@ -24,7 +24,8 @@
     "donate": "Support the project",
     "print": "Print",
     "generated": "Generated",
-    "offline_mode": "Offline — showing cached data"
+    "offline_mode": "Offline — showing cached data",
+    "install_app": "Install app"
   },
   "nav": {
     "dashboard": "Dashboard",

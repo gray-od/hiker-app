@@ -31,6 +31,22 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      try {
+        const cached = localStorage.getItem(`offline_list_${id}`);
+        if (cached) {
+          const { list: l, items: i } = JSON.parse(cached);
+          setList(l);
+          setListItems(i);
+          setIsOffline(true);
+        } else {
+          setError('offline');
+        }
+      } catch { setError('offline'); }
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
