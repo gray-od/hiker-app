@@ -25,7 +25,12 @@
     "print": "Print",
     "generated": "Generated",
     "offline_mode": "Offline — showing cached data",
-    "install_app": "Install app"
+    "install_app": "Install app",
+    "offline_access": "Offline Access",
+    "save_selected": "Save selected",
+    "clear_cache": "Clear all",
+    "cached": "Cached",
+    "no_items": "No data to cache"
   },
   "nav": {
     "dashboard": "Dashboard",

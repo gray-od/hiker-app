@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { cacheMealPlan, cacheGearList } from '@/lib/offline-cache';
 
 interface WeightItem {
   id: string;
@@ -41,6 +42,12 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
   useEffect(() => {
     if (!mounted) return;
     localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId, planId: selectedPlanId }));
+  }, [selectedListId, selectedPlanId, mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (selectedListId) cacheGearList(selectedListId).catch(() => {});
+    if (selectedPlanId) cacheMealPlan(selectedPlanId).catch(() => {});
   }, [selectedListId, selectedPlanId, mounted]);
 
   const selectedList = lists.find(l => l.id === selectedListId);

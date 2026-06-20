@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import ChatWidget from '@/components/ChatWidget';
 import SWRegister from '@/components/SWRegister';
+import { getCachedItems } from '@/lib/offline-cache';
 
 const PUBLIC_ROUTES = ['/login'];
 
@@ -24,20 +25,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const scanCache = () => {
-      const items: CachedItem[] = [];
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key?.startsWith('offline_meal_')) {
-            const data = JSON.parse(localStorage.getItem(key)!);
-            items.push({ id: key.replace('offline_meal_', ''), name: data.plan?.name || '—', type: 'meal' });
-          }
-          if (key?.startsWith('offline_list_')) {
-            const data = JSON.parse(localStorage.getItem(key)!);
-            items.push({ id: key.replace('offline_list_', ''), name: data.list?.name || '—', type: 'list' });
-          }
-        }
-      } catch {}
+      const cached = getCachedItems();
+      const items: CachedItem[] = [
+        ...cached.meals.map(m => ({ id: m.id, name: m.name, type: 'meal' as const })),
+        ...cached.lists.map(l => ({ id: l.id, name: l.name, type: 'list' as const })),
+      ];
       setCachedItems(items);
     };
 

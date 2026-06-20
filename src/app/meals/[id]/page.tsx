@@ -121,7 +121,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
       if (daysData) {
         setDays(daysData as MealDayWithEntries[]);
-        try { localStorage.setItem(`offline_meal_${id}`, JSON.stringify({ plan: planData, days: daysData })); } catch {}
+        try { localStorage.setItem(`offline_meal_${id}`, JSON.stringify({ plan: planData, days: daysData, cachedAt: Date.now() })); } catch {}
         fetch(window.location.href).catch(() => {});
         const { data: userFoodData } = await supabase.from('user_food_items').select('*').eq('user_id', user!.id).order('name');
         if (userFoodData) setUserFoodItems(userFoodData as UserFoodItem[]);

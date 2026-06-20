@@ -78,7 +78,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (itemsData) {
         setListItems(itemsData as ListItemWithGear[]);
-        try { localStorage.setItem(`offline_list_${id}`, JSON.stringify({ list: listData, items: itemsData })); } catch {}
+        try { localStorage.setItem(`offline_list_${id}`, JSON.stringify({ list: listData, items: itemsData, cachedAt: Date.now() })); } catch {}
         fetch(window.location.href).catch(() => {});
       }
 
