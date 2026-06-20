@@ -23,7 +23,8 @@
     "days": "days",
     "donate": "Support the project",
     "print": "Print",
-    "generated": "Generated"
+    "generated": "Generated",
+    "offline_mode": "Offline — showing cached data"
   },
   "nav": {
     "dashboard": "Dashboard",

@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import ChatWidget from '@/components/ChatWidget';
+import SWRegister from '@/components/SWRegister';
 
 const PUBLIC_ROUTES = ['/login'];
 
@@ -21,6 +22,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <ChatWidget />
+      <SWRegister />
     </>
   );
 }
