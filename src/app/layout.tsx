@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import { Analytics } from '@vercel/analytics/next';
 import AppShell from '@/components/AppShell';
 import { Providers } from '@/components/Providers';
 import './globals.css';
@@ -73,6 +74,7 @@ export default async function RootLayout({
           <NextIntlClientProvider messages={messages}>
             <AppShell>{children}</AppShell>
           </NextIntlClientProvider>
+          <Analytics />
         </Providers>
       </body>
     </html>
