@@ -138,7 +138,7 @@ Three fixes from user testing:
 | KI-5 | next-intl middleware удалён — несовместим с Next.js 16 proxy | 🟡 Архитектурное решение |
 | KI-6 | middleware.ts заменён на proxy.ts (только Supabase refresh, /auth/* исключён) | 🟡 Архитектурное решение |
 
-### Що працює після Раунду 17
+### Що працює після Раунду 18
 - ✅ Auth: Google OAuth, login/logout, session refresh
 - ✅ Gear Hub: full CRUD, cards mobile / table desktop, 16 professional categories, weight formatting
 - ✅ Packing Lists: create/delete, add from gear library, packed/worn/consumable, weights, progress bar, direct quantity input, print/PDF export
@@ -151,6 +151,7 @@ Three fixes from user testing:
 - ✅ Mobile UX: touch targets ≥44px, 17px base font, safe-area, card layouts, two-row controls
 - ✅ Dark mode: class-based (next-themes), supports Light/Dark/System
 - ✅ AI Assistant: DeepSeek chat with Tavily web search, 5-level expertise, proactive gear/meal analysis, markdown responses, user data context, desktop expand toggle (480↔700px), textarea input with auto-height, word-wrap for long content
+- ✅ AI Tool Calling: 4 tools (createMealPlan, addGearItems, createGearList, addItemsToList), smart language detection (any chat language, app data in uk/ru/en), mandatory confirm-before-create flow, batch operations with expert knowledge
 - ✅ AI Monetization: 15 msg/day free for all, Monobank donation button (amber, color harmony), ai_usage tracking
 - ✅ Print/PDF: printable meal plans (KBJU tables per day, responsive mobile preview) and packing lists (☐ checkboxes for paper), @media print CSS
 - ✅ Chat UX: instant auto-scroll (no jumping), safe-area input padding, 480px desktop width, enlarged desktop icons (md:w-5)
@@ -290,7 +291,34 @@ Rate limiting и добровольные пожертвования:
 
 **Build result:** ✅ TypeScript clean, 14 pages generated
 
-### Раунд 18 — PWA: Service Worker + офлайн-режим
+### Раунд 18 (20.06.2026) — AI Tool Calling ✅
+
+AI-помічник тепер може створювати дані в додатку за запитом користувача:
+
+**Системний промпт:**
+- Повністю переписаний на English (краще розуміння LLM, менше токенів)
+- Smart language detection: AI автоматично відповідає мовою користувача (будь-якою)
+- Дані в додатку створюються на мові locale (uk/ru або English для всіх інших)
+- Попередження при розбіжності мов чату та даних (один раз)
+- Tool Use Guidelines: обов'язкова фаза питань → підтвердження → виконання
+- AI використовує реальні ваги снаряги як експерт (не вигадує цифри)
+
+**4 інструменти:**
+| Tool | Що робить | Пакетний? |
+|---|---|---|
+| `createMealPlan` | Створити розкладку (+ шаблон) | Так — план + дні + записи |
+| `addGearItems` | Додати 1-N предметів у хаб | Так — масив предметів |
+| `createGearList` | Створити список спорядження | Ні |
+| `addItemsToList` | Додати предмети до списку (пошук за назвою) | Так — масив імен |
+
+**Технічні зміни:**
+- `api/chat/route.ts` — 4 tools з execute-функціями (Supabase мутації), searchWeb через spread `...()`, `maxSteps: 6`, userId/dataLocale через closure
+- `chat-system-prompt.ts` — повний English rewrite (119 рядків), Language Rules, Tool Use Guidelines, AVAILABLE TEMPLATES, GEAR CATEGORIES
+- User context розширено ID-шниками (`[id] name | category | ...`) для прив'язки до інструментів
+
+**Build result:** ✅ TypeScript clean, 14 pages generated
+
+### Раунд 19 — PWA: Service Worker + офлайн-режим
 
 **Концепція:** Повноцінний PWA з офлайн-доступом.
 
@@ -307,17 +335,9 @@ Rate limiting и добровольные пожертвования:
 
 ### Раунд 19 — AI tool calling (ІІ вносить дані за користувача)
 
-**Концепція:** DeepSeek function calling через Vercel AI SDK tools. ІІ-помічник може створювати спорядження, плани, додавати записи за запитом користувача.
+**Статус:** ✅ Реалізовано в Раунді 18
 
-**Що входить:**
-- 5-10 tools (addGearItem, createMealPlan, addMealEntry, createList, etc.)
-- Кожен tool = Supabase мутація з перевіркою auth
-- UI підтвердження: показати що AI зробив, дати скасувати
-- Режим confirm-before-execute для безпеки
-
-**Статус:** Планується
-
-### Раунд 20+ — Шерінг (shared links)
+### Раунд 20+ — Групові походи / Шерінг
 
 - Генерація унікального токена (UUID) для раскладки/списку
 - Публічний роут `/shared/[token]` без авторизації
