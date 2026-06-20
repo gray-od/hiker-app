@@ -164,7 +164,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 **Infrastructure:**
 - Auth: Google OAuth + Email/password, session refresh via proxy.ts, account deletion (service_role admin)
 - Landing page: hero, 4 feature cards, Google + email auth, language switcher
-- Privacy policy: /privacy, i18n (uk/ru/en), GitHub Issues for data deletion
+- Privacy policy: /privacy, i18n (uk/ru/en), self-service deletion + GitHub Issues fallback
 - i18n: uk/ru/en, cookie + DB sync
 - Dark mode: Light/Dark/System via next-themes
 - Branding: favicon, PWA icons, manifest, logo, Beta badge
