@@ -123,7 +123,7 @@ export default function MealPlanPrintPage() {
         }
       `}</style>
 
-      <div className="min-h-screen bg-white text-black max-w-4xl mx-auto p-6">
+      <div className="min-h-screen bg-white text-black w-full max-w-4xl mx-auto px-3 py-4 sm:p-6">
 
         <div className="no-print flex items-center gap-3 mb-6">
           <button
@@ -186,30 +186,32 @@ export default function MealPlanPrintPage() {
                     <h3 className="text-sm font-semibold text-black mb-2 ml-1">
                       ● {t(mealType)}
                     </h3>
-                    <table className="w-full border-collapse border border-zinc-300 text-sm mb-2">
+                    <div className="overflow-x-auto -mx-1">
+                    <table className="w-full border-collapse border border-zinc-300 text-xs sm:text-sm mb-2">
                       <thead>
                         <tr className="bg-zinc-100">
-                          <th className="border border-zinc-300 px-2 py-1 text-left font-medium text-zinc-700">{t('meal_name')}</th>
-                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700">{tCommon('weight_g')}</th>
-                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700">{t('kcal')}</th>
-                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700">{t('protein')}</th>
-                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700">{t('fat')}</th>
-                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700">{t('carbs')}</th>
+                          <th className="border border-zinc-300 px-2 py-1 text-left font-medium text-zinc-700 max-w-[140px] sm:max-w-none break-words">{t('meal_name')}</th>
+                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700 whitespace-nowrap">{tCommon('weight_g')}</th>
+                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700 whitespace-nowrap">{t('kcal')}</th>
+                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700 whitespace-nowrap">{t('protein')}</th>
+                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700 whitespace-nowrap">{t('fat')}</th>
+                          <th className="border border-zinc-300 px-2 py-1 text-right font-medium text-zinc-700 whitespace-nowrap">{t('carbs')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {mealEntries.map((entry) => (
                           <tr key={entry.id}>
-                            <td className="border border-zinc-300 px-2 py-1 text-black">{entry.name}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black">{entry.weight_g}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black">{entry.calories}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black">{entry.protein_g}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black">{entry.fat_g}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black">{entry.carbs_g}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-black max-w-[140px] sm:max-w-none break-words">{entry.name}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.weight_g}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.calories}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.protein_g}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.fat_g}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.carbs_g}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 );
               })}

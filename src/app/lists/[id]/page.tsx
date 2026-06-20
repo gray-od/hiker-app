@@ -27,6 +27,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [selectedGearIds, setSelectedGearIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [weightHint, setWeightHint] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -445,16 +446,40 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('base_weight')}</div>
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
+            {t('base_weight')}
+            <button onClick={() => setWeightHint(weightHint === 'base' ? null : 'base')} className="text-zinc-400 hover:text-[#75a93a] transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </button>
+          </div>
           <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcBaseWeight())}</div>
+          {weightHint === 'base' && (
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('base_weight_hint')}</div>
+          )}
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('worn_weight')}</div>
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
+            {t('worn_weight')}
+            <button onClick={() => setWeightHint(weightHint === 'worn' ? null : 'worn')} className="text-zinc-400 hover:text-[#75a93a] transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </button>
+          </div>
           <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcWornWeight())}</div>
+          {weightHint === 'worn' && (
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('worn_weight_hint')}</div>
+          )}
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('consumable_weight')}</div>
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
+            {t('consumable_weight')}
+            <button onClick={() => setWeightHint(weightHint === 'consumable' ? null : 'consumable')} className="text-zinc-400 hover:text-[#75a93a] transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </button>
+          </div>
           <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcConsumableWeight())}</div>
+          {weightHint === 'consumable' && (
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('consumable_weight_hint')}</div>
+          )}
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>

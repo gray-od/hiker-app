@@ -9,6 +9,7 @@ import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/foo
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
 import { getAdaptationCoefficient, PLAN_TYPES } from '@/lib/hiking-standards';
 import type { PlanTypeId } from '@/lib/hiking-standards';
+import { MEAL_TEMPLATES, getMealTemplate } from '@/lib/meal-templates';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
@@ -52,6 +53,8 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     target_weight_g: 650,
   });
   const [confirmDeletePlan, setConfirmDeletePlan] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
@@ -413,6 +416,83 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     await recalculateTotals();
   }
 
+  async function handleApplyTemplate(templateId: string) {
+    const template = getMealTemplate(templateId);
+    if (!template || !plan) return;
+
+    if (!confirm(t('apply_template_confirm'))) return;
+
+    setApplyingTemplate(true);
+    const supabase = createClient();
+
+    try {
+      const existingDayIds = days.map(d => d.id);
+      if (existingDayIds.length > 0) {
+        for (const dayId of existingDayIds) {
+          await supabase.from('meal_entries').delete().eq('day_id', dayId);
+        }
+        await supabase.from('meal_days').delete().eq('plan_id', plan.id);
+      }
+
+      const planType = (plan.plan_type || 'standard') as PlanTypeId;
+      const peopleCount = plan.people_count || 1;
+      const daysCount = plan.days_count || 3;
+
+      const loc = (['uk', 'ru', 'en'].includes(locale) ? locale : 'uk') as 'uk' | 'ru' | 'en';
+
+      for (let i = 0; i < daysCount; i++) {
+        const patternIndex = i % template.dayPatterns.length;
+        const pattern = template.dayPatterns[patternIndex];
+
+        const { data: dayData } = await supabase
+          .from('meal_days')
+          .insert({ plan_id: plan.id, day_number: i + 1, total_calories: 0, total_weight_g: 0 })
+          .select()
+          .single();
+
+        if (!dayData) continue;
+
+        let dayCalories = 0;
+        let dayWeight = 0;
+
+        for (const entry of pattern.entries) {
+          const foodItem = FOOD_CATALOG.find(f => f.id === entry.catalogId);
+          if (!foodItem) continue;
+
+          const portionMultiplier = entry.portionMultiplier || 1;
+          const portionG = Math.round(foodItem.defaultPortion[planType] * portionMultiplier * peopleCount);
+          const nutrition = calculateNutrition(foodItem, portionG);
+
+          await supabase.from('meal_entries').insert({
+            day_id: dayData.id,
+            meal_type: entry.mealType,
+            name: foodItem.name[loc],
+            weight_g: portionG,
+            calories: nutrition.calories,
+            protein_g: nutrition.protein,
+            fat_g: nutrition.fat,
+            carbs_g: nutrition.carbs,
+          });
+
+          dayCalories += nutrition.calories;
+          dayWeight += portionG;
+        }
+
+        await supabase
+          .from('meal_days')
+          .update({ total_calories: dayCalories, total_weight_g: dayWeight })
+          .eq('id', dayData.id);
+      }
+
+      setTemplateModalOpen(false);
+      await recalculateTotals();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setApplyingTemplate(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full flex items-center justify-center py-20">
@@ -537,6 +617,15 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setTemplateModalOpen(true)}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+            title={t('apply_template')}
+          >
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </button>
           <button
@@ -1342,6 +1431,43 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                 {tCommon('delete')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {templateModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setTemplateModalOpen(false)}>
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">{t('apply_template')}</h3>
+            <div className="space-y-2">
+              {MEAL_TEMPLATES.filter(tmpl => tmpl.planType === plan!.plan_type).map((tmpl) => {
+                const loc3 = (['uk', 'ru', 'en'].includes(locale) ? locale : 'uk') as 'uk' | 'ru' | 'en';
+                return (
+                  <button
+                    key={tmpl.id}
+                    onClick={() => handleApplyTemplate(tmpl.id)}
+                    disabled={applyingTemplate}
+                    className="w-full text-left p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-[#75a93a] hover:bg-[#75a93a]/5 transition-colors"
+                  >
+                    <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
+                      {tmpl.name[loc3]}
+                    </div>
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      {tmpl.description[loc3]}
+                    </div>
+                  </button>
+                );
+              })}
+              {MEAL_TEMPLATES.filter(tmpl => tmpl.planType === plan!.plan_type).length === 0 && (
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">{t('no_template')}</p>
+              )}
+            </div>
+            <button
+              onClick={() => setTemplateModalOpen(false)}
+              className="mt-4 w-full px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+            >
+              {tCommon('cancel')}
+            </button>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { getPlanType, type PlanTypeId } from '@/lib/hiking-standards';
 import type { GearList, MealPlan } from '@/lib/types';
+import TripWeightCard from '@/components/TripWeightCard';
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -43,14 +44,12 @@ export default async function DashboardPage() {
   const [{ data: recentListsRaw }, { data: recentMealsRaw }, { data: profileData }] = await Promise.all([
     supabase
       .from('gear_lists')
-      .select('id, name, season, created_at')
-      .order('created_at', { ascending: false })
-      .limit(3),
+      .select('id, name, season, created_at, list_items(quantity, gear_item:gear_items(weight_g))')
+      .order('created_at', { ascending: false }),
     supabase
       .from('meal_plans')
-      .select('id, name, plan_type, days_count, created_at')
-      .order('created_at', { ascending: false })
-      .limit(3),
+      .select('id, name, plan_type, days_count, created_at, meal_days(total_weight_g)')
+      .order('created_at', { ascending: false }),
     supabase
       .from('profiles')
       .select('name')
@@ -58,8 +57,23 @@ export default async function DashboardPage() {
       .single(),
   ]);
 
-  const recentLists = recentListsRaw as GearList[] | null;
-  const recentMeals = recentMealsRaw as MealPlan[] | null;
+  const recentLists = (recentListsRaw as GearList[] | null)?.slice(0, 3) || null;
+  const recentMeals = (recentMealsRaw as MealPlan[] | null)?.slice(0, 3) || null;
+
+  const allLists = recentListsRaw as (GearList & { list_items?: { quantity: number; gear_item: { weight_g: number } | null }[] })[] | null;
+  const allPlans = recentMealsRaw as (MealPlan & { meal_days?: { total_weight_g: number }[] })[] | null;
+
+  const listsWithWeight = (allLists || []).map(list => ({
+    id: list.id,
+    name: list.name,
+    totalWeight: (list.list_items || []).reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * (li.quantity || 1), 0),
+  }));
+
+  const plansWithWeight = (allPlans || []).map(plan => ({
+    id: plan.id,
+    name: plan.name,
+    totalWeight: (plan.meal_days || []).reduce((sum, d) => sum + (d.total_weight_g || 0), 0),
+  }));
 
   const t = await getTranslations('dashboard');
   const tGear = await getTranslations('gear');
@@ -165,6 +179,10 @@ export default async function DashboardPage() {
             </div>
           </Link>
         </div>
+      </section>
+
+      <section className="mb-8">
+        <TripWeightCard lists={listsWithWeight} plans={plansWithWeight} />
       </section>
 
       {/* Recent lists */}

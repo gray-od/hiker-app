@@ -138,10 +138,12 @@ NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou
 | 14 | 19.06 | Custom food: user_food_items, /food CRUD, 3-tab meal entry modal |
 | 15 | 19.06 | Print/PDF: /meals/[id]/print, /lists/[id]/print, @media print CSS |
 | 16 | 19.06 | Chat UX: scroll fix, safe-area input, expand toggle, textarea, word-wrap, desktop icons md:w-5, donate pink→amber |
+| 17 | 20.06 | Print mobile fix, weight tooltips, "Розхідники"→"Розхідне спорядження", template hint+apply button, dashboard TripWeightCard |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 17
+- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 18+
 - [ ] Шерінг (shared links, публічний доступ) — Раунд 18+
+- [ ] AI tool calling: ІІ-помічник вносить дані за користувача (gear, meals) — Раунд 19+
 
 ## What Works
 
