@@ -7,6 +7,7 @@
 - **Theme:** next-themes (class-based dark mode)
 - **AI:** DeepSeek API (chat) + Tavily API (web search)
 - **AI SDK:** Vercel AI SDK v4 (`ai@4.3.19`, `@ai-sdk/openai@1`) — НЕ v6 (несовместим с useChat)
+- **AI Tools:** DeepSeek function calling (createMealPlan, addGearItems, createGearList, addItemsToList)
 - **Hosting:** Vercel (free tier, auto-deploy from `main`)
 - **Repo:** github.com/gray-od/hiker-app
 
@@ -139,11 +140,11 @@ NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou
 | 15 | 19.06 | Print/PDF: /meals/[id]/print, /lists/[id]/print, @media print CSS |
 | 16 | 19.06 | Chat UX: scroll fix, safe-area input, expand toggle, textarea, word-wrap, desktop icons md:w-5, donate pink→amber |
 | 17 | 20.06 | Print mobile fix, weight tooltips, "Розхідники"→"Розхідне спорядження", template hint+apply button, dashboard TripWeightCard |
+| 18 | 20.06 | AI tool calling: 4 tools (createMealPlan, addGearItems, createGearList, addItemsToList), system prompt English rewrite, smart language detection, tool-use guidelines |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 18+
-- [ ] Шерінг (shared links, публічний доступ) — Раунд 18+
-- [ ] AI tool calling: ІІ-помічник вносить дані за користувача (gear, meals) — Раунд 19+
+- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 19+
+- [ ] Шерінг / Групові походи (shared links, розподіл спорядження по учасниках) — Раунд 20+
 
 ## What Works
 
