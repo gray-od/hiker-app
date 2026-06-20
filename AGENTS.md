@@ -141,10 +141,10 @@ NEXT_PUBLIC_DONATE_URL=https://send.monobank.ua/jar/8AQXnnupou
 | 16 | 19.06 | Chat UX: scroll fix, safe-area input, expand toggle, textarea, word-wrap, desktop icons md:w-5, donate pink→amber |
 | 17 | 20.06 | Print mobile fix, weight tooltips, "Розхідники"→"Розхідне спорядження", template hint+apply button, dashboard TripWeightCard |
 | 18 | 20.06 | AI tool calling: 4 tools (createMealPlan, addGearItems, createGearList, addItemsToList), system prompt English rewrite, smart language detection, tool-use guidelines |
+| 19 | 20.06 | PWA offline: Service Worker (app shell cache), localStorage data cache for meals/lists, offline banner, SWRegister, install prompt |
 
 ## Open Issues
-- [ ] PWA: Service Worker + офлайн-режим (Dexie.js) — Раунд 19+
-- [ ] Шерінг / Групові походи (shared links, розподіл спорядження по учасниках) — Раунд 20+
+- [ ] Групові походи (розподіл спорядження та їжі по учасниках, персональні списки) — Раунд 20+
 
 ## What Works
 
