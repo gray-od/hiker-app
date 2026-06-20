@@ -798,7 +798,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                               <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                                 {entry.name}
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                              <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
                                 <span className="tabular-nums">
                                   {entry.weight_g} {tCommon('weight_g')}
                                 </span>

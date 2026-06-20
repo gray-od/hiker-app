@@ -571,7 +571,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mt-2 ml-8">
+              <div className="flex items-center gap-2 mt-2 ml-8 flex-wrap">
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleUpdateQuantity(item.id, -1)}
