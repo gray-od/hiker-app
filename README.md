@@ -111,7 +111,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 This is an open source project. PRs, issues, and ideas are welcome.
 
-The codebase is clean TypeScript with no comments (by design). Read the [`AGENTS.md`](AGENTS.md) for architecture details and conventions.
+The codebase is clean TypeScript with no comments (by design). See the tech stack table above and explore `src/` to understand the architecture.
 
 ## License
 

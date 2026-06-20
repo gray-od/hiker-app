@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# project memory (local only, not for public repo)
+AGENTS.md
+wiki_map_project.md
 
 # vercel
 .vercel

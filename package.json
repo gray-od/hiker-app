@@ -1,6 +1,12 @@
 {
   "name": "hiker-app",
   "version": "0.1.0",
+  "description": "AI-first hiking planner — gear, meals, and an AI partner that actually thinks",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gray-od/hiker-app.git"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
