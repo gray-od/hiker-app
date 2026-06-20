@@ -268,5 +268,31 @@
     "feature_lists_desc": "Pack, check off, control your backpack weight",
     "feature_ai_title": "AI Assistant",
     "feature_ai_desc": "Gear analysis, recommendations, data import via chat"
+  },
+  "privacy": {
+    "data_collect_title": "What data we collect",
+    "data_collect_intro": "ProHikes collects only the minimum data necessary to provide the service:",
+    "data_email": "Email — to identify your account",
+    "data_name": "Name — obtained from Google when signing in with Google",
+    "data_gear": "Gear data — items, weights, categories that you create",
+    "data_meals": "Meal plan data — meal plans, dishes, products",
+    "data_lists": "Packing lists — gear lists for specific trips",
+    "purpose_title": "Purpose of data collection",
+    "purpose_text": "All data is used exclusively to provide you with ProHikes functionality — gear management, meal planning, creating packing lists.",
+    "third_title": "Third parties",
+    "third_intro": "To operate the service, we use the following third-party services:",
+    "third_supabase": "Supabase — data storage (database, authentication). Servers located in the EU.",
+    "third_google": "Google — authentication via Google OAuth.",
+    "third_deepseek": "DeepSeek — AI assistant. Your chat messages are sent to the DeepSeek API for processing to generate responses and recommendations.",
+    "cookies_title": "Cookies",
+    "cookies_text": "ProHikes uses one cookie — NEXT_LOCALE — to save your language preference. No tracking or advertising cookies are used.",
+    "deletion_title": "Data deletion",
+    "deletion_text": "You can request deletion of all your data by sending an email to",
+    "deletion_period": "Data will be deleted within 30 days of receiving the request.",
+    "no_sale_title": "Data sales",
+    "no_sale_text": "ProHikes does not sell your personal data to third parties. We do not use your data for advertising or marketing.",
+    "changes_title": "Policy changes",
+    "changes_text": "We may update this privacy policy from time to time. We will notify you of significant changes through the service.",
+    "last_updated": "Last updated: June 2026"
   }
 }

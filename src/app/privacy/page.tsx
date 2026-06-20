@@ -7,6 +7,7 @@ export async function generateMetadata() {
 
 export default async function PrivacyPage() {
   const t = await getTranslations('common');
+  const p = await getTranslations('privacy');
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
@@ -17,83 +18,60 @@ export default async function PrivacyPage() {
 
         <div className="prose prose-zinc dark:prose-invert max-w-none space-y-6 text-zinc-700 dark:text-zinc-300">
           <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Які дані ми збираємо</h2>
-            <p>
-              ProHikes збирає лише мінімально необхідні дані для роботи сервісу:
-            </p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('data_collect_title')}</h2>
+            <p>{p('data_collect_intro')}</p>
             <ul className="list-disc pl-5 space-y-1 mt-2">
-              <li><strong>Email</strong> — для ідентифікації вашого акаунту</li>
-              <li><strong>Ім&apos;я</strong> — отримується через Google при вході через Google</li>
-              <li><strong>Дані спорядження</strong> — предмети, їх вага, категорії, які ви створюєте</li>
-              <li><strong>Дані розкладок харчування</strong> — плани харчування, страви, продукти</li>
-              <li><strong>Списки походів</strong> — списки спорядження для конкретних походів</li>
+              <li>{p('data_email')}</li>
+              <li>{p('data_name')}</li>
+              <li>{p('data_gear')}</li>
+              <li>{p('data_meals')}</li>
+              <li>{p('data_lists')}</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Мета збору даних</h2>
-            <p>
-              Усі дані використовуються виключно для надання вам функціоналу сервісу ProHikes —
-              керування спорядженням, планування харчування, створення списків походів.
-            </p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('purpose_title')}</h2>
+            <p>{p('purpose_text')}</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Треті сторони</h2>
-            <p>Для роботи сервісу ми використовуємо наступні сторонні сервіси:</p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('third_title')}</h2>
+            <p>{p('third_intro')}</p>
             <ul className="list-disc pl-5 space-y-1 mt-2">
-              <li>
-                <strong>Supabase</strong> — зберігання даних (база даних, аутентифікація).
-                Сервери знаходяться в ЄС.
-              </li>
-              <li>
-                <strong>Google</strong> — аутентифікація при вході через Google OAuth.
-              </li>
-              <li>
-                <strong>DeepSeek</strong> — AI-помічник. Ваші повідомлення в чаті надсилаються
-                на обробку до DeepSeek API для генерації відповідей та рекомендацій.
-              </li>
+              <li>{p('third_supabase')}</li>
+              <li>{p('third_google')}</li>
+              <li>{p('third_deepseek')}</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Файли cookie</h2>
-            <p>
-              ProHikes використовує один файл cookie — <code>NEXT_LOCALE</code> — для збереження
-              вашої мовної переваги (українська, англійська або російська). Жодних трекінгових
-              або рекламних cookie не використовується.
-            </p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('cookies_title')}</h2>
+            <p>{p('cookies_text')}</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Видалення даних</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('deletion_title')}</h2>
             <p>
-              Ви можете запросити видалення всіх ваших даних, надіславши email на адресу{' '}
+              {p('deletion_text')}{' '}
               <a href="mailto:support@prohikes.app" className="text-[#75a93a] hover:underline">
                 support@prohikes.app
-              </a>.
-              Дані будуть видалені протягом 30 днів після отримання запиту.
+              </a>.{' '}
+              {p('deletion_period')}
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Продаж даних</h2>
-            <p>
-              ProHikes <strong>не продає</strong> ваші персональні дані третім сторонам.
-              Ми не використовуємо ваші дані для реклами чи маркетингу.
-            </p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('no_sale_title')}</h2>
+            <p>{p('no_sale_text')}</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Зміни до політики</h2>
-            <p>
-              Ми можемо оновлювати цю політику конфіденційності час від часу.
-              Про суттєві зміни ми повідомимо через сервіс.
-            </p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('changes_title')}</h2>
+            <p>{p('changes_text')}</p>
           </section>
 
           <p className="text-sm text-zinc-400 dark:text-zinc-500 pt-4">
-            Останнє оновлення: червень 2026 року
+            {p('last_updated')}
           </p>
         </div>
 
