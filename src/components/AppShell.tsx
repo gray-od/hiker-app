@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import ChatWidget from '@/components/ChatWidget';
 import SWRegister from '@/components/SWRegister';
 
-const PUBLIC_ROUTES = ['/login'];
+const PUBLIC_ROUTES = ['/login', '/privacy'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
