@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prohikes-v3';
+const CACHE_NAME = 'prohikes-v4';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -7,7 +7,7 @@ self.addEventListener('install', () => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -39,29 +39,28 @@ self.addEventListener('fetch', (event) => {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
             return response;
-          })
+          }).catch(() => cached || fetch(request))
       )
     );
     return;
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const fetchPromise = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(request).then((cached) => {
+          if (cached) return cached;
+          return caches.match('/').then((root) =>
+            root || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/html' } })
+          );
         })
-        .catch(() => null);
-
-      if (cached) return cached;
-
-      return fetchPromise.then(
-        (response) => response || caches.match('/') || new Response('Offline', { status: 503 })
-      );
-    })
+      )
   );
 });
