@@ -1,13 +1,17 @@
-const CACHE_NAME = 'prohikes-v4';
+const CACHE_NAME = 'prohikes-v5';
+const OFFLINE_URL = '/offline.html';
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL))
+  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -23,9 +27,7 @@ self.addEventListener('fetch', (event) => {
   if (
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/auth/') ||
-    url.hostname.includes('supabase') ||
-    url.hostname.includes('deepseek') ||
-    url.hostname.includes('tavily')
+    url.hostname !== self.location.hostname
   ) {
     return;
   }
@@ -39,28 +41,16 @@ self.addEventListener('fetch', (event) => {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
             return response;
-          }).catch(() => cached || fetch(request))
+          })
       )
     );
     return;
   }
 
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      })
-      .catch(() =>
-        caches.match(request).then((cached) => {
-          if (cached) return cached;
-          return caches.match('/').then((root) =>
-            root || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/html' } })
-          );
-        })
-      )
-  );
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(OFFLINE_URL))
+    );
+    return;
+  }
 });
