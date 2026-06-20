@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prohikes-v2';
+const CACHE_NAME = 'prohikes-v3';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
