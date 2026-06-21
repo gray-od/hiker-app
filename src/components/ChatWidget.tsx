@@ -9,9 +9,24 @@ import remarkGfm from 'remark-gfm';
 
 function stripThoughts(text: string): string {
   return text
+    // remove leaked reasoning blocks
     .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
     .replace(/<thought>[\s\S]*$/i, '')
     .replace(/<\/?thought>/gi, '')
+    // unwrap inline LaTeX math that wraps a backslash command: $\rightarrow$ -> \rightarrow
+    .replace(/\$([^$\n]*\\[^$\n]*)\$/g, '$1')
+    // convert common LaTeX commands to Unicode (model sometimes ignores the no-LaTeX rule)
+    .replace(/\\(?:longrightarrow|rightarrow|Rightarrow|to)\b/g, '→')
+    .replace(/\\(?:longleftarrow|leftarrow|Leftarrow)\b/g, '←')
+    .replace(/\\leftrightarrow\b/g, '↔')
+    .replace(/\\times\b/g, '×')
+    .replace(/\\cdot\b/g, '·')
+    .replace(/\\pm\b/g, '±')
+    .replace(/\\(?:leq|le)\b/g, '≤')
+    .replace(/\\(?:geq|ge)\b/g, '≥')
+    .replace(/\\approx\b/g, '≈')
+    .replace(/\\(?:degree|circ)\b/g, '°')
+    .replace(/\\bullet\b/g, '•')
     .replace(/^\s+/, '');
 }
 
