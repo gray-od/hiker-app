@@ -40,7 +40,10 @@ export default async function PrivacyPage() {
             <ul className="list-disc pl-5 space-y-1 mt-2">
               <li>{p('third_supabase')}</li>
               <li>{p('third_google')}</li>
-              <li>{p('third_deepseek')}</li>
+              <li>{p('third_ai')}</li>
+              <li>{p('third_search')}</li>
+              <li>{p('third_weather')}</li>
+              <li>{p('third_byok')}</li>
             </ul>
           </section>
 

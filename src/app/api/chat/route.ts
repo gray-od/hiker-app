@@ -13,8 +13,12 @@ function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
 }
 
-function sanitizeLog(msg: string): string {
-  return msg.replace(/\b(sk-[a-zA-Z0-9._-]{4,}|AIza[a-zA-Z0-9_-]{4,})\b/g, '***REDACTED***');
+function sanitizeLog(msg: string, secrets: string[] = []): string {
+  let out = msg;
+  for (const s of secrets) {
+    if (s && s.length >= 8) out = out.split(s).join('***REDACTED***');
+  }
+  return out.replace(/\b(sk-[a-zA-Z0-9._-]{4,}|AIza[a-zA-Z0-9_-]{4,}|pplx-[a-zA-Z0-9_-]{4,}|tvly-[a-zA-Z0-9_-]{4,}|fc-[a-zA-Z0-9_-]{4,})\b/g, '***REDACTED***');
 }
 
 const google = createGoogleGenerativeAI({
@@ -22,8 +26,12 @@ const google = createGoogleGenerativeAI({
 });
 
 export async function POST(req: Request) {
+  const secrets: string[] = [];
   try {
     const { messages, ai, search } = await req.json();
+    if (ai?.apiKey) secrets.push(ai.apiKey);
+    if (search?.apiKey) secrets.push(search.apiKey);
+    if (search?.cx) secrets.push(search.cx);
 
   const cookieStore = await cookies();
 
@@ -515,13 +523,13 @@ export async function POST(req: Request) {
       ) {
         return 'MODEL_NO_TOOLS';
       }
-      console.error('[chat] stream error:', sanitizeLog(msg));
+      console.error('[chat] stream error:', sanitizeLog(msg, secrets));
       return 'AI service is temporarily unavailable. Please try again in a moment.';
     },
   });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('[chat] route error:', sanitizeLog(msg));
+    console.error('[chat] route error:', sanitizeLog(msg, secrets));
     return new Response('Internal server error', { status: 500 });
   }
 }

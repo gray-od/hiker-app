@@ -32,7 +32,7 @@ The AI isn't a chatbot bolted onto a database. It reads your gear, lists, and me
 
 **Meal Plans** — 75 built-in hiking products with calories, protein, fat, carbs. 3 plan types (comfort, standard, ultralight). Cyclic templates. Group calculations. Custom food library. Print detailed nutrition tables.
 
-**AI Assistant** — powered by DeepSeek with Tavily web search. 5 levels of expertise: app navigator, data analyst, gear consultant, route specialist, survival expert. 4 tools: create meal plans, add gear items, create packing lists, add items to lists. Upload CSV/TXT files directly into chat. 15 free messages per day.
+**AI Assistant** — powered by Gemma 4 26B A4B (via Google AI Studio) with Exa web search and Open-Meteo weather. 5 levels of expertise: app navigator, data analyst, gear consultant, route specialist, survival expert. 8 tools: create meal plans, add gear items, create packing lists, add items to lists, search the web, get weather, get packing list details, get meal plan details. Upload CSV/TXT files directly into chat. 15 free messages per day.
 
 **Mobile-first PWA** — 44px touch targets, 17px base font, safe-area support, card layouts on mobile, tables on desktop. Install as app on any device.
 
@@ -48,8 +48,9 @@ Your data, your rules. Here's exactly what goes where:
 |---|---|---|
 | Gear, lists, meals, food items | Supabase (PostgreSQL, EU) | Yes, your account |
 | Google/Email auth | Supabase Auth | Email + name only |
-| AI chat messages | DeepSeek API (processing) | Not stored by provider |
-| AI web search queries | Tavily API (search) | Not stored |
+| AI chat messages | Google AI Studio (Gemma processing) | Not stored by provider (free tier data MAY be used for model improvement) |
+| AI web search queries | Exa API (search) | Not stored |
+| AI weather lookups | Open-Meteo (anonymous) | Not stored |
 | Page view analytics | Vercel Analytics | Anonymous, no cookies |
 
 **What we don't do:** sell data, share with advertisers, track across sites, use cookies for tracking.
@@ -72,7 +73,7 @@ This isn't a limitation — it's the point. In 2026, you don't need to know how 
 |---|---|
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind v4 |
 | Backend | Supabase (PostgreSQL, Auth, RLS) |
-| AI | DeepSeek API (chat + function calling), Tavily API (web search) |
+| AI | Gemma 4 26B A4B (Google AI Studio, chat + function calling), Exa (web search), Open-Meteo (weather), optional BYOK |
 | AI SDK | Vercel AI SDK v4 |
 | i18n | next-intl v4 |
 | Theme | next-themes |
@@ -92,7 +93,7 @@ npm install
 # Set up environment variables
 cp .env.example .env.local
 # Fill in: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
-# DEEPSEEK_API_KEY, TAVILY_API_KEY
+# GOOGLE_GENERATIVE_AI_API_KEY, EXA_API_KEY
 
 # Run development server
 npm run dev
