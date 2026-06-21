@@ -123,7 +123,7 @@ export async function POST(req: Request) {
   const dataLocale = (locale === 'uk' || locale === 'ru') ? locale as 'uk' | 'ru' : 'en' as const;
 
   const result = streamText({
-    model: groq('llama-3.3-70b-versatile'),
+    model: groq('openai/gpt-oss-120b'),
     system: systemPrompt,
     messages,
     tools: {
