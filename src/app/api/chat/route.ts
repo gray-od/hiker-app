@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, tool } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { streamText, tool, generateText } from 'ai';
 import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
@@ -11,14 +11,13 @@ function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
 }
 
-const deepseek = createOpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY!,
-  baseURL: 'https://api.deepseek.com',
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
 });
 
 export async function POST(req: Request) {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return new Response('DEEPSEEK_API_KEY not configured', { status: 500 });
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return new Response('GOOGLE_GENERATIVE_AI_API_KEY not configured', { status: 500 });
   }
 
   try {
@@ -123,35 +122,79 @@ export async function POST(req: Request) {
   const dataLocale = (locale === 'uk' || locale === 'ru') ? locale as 'uk' | 'ru' : 'en' as const;
 
   const result = streamText({
-    model: deepseek('deepseek-chat'),
+    model: google('gemini-2.0-flash'),
     system: systemPrompt,
     messages,
     tools: {
-      ...(process.env.TAVILY_API_KEY ? {
-        searchWeb: tool({
-          description: 'Search the internet for current information: weather, emergency contacts, route conditions, transport. Use when user asks about specific locations or you need up-to-date data.',
-          parameters: z.object({
-            query: z.string().describe('Search query in the language most likely to return good results'),
-          }),
-          execute: async ({ query }) => {
-            const response = await fetch('https://api.tavily.com/search', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                api_key: process.env.TAVILY_API_KEY,
-                query,
-                max_results: 5,
-                include_answer: true,
-              }),
-            });
-            const data = await response.json();
-            if (data.answer) {
-              return `Answer: ${data.answer}\n\nSources:\n${data.results?.map((r: { title: string; url: string; content: string }) => `- ${r.title}: ${r.content} (${r.url})`).join('\n') || ''}`;
-            }
-            return data.results?.map((r: { title: string; url: string; content: string }) => `- ${r.title}: ${r.content} (${r.url})`).join('\n') || 'No results found';
-          },
+      searchWeb: tool({
+        description: 'Search the internet for current information: emergency contacts, route conditions, transport, trail closures. For WEATHER, use getWeather instead. Use when the user asks about specific locations or you need up-to-date data.',
+        parameters: z.object({
+          query: z.string().describe('Search query in the language most likely to return good results'),
         }),
-      } : {}),
+        execute: async ({ query }) => {
+          try {
+            const { text, sources } = await generateText({
+              model: google('gemini-2.0-flash', { useSearchGrounding: true }),
+              prompt: query,
+            });
+            if (text && text.trim()) {
+              const src = (sources && sources.length > 0)
+                ? '\n\nSources:\n' + sources.map((s: { title?: string; url?: string }) => `- ${s.title || s.url} (${s.url})`).join('\n')
+                : '';
+              return `${text}${src}`;
+            }
+          } catch {
+            // Gemini search failed or quota exhausted — fall back to Jina
+          }
+          if (process.env.JINA_API_KEY) {
+            try {
+              const res = await fetch(`https://s.jina.ai/?q=${encodeURIComponent(query)}`, {
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${process.env.JINA_API_KEY}`,
+                  'X-Respond-With': 'no-content',
+                },
+              });
+              const data = await res.json();
+              const results = data.data || [];
+              if (results.length > 0) {
+                return results.slice(0, 5).map((r: { title: string; description?: string; content?: string; url: string }) => `- ${r.title}: ${r.description || r.content || ''} (${r.url})`).join('\n');
+              }
+            } catch {
+              // Jina failed
+            }
+          }
+          return 'No search results found';
+        },
+      }),
+
+      getWeather: tool({
+        description: 'Get current weather and a 7-day forecast for any location (mountains, trailheads, towns). Use this for ANY weather question. No API key needed.',
+        parameters: z.object({
+          location: z.string().describe('Place name, e.g. "Hoverla", "Yaremche", "Zakopane"'),
+        }),
+        execute: async ({ location }) => {
+          try {
+            const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+            const geo = await geoRes.json();
+            const place = geo.results?.[0];
+            if (!place) return `Location "${location}" not found`;
+            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,weather_code&forecast_days=7&timezone=auto`);
+            const w = await wRes.json();
+            const wmo: Record<number, string> = { 0:'Clear', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Fog', 48:'Rime fog', 51:'Light drizzle', 53:'Drizzle', 55:'Heavy drizzle', 61:'Light rain', 63:'Rain', 65:'Heavy rain', 71:'Light snow', 73:'Snow', 75:'Heavy snow', 77:'Snow grains', 80:'Rain showers', 81:'Rain showers', 82:'Violent rain showers', 85:'Snow showers', 86:'Heavy snow showers', 95:'Thunderstorm', 96:'Thunderstorm w/ hail', 99:'Severe thunderstorm' };
+            const c = w.current;
+            let out = `Weather for ${place.name}${place.country ? ', ' + place.country : ''}${place.elevation ? ' (' + place.elevation + 'm)' : ''}:\n`;
+            out += `Now: ${c.temperature_2m}°C (feels ${c.apparent_temperature}°C), ${wmo[c.weather_code] || 'code ' + c.weather_code}, wind ${c.wind_speed_10m} km/h, precip ${c.precipitation} mm\n\n7-day forecast:\n`;
+            const d = w.daily;
+            for (let i = 0; i < d.time.length; i++) {
+              out += `- ${d.time[i]}: ${d.temperature_2m_min[i]}…${d.temperature_2m_max[i]}°C, ${wmo[d.weather_code[i]] || 'code ' + d.weather_code[i]}, precip ${d.precipitation_sum[i]} mm, wind max ${d.wind_speed_10m_max[i]} km/h\n`;
+            }
+            return out;
+          } catch {
+            return 'Weather data unavailable right now';
+          }
+        },
+      }),
 
       createMealPlan: tool({
         description: 'Create a new meal plan in the app. Can optionally apply a template to auto-fill days with food entries. Available templates: standard_3day, comfort_winter, ultralight_3day.',
