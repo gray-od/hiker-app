@@ -10,6 +10,7 @@ function stripThoughts(text: string): string {
   return text
     .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
     .replace(/<thought>[\s\S]*$/i, '')
+    .replace(/<\/?thought>/gi, '')
     .replace(/^\s+/, '');
 }
 

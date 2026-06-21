@@ -417,7 +417,7 @@ export async function POST(req: Request) {
       }),
     },
     maxSteps: 4,
-    maxTokens: 1500,
+    maxTokens: 4096,
   });
 
   return result.toDataStreamResponse({
