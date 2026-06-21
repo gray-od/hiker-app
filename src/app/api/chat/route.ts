@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { streamText, tool, generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
@@ -11,13 +11,14 @@ function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
 }
 
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
+const groq = createOpenAI({
+  apiKey: process.env.GROQ_API_KEY!,
+  baseURL: 'https://api.groq.com/openai/v1',
 });
 
 export async function POST(req: Request) {
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return new Response('GOOGLE_GENERATIVE_AI_API_KEY not configured', { status: 500 });
+  if (!process.env.GROQ_API_KEY) {
+    return new Response('GROQ_API_KEY not configured', { status: 500 });
   }
 
   try {
@@ -122,49 +123,43 @@ export async function POST(req: Request) {
   const dataLocale = (locale === 'uk' || locale === 'ru') ? locale as 'uk' | 'ru' : 'en' as const;
 
   const result = streamText({
-    model: google('gemini-2.0-flash'),
+    model: groq('llama-3.3-70b-versatile'),
     system: systemPrompt,
     messages,
     tools: {
       searchWeb: tool({
-        description: 'Search the internet for current information: emergency contacts, route conditions, transport, trail closures. For WEATHER, use getWeather instead. Use when the user asks about specific locations or you need up-to-date data.',
+        description: 'Search the internet for current information: emergency contacts, route conditions, transport, trail closures, gear info. For WEATHER, use getWeather instead. Use when the user asks about specific locations or you need up-to-date data. Cite the returned source URLs and advise verifying safety-critical info.',
         parameters: z.object({
           query: z.string().describe('Search query in the language most likely to return good results'),
         }),
         execute: async ({ query }) => {
+          if (!process.env.EXA_API_KEY) return 'Search is unavailable right now';
           try {
-            const { text, sources } = await generateText({
-              model: google('gemini-2.0-flash', { useSearchGrounding: true }),
-              prompt: query,
+            const res = await fetch('https://api.exa.ai/search', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.EXA_API_KEY,
+              },
+              body: JSON.stringify({
+                query,
+                type: 'auto',
+                numResults: 5,
+                contents: { highlights: true },
+              }),
             });
-            if (text && text.trim()) {
-              const src = (sources && sources.length > 0)
-                ? '\n\nSources:\n' + sources.map((s: { title?: string; url?: string }) => `- ${s.title || s.url} (${s.url})`).join('\n')
-                : '';
-              return `${text}${src}`;
-            }
+            const data = await res.json();
+            const results = data.results || [];
+            if (results.length === 0) return 'No search results found';
+            return results
+              .map((r: { title?: string; url?: string; highlights?: string[]; text?: string }) => {
+                const snippet = r.highlights && r.highlights.length > 0 ? r.highlights.join(' … ') : (r.text || '');
+                return `- ${r.title || r.url}: ${snippet} (${r.url})`;
+              })
+              .join('\n');
           } catch {
-            // Gemini search failed or quota exhausted — fall back to Jina
+            return 'Search temporarily unavailable';
           }
-          if (process.env.JINA_API_KEY) {
-            try {
-              const res = await fetch(`https://s.jina.ai/?q=${encodeURIComponent(query)}`, {
-                headers: {
-                  'Accept': 'application/json',
-                  'Authorization': `Bearer ${process.env.JINA_API_KEY}`,
-                  'X-Respond-With': 'no-content',
-                },
-              });
-              const data = await res.json();
-              const results = data.data || [];
-              if (results.length > 0) {
-                return results.slice(0, 5).map((r: { title: string; description?: string; content?: string; url: string }) => `- ${r.title}: ${r.description || r.content || ''} (${r.url})`).join('\n');
-              }
-            } catch {
-              // Jina failed
-            }
-          }
-          return 'No search results found';
         },
       }),
 
