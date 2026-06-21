@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
@@ -11,9 +11,8 @@ function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
 }
 
-const ai = createOpenAI({
+const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
-  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
 });
 
 export async function POST(req: Request) {
@@ -123,7 +122,7 @@ export async function POST(req: Request) {
   const dataLocale = (locale === 'uk' || locale === 'ru') ? locale as 'uk' | 'ru' : 'en' as const;
 
   const result = streamText({
-    model: ai('gemma-4-26b-a4b-it'),
+    model: google('gemma-4-26b-a4b-it'),
     system: systemPrompt,
     messages,
     tools: {
@@ -419,6 +418,9 @@ export async function POST(req: Request) {
     },
     maxSteps: 4,
     maxTokens: 1500,
+    providerOptions: {
+      google: { thinkingConfig: { thinkingBudget: 0 } },
+    },
   });
 
   return result.toDataStreamResponse({

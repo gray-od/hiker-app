@@ -6,6 +6,13 @@ import { useTranslations } from 'next-intl';
 import { Sparkles, X, Send, Loader2, Maximize2, Minimize2, Copy, Check, Paperclip } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
+function stripThoughts(text: string): string {
+  return text
+    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+    .replace(/<thought>[\s\S]*$/i, '')
+    .replace(/^\s+/, '');
+}
+
 export default function ChatWidget() {
   const t = useTranslations('chat');
   const [open, setOpen] = useState(false);
@@ -147,12 +154,12 @@ export default function ChatWidget() {
                             pre: ({ children }) => <pre className="overflow-x-auto mb-2 text-xs">{children}</pre>,
                           }}
                         >
-                          {msg.content}
+                          {stripThoughts(msg.content)}
                         </ReactMarkdown>
                       </div>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(msg.content);
+                          navigator.clipboard.writeText(stripThoughts(msg.content));
                           setCopiedId(msg.id);
                           setTimeout(() => setCopiedId(null), 2000);
                         }}
