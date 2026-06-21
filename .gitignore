@@ -37,6 +37,7 @@ yarn-error.log*
 # project memory (local only, not for public repo)
 AGENTS.md
 wiki_map_project.md
+temp_doc/
 
 # vercel
 .vercel
