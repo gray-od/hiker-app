@@ -198,9 +198,9 @@ export async function POST(req: Request) {
           planType: z.enum(['comfort', 'standard', 'ultralight']).describe('Plan type'),
           daysCount: z.number().min(1).max(30).describe('Number of days'),
           peopleCount: z.number().min(1).max(20).describe('Number of people'),
-          targetCalories: z.number().optional().describe('Target calories per day (optional)'),
-          targetWeightG: z.number().optional().describe('Target weight per day in grams (optional)'),
-          templateId: z.string().optional().describe('Template ID to auto-fill entries: standard_3day, comfort_winter, or ultralight_3day'),
+          targetCalories: z.number().nullable().describe('Target calories per day (optional)'),
+          targetWeightG: z.number().nullable().describe('Target weight per day in grams (optional)'),
+          templateId: z.string().nullable().describe('Template ID to auto-fill entries: standard_3day, comfort_winter, or ultralight_3day'),
         }),
         execute: async ({ name, planType, daysCount, peopleCount, targetCalories, targetWeightG, templateId }) => {
           const defaults: Record<string, { cal: number; weight: number }> = {
@@ -303,7 +303,7 @@ export async function POST(req: Request) {
             category: z.enum(['backpack', 'shelter', 'sleep_system', 'cooking', 'water', 'clothing', 'footwear', 'lighting', 'navigation', 'safety', 'hygiene', 'electronics', 'tools', 'documents', 'technical', 'other']).describe('Gear category'),
             weightG: z.number().min(0).describe('Weight in grams'),
             season: z.enum(['summer', 'winter', 'demi']).describe('Season'),
-            notes: z.string().optional().describe('Optional notes'),
+            notes: z.string().nullable().describe('Optional notes'),
           })).describe('Array of gear items to add'),
         }),
         execute: async ({ items }) => {
@@ -339,7 +339,7 @@ export async function POST(req: Request) {
         parameters: z.object({
           name: z.string().describe('List name (e.g., trip name)'),
           season: z.enum(['summer', 'winter', 'demi']).describe('Season'),
-          tripDate: z.string().optional().describe('Trip date in YYYY-MM-DD format (optional)'),
+          tripDate: z.string().nullable().describe('Trip date in YYYY-MM-DD format (optional)'),
         }),
         execute: async ({ name, season, tripDate }) => {
           const { data: list, error } = await supabase
