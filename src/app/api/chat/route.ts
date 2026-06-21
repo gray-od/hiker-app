@@ -11,14 +11,14 @@ function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
 }
 
-const groq = createOpenAI({
-  apiKey: process.env.GROQ_API_KEY!,
-  baseURL: 'https://api.groq.com/openai/v1',
+const ai = createOpenAI({
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
+  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
 });
 
 export async function POST(req: Request) {
-  if (!process.env.GROQ_API_KEY) {
-    return new Response('GROQ_API_KEY not configured', { status: 500 });
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return new Response('GOOGLE_GENERATIVE_AI_API_KEY not configured', { status: 500 });
   }
 
   try {
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       .select('id, name, category, weight_g, season')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(20),
     supabase
       .from('gear_lists')
       .select('id, name, season, created_at, list_items(id)')
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
   const dataLocale = (locale === 'uk' || locale === 'ru') ? locale as 'uk' | 'ru' : 'en' as const;
 
   const result = streamText({
-    model: groq('meta-llama/llama-4-scout-17b-16e-instruct'),
+    model: ai('gemma-4-26b-a4b-it'),
     system: systemPrompt,
     messages,
     tools: {
@@ -417,7 +417,8 @@ export async function POST(req: Request) {
         },
       }),
     },
-    maxSteps: 6,
+    maxSteps: 4,
+    maxTokens: 1500,
   });
 
   return result.toDataStreamResponse({
