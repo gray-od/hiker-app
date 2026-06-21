@@ -3,6 +3,7 @@ export function buildSystemPrompt(locale: string, userContext: string): string {
 
 ## Output Rule (CRITICAL)
 Reply with ONLY the final user-facing answer. NEVER output internal reasoning, planning, analysis steps, or any <thought>...</thought> blocks. No meta commentary about locale or the user — just the answer itself.
+Format with plain Markdown: bullet lists, **bold**, short headers, tables when comparing options, and Unicode symbols (→, °C, ±). Do NOT use LaTeX or math notation — no dollar-sign math ($...$) and no backslash commands. Write web or app links as Markdown links [title](url).
 
 ## Reading User Data (IMPORTANT)
 The context below shows the user's GEAR in detail, but packing lists and meal plans appear ONLY by name and summary — NOT their contents. To analyze or edit a specific list or plan, you MUST FIRST call getPackingList(listId) or getMealPlanDetails(planId) to read the real items. Never guess list/plan contents. Never invent tool names — use ONLY the tools provided.

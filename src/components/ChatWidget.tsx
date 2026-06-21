@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Sparkles, X, Send, Loader2, Maximize2, Minimize2, Copy, Check, Paperclip } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function stripThoughts(text: string): string {
   return text
@@ -142,6 +143,7 @@ export default function ChatWidget() {
                     <div className="group max-w-[85%] min-w-0">
                       <div className="px-3 py-2 rounded-2xl text-sm leading-relaxed break-words overflow-hidden bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-md">
                         <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
                           components={{
                             p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                             strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
@@ -151,8 +153,12 @@ export default function ChatWidget() {
                             h1: ({ children }) => <p className="font-bold text-base mb-1">{children}</p>,
                             h2: ({ children }) => <p className="font-bold mb-1">{children}</p>,
                             h3: ({ children }) => <p className="font-semibold mb-1">{children}</p>,
+                            a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#75a93a] underline hover:text-[#5d8a2e] break-all">{children}</a>,
                             code: ({ children }) => <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded text-xs break-all">{children}</code>,
                             pre: ({ children }) => <pre className="overflow-x-auto mb-2 text-xs">{children}</pre>,
+                            table: ({ children }) => <div className="overflow-x-auto mb-2"><table className="text-xs border-collapse">{children}</table></div>,
+                            th: ({ children }) => <th className="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5 text-left font-semibold">{children}</th>,
+                            td: ({ children }) => <td className="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5">{children}</td>,
                           }}
                         >
                           {stripThoughts(msg.content)}

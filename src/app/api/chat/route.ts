@@ -59,11 +59,6 @@ export async function POST(req: Request) {
     return new Response('RATE_LIMIT', { status: 429 });
   }
 
-  await supabase.from('ai_usage').upsert(
-    { user_id: session.user.id, date: new Date().toISOString().split('T')[0], message_count: todayCount + 1 },
-    { onConflict: 'user_id,date' }
-  );
-
   const locale = cookieStore.get('NEXT_LOCALE')?.value || 'uk';
 
   const [{ data: gear }, { data: lists }, { data: meals }] = await Promise.all([
@@ -480,16 +475,22 @@ export async function POST(req: Request) {
     },
     maxSteps: 4,
     maxTokens: 4096,
+    onFinish: async () => {
+      await supabase.from('ai_usage').upsert(
+        { user_id: session.user.id, date: new Date().toISOString().split('T')[0], message_count: todayCount + 1 },
+        { onConflict: 'user_id,date' }
+      );
+    },
   });
 
   return result.toDataStreamResponse({
     getErrorMessage: (error) => {
       console.error('[chat] stream error:', error);
-      return error instanceof Error ? error.message : String(error);
+      return 'AI service is temporarily unavailable. Please try again in a moment.';
     },
   });
   } catch (error) {
     console.error('[chat] route error:', error);
-    return new Response(error instanceof Error ? error.message : 'Internal server error', { status: 500 });
+    return new Response('Internal server error', { status: 500 });
   }
 }
