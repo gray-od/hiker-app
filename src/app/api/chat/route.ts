@@ -14,18 +14,6 @@ function escapeLike(str: string): string {
 const ai = createOpenAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
   baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-  fetch: (async (url: string | URL | Request, options?: RequestInit) => {
-    if (options && typeof options.body === 'string') {
-      try {
-        const body = JSON.parse(options.body);
-        body.reasoning_effort = 'none';
-        return fetch(url, { ...options, body: JSON.stringify(body) });
-      } catch {
-        // leave body untouched if parsing fails
-      }
-    }
-    return fetch(url, options);
-  }) as typeof fetch,
 });
 
 export async function POST(req: Request) {
