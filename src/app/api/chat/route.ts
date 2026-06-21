@@ -418,9 +418,6 @@ export async function POST(req: Request) {
     },
     maxSteps: 4,
     maxTokens: 1500,
-    providerOptions: {
-      google: { thinkingConfig: { thinkingBudget: 0 } },
-    },
   });
 
   return result.toDataStreamResponse({
