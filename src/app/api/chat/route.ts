@@ -6,9 +6,15 @@ import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
 import { getMealTemplate } from '@/lib/meal-templates';
+import { resolveUserModel } from '@/lib/ai-providers';
+import { isValidSearch, runUserSearch } from '@/lib/search-providers';
 
 function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
+}
+
+function sanitizeLog(msg: string): string {
+  return msg.replace(/\b(sk-[a-zA-Z0-9._-]{4,}|AIza[a-zA-Z0-9_-]{4,})\b/g, '***REDACTED***');
 }
 
 const google = createGoogleGenerativeAI({
@@ -16,12 +22,8 @@ const google = createGoogleGenerativeAI({
 });
 
 export async function POST(req: Request) {
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return new Response('GOOGLE_GENERATIVE_AI_API_KEY not configured', { status: 500 });
-  }
-
   try {
-    const { messages } = await req.json();
+    const { messages, ai, search } = await req.json();
 
   const cookieStore = await cookies();
 
@@ -44,19 +46,30 @@ export async function POST(req: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  const userModel = resolveUserModel(ai);
+  const usingOwnKey = userModel !== null;
+
+  if (!usingOwnKey && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return new Response('GOOGLE_GENERATIVE_AI_API_KEY not configured', { status: 500 });
+  }
+
   const FREE_DAILY_LIMIT = 15;
 
-  const { data: usage } = await supabase
-    .from('ai_usage')
-    .select('message_count')
-    .eq('user_id', session.user.id)
-    .eq('date', new Date().toISOString().split('T')[0])
-    .single();
+  let todayCount = 0;
 
-  const todayCount = usage?.message_count || 0;
+  if (!usingOwnKey) {
+    const { data: usage } = await supabase
+      .from('ai_usage')
+      .select('message_count')
+      .eq('user_id', session.user.id)
+      .eq('date', new Date().toISOString().split('T')[0])
+      .single();
 
-  if (todayCount >= FREE_DAILY_LIMIT) {
-    return new Response('RATE_LIMIT', { status: 429 });
+    todayCount = usage?.message_count || 0;
+
+    if (todayCount >= FREE_DAILY_LIMIT) {
+      return new Response('RATE_LIMIT', { status: 429 });
+    }
   }
 
   const locale = cookieStore.get('NEXT_LOCALE')?.value || 'uk';
@@ -117,7 +130,7 @@ export async function POST(req: Request) {
   const dataLocale = (locale === 'uk' || locale === 'ru') ? locale as 'uk' | 'ru' : 'en' as const;
 
   const result = streamText({
-    model: google('gemma-4-26b-a4b-it'),
+    model: userModel ?? google('gemma-4-26b-a4b-it'),
     system: systemPrompt,
     messages,
     tools: {
@@ -127,6 +140,9 @@ export async function POST(req: Request) {
           query: z.string().describe('Search query in the language most likely to return good results'),
         }),
         execute: async ({ query }) => {
+          if (isValidSearch(search)) {
+            return runUserSearch(search, query);
+          }
           if (!process.env.EXA_API_KEY) return 'Search is unavailable right now';
           try {
             const res = await fetch('https://api.exa.ai/search', {
@@ -163,6 +179,9 @@ export async function POST(req: Request) {
           location: z.string().describe('Place name, e.g. "Hoverla", "Yaremche", "Zakopane"'),
         }),
         execute: async ({ location }) => {
+          if (isValidSearch(search)) {
+            return runUserSearch(search, 'weather forecast 7 day ' + location);
+          }
           try {
             const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
             const geo = await geoRes.json();
@@ -476,21 +495,33 @@ export async function POST(req: Request) {
     maxSteps: 4,
     maxTokens: 4096,
     onFinish: async () => {
-      await supabase.from('ai_usage').upsert(
-        { user_id: session.user.id, date: new Date().toISOString().split('T')[0], message_count: todayCount + 1 },
-        { onConflict: 'user_id,date' }
-      );
+      if (!usingOwnKey) {
+        await supabase.from('ai_usage').upsert(
+          { user_id: session.user.id, date: new Date().toISOString().split('T')[0], message_count: todayCount + 1 },
+          { onConflict: 'user_id,date' }
+        );
+      }
     },
   });
 
   return result.toDataStreamResponse({
     getErrorMessage: (error) => {
-      console.error('[chat] stream error:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      const lower = msg.toLowerCase();
+      if (
+        lower.includes('tool') || lower.includes('function call') ||
+        lower.includes('function_call') || lower.includes('tool_choice') ||
+        lower.includes('tool_calls')
+      ) {
+        return 'MODEL_NO_TOOLS';
+      }
+      console.error('[chat] stream error:', sanitizeLog(msg));
       return 'AI service is temporarily unavailable. Please try again in a moment.';
     },
   });
   } catch (error) {
-    console.error('[chat] route error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[chat] route error:', sanitizeLog(msg));
     return new Response('Internal server error', { status: 500 });
   }
 }

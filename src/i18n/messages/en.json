@@ -254,7 +254,17 @@
     "delete_confirm_text": "Enter {email} to confirm deletion. This action cannot be undone.",
     "delete_confirm_placeholder": "Enter your email",
     "delete_confirm_button": "Delete permanently",
-    "delete_error": "Failed to delete account. Please try again later."
+    "delete_error": "Failed to delete account. Please try again later.",
+    "ai_assistant": "AI Assistant",
+    "ai_model_block": "Custom AI Model",
+    "search_block": "Custom Search",
+    "provider": "Provider",
+    "api_key": "API Key",
+    "model_id": "Model",
+    "cx": "CX (Search Engine ID)",
+    "byok_ai_hint": "Key is stored only in your browser. With your own key the 15 messages/day limit is removed.",
+    "byok_search_hint": "With custom search, weather also goes through it.",
+    "clear": "Clear"
   },
   "chat": {
     "title": "AI Assistant",
@@ -269,7 +279,8 @@
     "file_too_large": "File too large (max 100 KB)",
     "close": "Close",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "model_no_tools": "Your model doesn't support tools"
   },
   "landing": {
     "tagline": "Plan your hike smart",

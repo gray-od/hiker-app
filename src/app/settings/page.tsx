@@ -30,6 +30,14 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState('');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [aiProvider, setAiProvider] = useState('gemini');
+  const [aiKey, setAiKey] = useState('');
+  const [aiModel, setAiModel] = useState('');
+  const [searchProvider, setSearchProvider] = useState('exa');
+  const [searchKey, setSearchKey] = useState('');
+  const [searchCx, setSearchCx] = useState('');
+  const [aiSavedMessage, setAiSavedMessage] = useState('');
+  const [searchSavedMessage, setSearchSavedMessage] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -73,6 +81,28 @@ export default function SettingsPage() {
     });
   }, [router]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const parse = (k: string) => {
+      try {
+        const v = localStorage.getItem(k);
+        return v ? JSON.parse(v) : null;
+      } catch { return null; }
+    };
+    const ai = parse('prohikes.ai');
+    if (ai) {
+      if (ai.provider) setAiProvider(ai.provider);
+      if (ai.apiKey) setAiKey(ai.apiKey);
+      if (ai.model) setAiModel(ai.model);
+    }
+    const search = parse('prohikes.search');
+    if (search) {
+      if (search.provider) setSearchProvider(search.provider);
+      if (search.apiKey) setSearchKey(search.apiKey);
+      if (search.cx) setSearchCx(search.cx);
+    }
+  }, []);
+
   const switchLocale = async (locale: string) => {
     document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
     setCurrentLocale(locale);
@@ -106,6 +136,36 @@ export default function SettingsPage() {
       setDeleteError(t('delete_error'));
       setDeleting(false);
     }
+  };
+
+  const handleSaveAi = () => {
+    if (!aiKey.trim()) return;
+    localStorage.setItem('prohikes.ai', JSON.stringify({ provider: aiProvider, apiKey: aiKey, model: aiModel }));
+    setAiSavedMessage(t('saved'));
+    setTimeout(() => setAiSavedMessage(''), 2000);
+  };
+
+  const handleClearAi = () => {
+    localStorage.removeItem('prohikes.ai');
+    setAiProvider('gemini');
+    setAiKey('');
+    setAiModel('');
+  };
+
+  const handleSaveSearch = () => {
+    if (!searchKey.trim()) return;
+    const payload: Record<string, string> = { provider: searchProvider, apiKey: searchKey };
+    if (searchProvider === 'google_cse') payload.cx = searchCx;
+    localStorage.setItem('prohikes.search', JSON.stringify(payload));
+    setSearchSavedMessage(t('saved'));
+    setTimeout(() => setSearchSavedMessage(''), 2000);
+  };
+
+  const handleClearSearch = () => {
+    localStorage.removeItem('prohikes.search');
+    setSearchProvider('exa');
+    setSearchKey('');
+    setSearchCx('');
   };
 
   if (loading) {
@@ -167,6 +227,134 @@ export default function SettingsPage() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            {t('ai_assistant')}
+          </h2>
+
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+              {t('ai_model_block')}
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
+                <select
+                  value={aiProvider}
+                  onChange={(e) => setAiProvider(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                >
+                  <option value="gemini">Gemini</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="openrouter">OpenRouter</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('api_key')}</label>
+                <input
+                  type="password"
+                  value={aiKey}
+                  onChange={(e) => setAiKey(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('model_id')}</label>
+                <input
+                  type="text"
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                  placeholder={aiProvider === 'gemini' ? 'gemma-4-26b-a4b-it' : aiProvider === 'openai' ? 'gpt-4o-mini' : aiProvider === 'deepseek' ? 'deepseek-chat' : 'openai/gpt-4o-mini'}
+                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                />
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('byok_ai_hint')}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveAi}
+                  disabled={!aiKey.trim()}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[#75a93a] hover:bg-[#5d8a2e] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {tCommon('save')}
+                </button>
+                <button
+                  onClick={handleClearAi}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                >
+                  {t('clear')}
+                </button>
+                {aiSavedMessage && (
+                  <span className="text-sm text-[#75a93a] self-center">{aiSavedMessage}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+              {t('search_block')}
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
+                <select
+                  value={searchProvider}
+                  onChange={(e) => setSearchProvider(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                >
+                  <option value="exa">Exa</option>
+                  <option value="brave">Brave</option>
+                  <option value="tavily">Tavily</option>
+                  <option value="serper">Serper</option>
+                  <option value="firecrawl">Firecrawl</option>
+                  <option value="perplexity">Perplexity</option>
+                  <option value="google_cse">Google CSE</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('api_key')}</label>
+                <input
+                  type="password"
+                  value={searchKey}
+                  onChange={(e) => setSearchKey(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                />
+              </div>
+              {searchProvider === 'google_cse' && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('cx')}</label>
+                  <input
+                    type="text"
+                    value={searchCx}
+                    onChange={(e) => setSearchCx(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  />
+                </div>
+              )}
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('byok_search_hint')}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveSearch}
+                  disabled={!searchKey.trim()}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[#75a93a] hover:bg-[#5d8a2e] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {tCommon('save')}
+                </button>
+                <button
+                  onClick={handleClearSearch}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                >
+                  {t('clear')}
+                </button>
+                {searchSavedMessage && (
+                  <span className="text-sm text-[#75a93a] self-center">{searchSavedMessage}</span>
+                )}
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
