@@ -425,8 +425,14 @@ export async function POST(req: Request) {
     maxSteps: 6,
   });
 
-  return result.toDataStreamResponse();
-  } catch {
-    return new Response('Internal server error', { status: 500 });
+  return result.toDataStreamResponse({
+    getErrorMessage: (error) => {
+      console.error('[chat] stream error:', error);
+      return error instanceof Error ? error.message : String(error);
+    },
+  });
+  } catch (error) {
+    console.error('[chat] route error:', error);
+    return new Response(error instanceof Error ? error.message : 'Internal server error', { status: 500 });
   }
 }
