@@ -190,6 +190,68 @@ export async function POST(req: Request) {
         },
       }),
 
+      getPackingList: tool({
+        description: 'Read the FULL contents of one of the user\'s packing lists — every gear item with weight, quantity, and packed/worn/consumable status. The context below only lists names and item counts, NOT the items themselves, so you MUST call this before analyzing or editing a specific list.',
+        parameters: z.object({
+          listId: z.string().describe('ID of the packing list (from the Packing Lists context below)'),
+        }),
+        execute: async ({ listId }) => {
+          const { data } = await supabase
+            .from('list_items')
+            .select('quantity, is_packed, worn, consumable, gear_items(name, category, weight_g)')
+            .eq('list_id', listId);
+          const items = (data ?? []) as unknown as Array<{
+            quantity: number;
+            is_packed: boolean;
+            worn: boolean;
+            consumable: boolean;
+            gear_items: { name: string; category: string; weight_g: number } | { name: string; category: string; weight_g: number }[] | null;
+          }>;
+          if (items.length === 0) return 'This list has no items yet.';
+          let total = 0;
+          const lines: string[] = [];
+          for (const it of items) {
+            const g = Array.isArray(it.gear_items) ? it.gear_items[0] : it.gear_items;
+            if (!g) continue;
+            total += (g.weight_g || 0) * (it.quantity || 1);
+            const flags = [it.worn ? 'worn' : '', it.consumable ? 'consumable' : '', it.is_packed ? 'packed' : ''].filter(Boolean).join(', ');
+            lines.push(`- ${g.name} | ${g.category} | ${g.weight_g}g ×${it.quantity}${flags ? ' (' + flags + ')' : ''}`);
+          }
+          return `Items (${lines.length}), total ${total}g:\n${lines.join('\n')}`;
+        },
+      }),
+
+      getMealPlanDetails: tool({
+        description: 'Read the FULL day-by-day contents of one of the user\'s meal plans — meals, foods, calories and weight per day. The context below only has plan summaries, NOT the entries, so you MUST call this before analyzing or editing a specific plan.',
+        parameters: z.object({
+          planId: z.string().describe('ID of the meal plan (from the Meal Plans context below)'),
+        }),
+        execute: async ({ planId }) => {
+          const { data } = await supabase
+            .from('meal_days')
+            .select('day_number, total_calories, total_weight_g, meal_entries(meal_type, name, weight_g, calories)')
+            .eq('plan_id', planId)
+            .order('day_number');
+          const days = (data ?? []) as unknown as Array<{
+            day_number: number;
+            total_calories: number;
+            total_weight_g: number;
+            meal_entries: { meal_type: string; name: string; weight_g: number; calories: number }[] | null;
+          }>;
+          if (days.length === 0) return 'This plan has no days yet.';
+          let out = '';
+          for (const day of days) {
+            out += `Day ${day.day_number} (${day.total_calories || 0} kcal, ${day.total_weight_g || 0}g):\n`;
+            const entries = day.meal_entries || [];
+            if (entries.length === 0) out += '  (no entries)\n';
+            for (const e of entries) {
+              out += `  - ${e.meal_type}: ${e.name} | ${e.weight_g}g | ${e.calories} kcal\n`;
+            }
+          }
+          return out;
+        },
+      }),
+
       createMealPlan: tool({
         description: 'Create a new meal plan in the app. Can optionally apply a template to auto-fill days with food entries. Available templates: standard_3day, comfort_winter, ultralight_3day.',
         parameters: z.object({
