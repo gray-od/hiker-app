@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
 import { getMealTemplate } from '@/lib/meal-templates';
-import { resolveUserModel } from '@/lib/ai-providers';
+import { resolveUserModel, validateAiKey } from '@/lib/ai-providers';
 import { isValidSearch, runUserSearch } from '@/lib/search-providers';
 
 function escapeLike(str: string): string {
@@ -54,8 +54,17 @@ export async function POST(req: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const userModel = resolveUserModel(ai);
-  const usingOwnKey = userModel !== null;
+  let userModel = resolveUserModel(ai);
+  let usingOwnKey = userModel !== null;
+
+  if (usingOwnKey) {
+    const check = await validateAiKey(ai);
+    if (!check.ok) {
+      console.error('[chat] BYOK key invalid, falling back to default:', sanitizeLog(check.error ?? '', secrets));
+      userModel = null;
+      usingOwnKey = false;
+    }
+  }
 
   if (!usingOwnKey && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     return new Response('GOOGLE_GENERATIVE_AI_API_KEY not configured', { status: 500 });
@@ -522,6 +531,17 @@ export async function POST(req: Request) {
         lower.includes('tool_calls')
       ) {
         return 'MODEL_NO_TOOLS';
+      }
+      if (usingOwnKey) {
+        if (
+          lower.includes('401') || lower.includes('403') || lower.includes('429') ||
+          lower.includes('unauthorized') || lower.includes('quota') ||
+          lower.includes('insufficient') || lower.includes('invalid api key') ||
+          lower.includes('rate limit')
+        ) {
+          console.error('[chat] stream error:', sanitizeLog(msg, secrets));
+          return 'BYOK_FAILED';
+        }
       }
       console.error('[chat] stream error:', sanitizeLog(msg, secrets));
       return 'AI service is temporarily unavailable. Please try again in a moment.';

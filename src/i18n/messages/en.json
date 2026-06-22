@@ -264,6 +264,9 @@
     "cx": "CX (Search Engine ID)",
     "byok_ai_hint": "Key is stored only in your browser. With your own key the 15 messages/day limit is removed.",
     "byok_search_hint": "With custom search, weather also goes through it.",
+    "byok_testing": "Checking key…",
+    "byok_valid": "Key valid",
+    "byok_invalid": "Key invalid",
     "clear": "Clear"
   },
   "chat": {
@@ -280,7 +283,8 @@
     "close": "Close",
     "expand": "Expand",
     "collapse": "Collapse",
-    "model_no_tools": "Your model doesn't support tools"
+    "model_no_tools": "Your model doesn't support tools",
+    "byok_key_failed": "Your key failed (error or quota exhausted). Switch to free mode in Settings."
   },
   "landing": {
     "tagline": "Plan your hike smart",
@@ -311,7 +315,7 @@
     "third_ai": "Google Gemma 4 (via Google AI Studio) — AI assistant. Your chat messages are sent to Google AI Studio for processing. On the free AI Studio tier, submitted data MAY be used by Google to improve their models and may be processed on servers outside the EU. By using the chat, you agree to these terms.",
     "third_search": "Exa (exa.ai) — web search for the AI assistant. Search queries are sent to the Exa API. Exa does not retain search queries.",
     "third_weather": "Open-Meteo — weather. Weather data is fetched anonymously, without an API key or account.",
-    "third_byok": "Bring Your Own Key (BYOK) — you may enter your own AI key (Gemini / OpenAI / DeepSeek / OpenRouter) and/or search key (Exa / Brave / Tavily / Serper / Firecrawl / Perplexity / Google CSE) in Settings. Keys are stored ONLY in your browser (localStorage), sent in the request body per request over HTTPS, and are NOT stored or logged on the server. When set, requests use your chosen provider instead of the defaults.",
+    "third_byok": "Bring Your Own Key (BYOK) — you may enter your own AI key (Gemini / OpenAI / DeepSeek / OpenRouter) and/or search key (Exa / Brave / Tavily / Serper / Firecrawl / Perplexity / Google CSE) in Settings. Keys are stored ONLY in your browser (localStorage), sent in the request body per request over HTTPS, and are NOT stored or logged on the server. When set, requests use your chosen provider instead of the defaults. When you save a key in Settings, it is sent once to our server to be validated (a test request to the chosen provider) and is likewise not stored or logged.",
     "cookies_title": "Cookies",
     "cookies_text": "ProHikes uses one cookie — NEXT_LOCALE — to save your language preference. No tracking or advertising cookies are used.",
     "deletion_title": "Data deletion",

@@ -38,6 +38,10 @@ export default function SettingsPage() {
   const [searchCx, setSearchCx] = useState('');
   const [aiSavedMessage, setAiSavedMessage] = useState('');
   const [searchSavedMessage, setSearchSavedMessage] = useState('');
+  const [aiTesting, setAiTesting] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<'valid' | 'invalid' | null>(null);
+  const [searchTesting, setSearchTesting] = useState(false);
+  const [searchTestResult, setSearchTestResult] = useState<'valid' | 'invalid' | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -138,11 +142,30 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveAi = () => {
+  const handleSaveAi = async () => {
     if (!aiKey.trim()) return;
-    localStorage.setItem('prohikes.ai', JSON.stringify({ provider: aiProvider, apiKey: aiKey, model: aiModel }));
-    setAiSavedMessage(t('saved'));
-    setTimeout(() => setAiSavedMessage(''), 2000);
+    setAiTesting(true);
+    setAiTestResult(null);
+    try {
+      const res = await fetch('/api/byok/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'ai', config: { provider: aiProvider, apiKey: aiKey, model: aiModel } }),
+      });
+      const { ok } = await res.json();
+      if (ok) {
+        localStorage.setItem('prohikes.ai', JSON.stringify({ provider: aiProvider, apiKey: aiKey, model: aiModel }));
+        setAiTestResult('valid');
+        setAiSavedMessage(t('saved'));
+        setTimeout(() => setAiSavedMessage(''), 2000);
+      } else {
+        setAiTestResult('invalid');
+      }
+    } catch {
+      setAiTestResult('invalid');
+    } finally {
+      setAiTesting(false);
+    }
   };
 
   const handleClearAi = () => {
@@ -152,13 +175,32 @@ export default function SettingsPage() {
     setAiModel('');
   };
 
-  const handleSaveSearch = () => {
+  const handleSaveSearch = async () => {
     if (!searchKey.trim()) return;
-    const payload: Record<string, string> = { provider: searchProvider, apiKey: searchKey };
-    if (searchProvider === 'google_cse') payload.cx = searchCx;
-    localStorage.setItem('prohikes.search', JSON.stringify(payload));
-    setSearchSavedMessage(t('saved'));
-    setTimeout(() => setSearchSavedMessage(''), 2000);
+    setSearchTesting(true);
+    setSearchTestResult(null);
+    try {
+      const payload: Record<string, string> = { provider: searchProvider, apiKey: searchKey };
+      if (searchProvider === 'google_cse') payload.cx = searchCx;
+      const res = await fetch('/api/byok/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'search', config: payload }),
+      });
+      const { ok } = await res.json();
+      if (ok) {
+        localStorage.setItem('prohikes.search', JSON.stringify(payload));
+        setSearchTestResult('valid');
+        setSearchSavedMessage(t('saved'));
+        setTimeout(() => setSearchSavedMessage(''), 2000);
+      } else {
+        setSearchTestResult('invalid');
+      }
+    } catch {
+      setSearchTestResult('invalid');
+    } finally {
+      setSearchTesting(false);
+    }
   };
 
   const handleClearSearch = () => {
@@ -243,7 +285,7 @@ export default function SettingsPage() {
                 <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
                 <select
                   value={aiProvider}
-                  onChange={(e) => setAiProvider(e.target.value)}
+                  onChange={(e) => { setAiProvider(e.target.value); setAiTestResult(null); }}
                   className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                 >
                   <option value="gemini">Gemini</option>
@@ -257,7 +299,7 @@ export default function SettingsPage() {
                 <input
                   type="password"
                   value={aiKey}
-                  onChange={(e) => setAiKey(e.target.value)}
+                  onChange={(e) => { setAiKey(e.target.value); setAiTestResult(null); }}
                   className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                 />
               </div>
@@ -266,7 +308,7 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   value={aiModel}
-                  onChange={(e) => setAiModel(e.target.value)}
+                  onChange={(e) => { setAiModel(e.target.value); setAiTestResult(null); }}
                   placeholder={aiProvider === 'gemini' ? 'gemma-4-26b-a4b-it' : aiProvider === 'openai' ? 'gpt-4o-mini' : aiProvider === 'deepseek' ? 'deepseek-chat' : 'openai/gpt-4o-mini'}
                   className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                 />
@@ -275,10 +317,10 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveAi}
-                  disabled={!aiKey.trim()}
+                  disabled={!aiKey.trim() || aiTesting}
                   className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[#75a93a] hover:bg-[#5d8a2e] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  {tCommon('save')}
+                  {aiTesting ? t('byok_testing') : tCommon('save')}
                 </button>
                 <button
                   onClick={handleClearAi}
@@ -286,6 +328,15 @@ export default function SettingsPage() {
                 >
                   {t('clear')}
                 </button>
+                {aiTesting && (
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 self-center">{t('byok_testing')}</span>
+                )}
+                {aiTestResult === 'valid' && (
+                  <span className="text-sm text-[#75a93a] self-center">&#x2713; {t('byok_valid')}</span>
+                )}
+                {aiTestResult === 'invalid' && (
+                  <span className="text-sm text-red-500 self-center">&#x2717; {t('byok_invalid')}</span>
+                )}
                 {aiSavedMessage && (
                   <span className="text-sm text-[#75a93a] self-center">{aiSavedMessage}</span>
                 )}
@@ -302,7 +353,7 @@ export default function SettingsPage() {
                 <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
                 <select
                   value={searchProvider}
-                  onChange={(e) => setSearchProvider(e.target.value)}
+                  onChange={(e) => { setSearchProvider(e.target.value); setSearchTestResult(null); }}
                   className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                 >
                   <option value="exa">Exa</option>
@@ -319,29 +370,29 @@ export default function SettingsPage() {
                 <input
                   type="password"
                   value={searchKey}
-                  onChange={(e) => setSearchKey(e.target.value)}
+                  onChange={(e) => { setSearchKey(e.target.value); setSearchTestResult(null); }}
                   className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                 />
               </div>
               {searchProvider === 'google_cse' && (
                 <div>
                   <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('cx')}</label>
-                  <input
-                    type="text"
-                    value={searchCx}
-                    onChange={(e) => setSearchCx(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-                  />
+                <input
+                  type="text"
+                  value={searchCx}
+                  onChange={(e) => { setSearchCx(e.target.value); setSearchTestResult(null); }}
+                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                />
                 </div>
               )}
               <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('byok_search_hint')}</p>
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveSearch}
-                  disabled={!searchKey.trim()}
+                  disabled={!searchKey.trim() || searchTesting}
                   className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[#75a93a] hover:bg-[#5d8a2e] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  {tCommon('save')}
+                  {searchTesting ? t('byok_testing') : tCommon('save')}
                 </button>
                 <button
                   onClick={handleClearSearch}
@@ -349,6 +400,15 @@ export default function SettingsPage() {
                 >
                   {t('clear')}
                 </button>
+                {searchTesting && (
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 self-center">{t('byok_testing')}</span>
+                )}
+                {searchTestResult === 'valid' && (
+                  <span className="text-sm text-[#75a93a] self-center">&#x2713; {t('byok_valid')}</span>
+                )}
+                {searchTestResult === 'invalid' && (
+                  <span className="text-sm text-red-500 self-center">&#x2717; {t('byok_invalid')}</span>
+                )}
                 {searchSavedMessage && (
                   <span className="text-sm text-[#75a93a] self-center">{searchSavedMessage}</span>
                 )}

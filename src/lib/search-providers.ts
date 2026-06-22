@@ -169,3 +169,85 @@ export async function runUserSearch(
     return 'Search temporarily unavailable';
   }
 }
+
+export async function validateSearchKey(search: unknown): Promise<{ ok: boolean; error?: string }> {
+  if (!isValidSearch(search)) return { ok: false, error: 'invalid config' };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  const p = search.provider as SearchProvider;
+
+  try {
+    let response: Response;
+
+    switch (p) {
+      case 'exa':
+        response = await fetch('https://api.exa.ai/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': search.apiKey },
+          body: JSON.stringify({ query: 'test', numResults: 1 }),
+          signal: controller.signal,
+        });
+        break;
+      case 'brave':
+        response = await fetch(
+          'https://api.search.brave.com/res/v1/web/search?q=test&count=1',
+          { headers: { 'X-Subscription-Token': search.apiKey }, signal: controller.signal },
+        );
+        break;
+      case 'tavily':
+        response = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: search.apiKey, query: 'test', max_results: 1 }),
+          signal: controller.signal,
+        });
+        break;
+      case 'serper':
+        response = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-API-KEY': search.apiKey },
+          body: JSON.stringify({ q: 'test', num: 1 }),
+          signal: controller.signal,
+        });
+        break;
+      case 'firecrawl':
+        response = await fetch('https://api.firecrawl.dev/v1/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${search.apiKey}` },
+          body: JSON.stringify({ query: 'test', limit: 1 }),
+          signal: controller.signal,
+        });
+        break;
+      case 'perplexity':
+        response = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${search.apiKey}` },
+          body: JSON.stringify({ model: 'sonar', messages: [{ role: 'user', content: 'test' }], max_tokens: 1 }),
+          signal: controller.signal,
+        });
+        break;
+      case 'google_cse':
+        if (!search.cx) {
+          clearTimeout(timeoutId);
+          return { ok: false, error: 'missing cx' };
+        }
+        response = await fetch(
+          `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(search.apiKey)}&cx=${encodeURIComponent(search.cx)}&q=test&num=1`,
+          { signal: controller.signal },
+        );
+        break;
+      default:
+        clearTimeout(timeoutId);
+        return { ok: false, error: 'invalid config' };
+    }
+
+    clearTimeout(timeoutId);
+    if (response.ok) return { ok: true };
+    return { ok: false, error: `HTTP ${response.status}` };
+  } catch {
+    clearTimeout(timeoutId);
+    return { ok: false, error: 'network' };
+  }
+}
