@@ -590,6 +590,17 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         </h1>
         <div className="flex items-center gap-2">
           <a
+            href={`/meals/${id}/shopping`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+            title={t('shopping_list')}
+          >
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-.532 2.062-1.434 2.683-2.566L19.5 6.75H5.106M7.5 14.25 5.106 6.75M7.5 14.25 6.106 18.75m0 0a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0Zm12 0a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0Z" />
+            </svg>
+          </a>
+          <a
             href={`/meals/${id}/print`}
             target="_blank"
             rel="noopener noreferrer"

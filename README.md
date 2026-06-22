@@ -30,7 +30,7 @@ The AI isn't a chatbot bolted onto a database. It reads your gear, lists, and me
 
 **Packing Lists** — create trip-specific lists from your gear library. Track packed/worn/consumable items. Progress bar. Weight breakdown with explanations. Print with checkboxes for paper.
 
-**Meal Plans** — 75 built-in hiking products with calories, protein, fat, carbs. 3 plan types (comfort, standard, ultralight). Cyclic templates. Group calculations. Custom food library. Print detailed nutrition tables.
+**Meal Plans** — 75 built-in hiking products with calories, protein, fat, carbs. 3 plan types (comfort, standard, ultralight). Cyclic templates. Group calculations. Custom food library. Print detailed nutrition tables. Generate a combined shopping list — identical products across all days are merged and their weights summed, ready to print for the store.
 
 **AI Assistant** — powered by Gemma 4 26B A4B (via Google AI Studio) with Exa web search and Open-Meteo weather. 5 levels of expertise: app navigator, data analyst, gear consultant, route specialist, survival expert. 8 tools: create meal plans, add gear items, create packing lists, add items to lists, search the web, get weather, get packing list details, get meal plan details. Attach text files (CSV/TXT/TSV, up to 100 KB) directly into chat — PDF, photos and Word are not supported; convert them to a text/CSV file first. 15 free messages per day.
 

@@ -174,7 +174,11 @@
     "all_categories": "All Categories",
     "template_hint": "Pre-built meal plans from experienced hikers",
     "apply_template": "Apply Template",
-    "apply_template_confirm": "This will replace all current entries. Continue?"
+    "apply_template_confirm": "This will replace all current entries. Continue?",
+    "shopping_list": "Shopping List",
+    "shopping_list_subtitle": "Products for the trip — total amount of each",
+    "product": "Product",
+    "shopping_list_empty": "No products — add dishes to the plan"
   },
   "food": {
     "title": "My Products",
