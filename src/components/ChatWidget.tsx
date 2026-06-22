@@ -151,6 +151,7 @@ export default function ChatWidget() {
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-[250px] mx-auto">
                   {t('welcome')}
                 </p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">{t('attach_hint')}</p>
               </div>
             )}
 
@@ -250,7 +251,7 @@ export default function ChatWidget() {
           <input
             type="file"
             ref={fileInputRef}
-            accept=".csv,.txt,.tsv"
+            accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -260,9 +261,17 @@ export default function ChatWidget() {
                 e.target.value = '';
                 return;
               }
+              if (!/\.(csv|txt|tsv)$/i.test(file.name)) {
+                alert(t('file_invalid_type'));
+                e.target.value = '';
+                return;
+              }
               const reader = new FileReader();
               reader.onload = (ev) => {
                 setAttachedFile({ name: file.name, content: ev.target?.result as string });
+              };
+              reader.onerror = () => {
+                alert(t('file_read_error'));
               };
               reader.readAsText(file);
               e.target.value = '';
@@ -292,6 +301,7 @@ export default function ChatWidget() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label={t('attach_file')}
+                title={t('attach_hint')}
                 className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
               >
                 <Paperclip className="w-4 h-4" />

@@ -17,7 +17,7 @@ ProHikes takes a different approach:
 | Old way | ProHikes way |
 |---|---|
 | Pie chart shows weight distribution | AI says "your tent is 2.4 kg — swap to X, save 800 g" |
-| CSV import with column mapping dialogs | Paste your spreadsheet into chat — AI imports it |
+| Attach text files (CSV/TXT/TSV) | Paste or attach a text file into chat — the AI reads it (PDF/photos not supported) |
 | 7-step onboarding tutorial | AI sees an empty list and asks "packing for the Carpathians?" |
 | Filter dropdowns to find gear | Tell AI "show me clothing over 200 g" in plain language |
 | Static meal plan templates | AI builds a custom plan for your trip, season, and group size |
@@ -32,7 +32,7 @@ The AI isn't a chatbot bolted onto a database. It reads your gear, lists, and me
 
 **Meal Plans** — 75 built-in hiking products with calories, protein, fat, carbs. 3 plan types (comfort, standard, ultralight). Cyclic templates. Group calculations. Custom food library. Print detailed nutrition tables.
 
-**AI Assistant** — powered by Gemma 4 26B A4B (via Google AI Studio) with Exa web search and Open-Meteo weather. 5 levels of expertise: app navigator, data analyst, gear consultant, route specialist, survival expert. 8 tools: create meal plans, add gear items, create packing lists, add items to lists, search the web, get weather, get packing list details, get meal plan details. Upload CSV/TXT files directly into chat. 15 free messages per day.
+**AI Assistant** — powered by Gemma 4 26B A4B (via Google AI Studio) with Exa web search and Open-Meteo weather. 5 levels of expertise: app navigator, data analyst, gear consultant, route specialist, survival expert. 8 tools: create meal plans, add gear items, create packing lists, add items to lists, search the web, get weather, get packing list details, get meal plan details. Attach text files (CSV/TXT/TSV, up to 100 KB) directly into chat — PDF, photos and Word are not supported; convert them to a text/CSV file first. 15 free messages per day.
 
 **Mobile-first PWA** — 44px touch targets, 17px base font, safe-area support, card layouts on mobile, tables on desktop. Install as app on any device.
 
