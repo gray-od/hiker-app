@@ -36,7 +36,7 @@ const bottomNavItems = [
   { href: '/gear', icon: Backpack, labelKey: 'gear' as const },
   { href: '/lists', icon: ClipboardList, labelKey: 'lists' as const },
   { href: '/meals', icon: UtensilsCrossed, labelKey: 'meals' as const },
-  { href: '/settings', icon: Settings, labelKey: 'settings' as const },
+  { href: '/food', icon: Apple, labelKey: 'food' as const },
 ];
 
 export default function Navbar() {
@@ -188,6 +188,17 @@ export default function Navbar() {
             <span className="text-[9px] font-medium bg-[#75a93a]/15 text-[#75a93a] px-1.5 py-0.5 rounded-md">beta</span>
           </Link>
           <div className="flex items-center gap-1">
+            <Link
+              href="/settings"
+              aria-label={tnav('settings')}
+              className={`p-2.5 rounded-lg transition-colors ${
+                isActive('/settings')
+                  ? 'text-[#75a93a]'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+            </Link>
             {process.env.NEXT_PUBLIC_DONATE_URL && (
               <a
                 href={process.env.NEXT_PUBLIC_DONATE_URL}
