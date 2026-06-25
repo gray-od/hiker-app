@@ -32,7 +32,8 @@
     "check_email": "Check your email for confirmation",
     "no_account": "No account?",
     "have_account": "Already have an account?",
-    "privacy_policy": "Privacy Policy"
+    "privacy_policy": "Privacy Policy",
+    "source_code": "Source Code"
   },
   "nav": {
     "dashboard": "Dashboard",
