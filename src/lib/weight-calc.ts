@@ -13,18 +13,6 @@ export function getTerrainLimitPct(gpxData?: GpxLike | null): number {
   return 0.25;
 }
 
-export function progressColor(pct: number): string {
-  if (pct > 100) return 'bg-red-400';
-  if (pct > 75) return 'bg-amber-400';
-  return 'bg-[#75a93a]';
-}
-
-export function textColor(pct: number): string {
-  if (pct > 100) return 'text-red-400';
-  if (pct > 75) return 'text-amber-400';
-  return 'text-[#75a93a]';
-}
-
 export function bannerColor(pct: number): string {
   if (pct > 100) return 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400';
   if (pct > 75) return 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400';
