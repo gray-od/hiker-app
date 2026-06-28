@@ -30,7 +30,6 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
   const t = useTranslations('dashboard');
 
   const [selectedListId, setSelectedListId] = useState<string>('');
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -38,22 +37,21 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
     try {
       const saved = localStorage.getItem('trip_weight_selection');
       if (saved) {
-        const { listId, planId } = JSON.parse(saved);
+        const { listId } = JSON.parse(saved);
         if (listId) setSelectedListId(listId);
-        if (planId) setSelectedPlanId(planId);
       }
     } catch {}
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
-    localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId, planId: selectedPlanId }));
-  }, [selectedListId, selectedPlanId, mounted]);
+    localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId }));
+  }, [selectedListId, mounted]);
 
   const selectedList = lists.find(l => l.id === selectedListId);
-  const selectedPlan = plans.find(p => p.id === selectedPlanId);
+  const linkedPlan = plans.find(p => p.id === selectedList?.meal_plan_id);
   const gearWeight = selectedList?.totalWeight || 0;
-  const foodWeight = selectedPlan?.totalWeight || 0;
+  const foodWeight = linkedPlan?.totalWeight || 0;
   const totalWeight = gearWeight + foodWeight;
 
   if (lists.length === 0 && plans.length === 0) return null;
@@ -62,41 +60,52 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
     <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5">
       <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">{t('trip_weight')}</h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-        <div>
-          <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('gear_weight')}</label>
-          <select
-            value={selectedListId}
-            onChange={(e) => setSelectedListId(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-          >
-            <option value="">{t('select_list')}</option>
-            {lists.map(l => (
-              <option key={l.id} value={l.id}>{l.name} ({formatWeight(l.totalWeight)})</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('food_weight')}</label>
-          <select
-            value={selectedPlanId}
-            onChange={(e) => setSelectedPlanId(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-          >
-            <option value="">{t('select_plan')}</option>
-            {plans.map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({formatWeight(p.totalWeight)})</option>
-            ))}
-          </select>
-        </div>
+      <div className="mb-4">
+        <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('gear_weight')}</label>
+        <select
+          value={selectedListId}
+          onChange={(e) => setSelectedListId(e.target.value)}
+          className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+        >
+          <option value="">{t('select_list')}</option>
+          {lists.map(l => (
+            <option key={l.id} value={l.id}>{l.name} ({formatWeight(l.totalWeight)})</option>
+          ))}
+        </select>
       </div>
 
-      {(selectedListId || selectedPlanId) ? (
+      {selectedList && (
+        <div className="mb-4">
+          {(() => {
+            const linkedPlan = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
+            return (
+              <>
+                {linkedPlan ? (
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                    <span>{t('food_weight')}:</span>
+                    <span className="text-[#75a93a]">{linkedPlan.name}</span>
+                    <span>· {formatWeight(linkedPlan.totalWeight)} · {linkedPlan.people_count} ос</span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-zinc-400 dark:text-zinc-500">
+                    <span>{t('food_weight')}: {t('no_meal_plan')}</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {selectedList && (
         <>
           <div className="flex items-center justify-between text-sm border-t border-zinc-200 dark:border-zinc-800 pt-3">
             <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-400">
-              {selectedList && <span>{t('gear_weight')}: {formatWeight(gearWeight)}</span>}
-              {selectedPlan && <span>{t('food_weight')}: {formatWeight(foodWeight)}</span>}
+              <span>{t('gear_weight')}: {formatWeight(gearWeight)}</span>
+              {(() => {
+                const lp = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
+                return lp ? <span>{t('food_weight')}: {formatWeight(lp.totalWeight)}</span> : null;
+              })()}
             </div>
             <div className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
               {t('combined_weight')}: {formatWeight(totalWeight)}
@@ -116,29 +125,27 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
               ))}
             </div>
           )}
-          {selectedList && selectedPlan && (
-            (() => {
-              const gearTotal = selectedList.totalWeight || 0;
-              const foodTotal = selectedPlan.totalWeight || 0;
-              const groupTotal = gearTotal + foodTotal;
-              const limitPct = getTerrainLimitPct(selectedList.gpx_data);
-              const peopleCount = selectedList.participants?.length || 1;
-              const maxPerPerson = selectedList.participants?.length
-                ? calcGroupMax(selectedList.participants, selectedList.gpx_data)
-                : 80 * 1000 * limitPct;
-              const groupMax = maxPerPerson * peopleCount;
-              const pct = groupMax > 0 ? Math.round((groupTotal / groupMax) * 100) : 0;
-              return (
-                <div className={`mt-3 p-2 rounded-lg text-xs flex items-center justify-between flex-wrap gap-2 ${bannerColor(pct)}`}>
-                  <span>⚖ {formatWeight(gearTotal)} + {formatWeight(foodTotal)} = {formatWeight(groupTotal)}</span>
-                  <span className="tabular-nums font-medium">≤ {formatWeight(groupMax)} ({pct}%)</span>
-                </div>
-              );
-            })()
-          )}
+          {selectedList && (() => {
+            const lp = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
+            if (!lp) return null;
+            const gearTotal = selectedList.totalWeight || 0;
+            const foodTotal = lp.totalWeight || 0;
+            const groupTotal = gearTotal + foodTotal;
+            const limitPct = getTerrainLimitPct(selectedList.gpx_data);
+            const peopleCount = selectedList.participants?.length || 1;
+            const maxPerPerson = selectedList.participants?.length
+              ? calcGroupMax(selectedList.participants, selectedList.gpx_data)
+              : 80 * 1000 * limitPct;
+            const groupMax = maxPerPerson * peopleCount;
+            const pct = groupMax > 0 ? Math.round((groupTotal / groupMax) * 100) : 0;
+            return (
+              <div className={`mt-3 p-2 rounded-lg text-xs flex items-center justify-between flex-wrap gap-2 ${bannerColor(pct)}`}>
+                <span>⚖ {formatWeight(gearTotal)} + {formatWeight(foodTotal)} = {formatWeight(groupTotal)}</span>
+                <span className="tabular-nums font-medium">≤ {formatWeight(groupMax)} ({pct}%)</span>
+              </div>
+            );
+          })()}
         </>
-      ) : (
-        <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center">{t('select_hint')}</p>
       )}
     </div>
   );

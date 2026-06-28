@@ -25,7 +25,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addItemsModalOpen, setAddItemsModalOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editForm, setEditForm] = useState<{ name: string; season: string; trip_date: string; meal_plan_id?: string }>({ name: '', season: 'summer', trip_date: '', meal_plan_id: '' });
+  const [editForm, setEditForm] = useState({ name: '', season: 'summer', trip_date: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGearIds, setSelectedGearIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -147,7 +147,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       name: list.name,
       season: list.season,
       trip_date: list.trip_date || '',
-      meal_plan_id: list.meal_plan_id || '',
     });
     setEditModalOpen(true);
   }
@@ -164,7 +163,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         name: editForm.name,
         season: editForm.season,
         trip_date: editForm.trip_date || null,
-        meal_plan_id: editForm.meal_plan_id || null,
       })
       .eq('id', id);
 
@@ -174,7 +172,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       return;
     }
 
-    setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date, meal_plan_id: editForm.meal_plan_id || null } : null);
+    setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
     setSaving(false);
     setEditModalOpen(false);
   }
@@ -831,6 +829,39 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
+      <div className="mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">{t('linked_meal_plan')}:</span>
+          {(() => {
+            const linkedPlan = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
+            return (
+              <>
+                <select
+                  value={list?.meal_plan_id || ''}
+                  onChange={async (e) => {
+                    const newId = e.target.value || null;
+                    const supabase = createClient();
+                    const { error } = await supabase.from('gear_lists').update({ meal_plan_id: newId }).eq('id', id);
+                    if (!error) setList((prev) => prev ? { ...prev, meal_plan_id: newId as any } : null);
+                  }}
+                  className="text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-zinc-600 dark:text-zinc-400"
+                >
+                  <option value="">{t('no_meal_plan')}</option>
+                  {mealPlans.map((mp) => (
+                    <option key={mp.id} value={mp.id}>{mp.name}</option>
+                  ))}
+                </select>
+                {linkedPlan && (
+                  <span className="text-xs text-[#75a93a]">
+                    · {formatWeight(linkedPlan.total_weight_g)} · {linkedPlan.people_count} {linkedPlan.people_count === 1 ? 'ос' : 'осіб'}
+                  </span>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </div>
+
       {totalItems > 0 && (
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
@@ -1091,19 +1122,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('linked_meal_plan')}</label>
-                  <select
-                    value={editForm.meal_plan_id || ''}
-                    onChange={(e) => setEditForm((f) => ({ ...f, meal_plan_id: e.target.value || '' }))}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
-                  >
-                    <option value="">{t('no_meal_plan')}</option>
-                    {mealPlans.map((mp) => (
-                      <option key={mp.id} value={mp.id}>{mp.name}</option>
-                    ))}
-                  </select>
-                </div>
+
               </div>
 
               <div className="flex items-center justify-end gap-3 mt-6">

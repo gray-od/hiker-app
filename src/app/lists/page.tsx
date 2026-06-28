@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   name: '',
   season: 'summer' as (typeof SEASONS)[number],
   trip_date: '',
+  meal_plan_id: '',
 };
 
 function formatDate(dateStr: string | null): string {
@@ -53,6 +54,7 @@ export default function ListsPage() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -75,6 +77,15 @@ export default function ListsPage() {
             setLists(data as unknown as GearListWithItems[]);
           }
           setLoading(false);
+        });
+
+      supabase
+        .from('meal_plans')
+        .select('id, name, people_count, total_weight_g')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          if (data) setMealPlans(data);
         });
     });
   }, [router]);
@@ -141,6 +152,7 @@ export default function ListsPage() {
         name: formData.name,
         season: formData.season,
         trip_date: formData.trip_date || null,
+        meal_plan_id: formData.meal_plan_id || null,
       })
       .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
       .single();
@@ -366,11 +378,27 @@ export default function ListsPage() {
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    {t('linked_meal_plan')}
+                  </label>
+                  <select
+                    value={formData.meal_plan_id || ''}
+                    onChange={(e) => handleFormChange('meal_plan_id', e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  >
+                    <option value="">{t('no_meal_plan')}</option>
+                    {mealPlans.map((mp) => (
+                      <option key={mp.id} value={mp.id}>{mp.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => { setModalOpen(false); setFormData(EMPTY_FORM); }}
                   className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
                 >
                   {tCommon('cancel')}
