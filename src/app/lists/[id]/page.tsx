@@ -665,34 +665,36 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
 
-        {(list?.participants?.length ?? 0) > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                {t('participants')}:
-              </span>
-              {list!.participants!.map((p, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[#75a93a]/10 text-[#75a93a] font-medium">
-                  {p.name}{p.weight_kg ? ` ${p.weight_kg} кг` : ''}
-                  <button
-                    onClick={() => handleRemoveParticipant(idx)}
-                    className="ml-0.5 hover:text-red-500 transition-colors"
-                    aria-label={`Remove ${p.name}`}
-                  >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {(list?.participants?.length ?? 0) > 0 && (
+              <>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  {t('participants')}:
                 </span>
-              ))}
-              <button
-                onClick={() => setParticipantModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px]"
-              >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                {t('add_participant')}
-              </button>
-            </div>
+                {list!.participants!.map((p, idx) => (
+                  <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[#75a93a]/10 text-[#75a93a] font-medium">
+                    {p.name}{p.weight_kg ? ` ${p.weight_kg} кг` : ''}
+                    <button
+                      onClick={() => handleRemoveParticipant(idx)}
+                      className="ml-0.5 hover:text-red-500 transition-colors"
+                      aria-label={`Remove ${p.name}`}
+                    >
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </span>
+                ))}
+              </>
+            )}
+            <button
+              onClick={() => setParticipantModalOpen(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px]"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              {t('add_participant')}
+            </button>
           </div>
-        )}
+        </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
