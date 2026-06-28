@@ -123,7 +123,15 @@
     "gpx_max_elevation": "Max elevation",
     "gpx_show_on_map": "Show on map",
     "gpx_download": "Download GPX",
-    "gpx_weather": "Route weather"
+    "gpx_weather": "Route weather",
+    "participants": "Participants",
+    "add_participant": "Add participant",
+    "participant_name": "Name",
+    "participant_weight": "Weight (kg)",
+    "participant_weight_hint": "optional, default 80 kg",
+    "assigned_to": "Assigned to",
+    "unassigned": "—",
+    "weight_progress": "Weight vs. recommended"
   },
   "meals": {
     "title": "Meal Plans",

@@ -1,0 +1,2 @@
+ALTER TABLE gear_lists ADD COLUMN IF NOT EXISTS participants JSONB DEFAULT '[]';
+ALTER TABLE list_items ADD COLUMN IF NOT EXISTS assigned_to TEXT DEFAULT '';

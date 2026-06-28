@@ -30,6 +30,9 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [weightHint, setWeightHint] = useState<string | null>(null);
+  const [participantModalOpen, setParticipantModalOpen] = useState(false);
+  const [participantForm, setParticipantForm] = useState({ name: '', weight_kg: '' });
+  const [participantSaving, setParticipantSaving] = useState(false);
   const [gpxUploading, setGpxUploading] = useState(false);
   const [gpxError, setGpxError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -406,6 +409,64 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     URL.revokeObjectURL(url);
   };
 
+  const handleAddParticipant = async () => {
+    if (!participantForm.name.trim()) return;
+    setParticipantSaving(true);
+    const supabase = createClient();
+    const participants = list?.participants || [];
+    const newParticipant = {
+      name: participantForm.name.trim(),
+      weight_kg: participantForm.weight_kg ? Number(participantForm.weight_kg) : undefined,
+    };
+    const updated = [...participants, newParticipant];
+    const { error } = await supabase
+      .from('gear_lists')
+      .update({ participants: updated })
+      .eq('id', id);
+    if (!error) {
+      setList((prev) => prev ? { ...prev, participants: updated } : null);
+      setParticipantForm({ name: '', weight_kg: '' });
+      setParticipantModalOpen(false);
+    }
+    setParticipantSaving(false);
+  };
+
+  const handleRemoveParticipant = async (index: number) => {
+    const supabase = createClient();
+    const participants = list?.participants || [];
+    const name = participants[index].name;
+    const updated = participants.filter((_, i) => i !== index);
+    const { error } = await supabase
+      .from('gear_lists')
+      .update({ participants: updated })
+      .eq('id', id);
+    if (!error) {
+      setList((prev) => prev ? { ...prev, participants: updated } : null);
+      const clearedItems = listItems.map((li) =>
+        li.assigned_to === name ? { ...li, assigned_to: '' } : li
+      );
+      setListItems(clearedItems);
+      for (const li of clearedItems) {
+        if (li.assigned_to === '') {
+          await supabase.from('list_items').update({ assigned_to: '' }).eq('id', li.id);
+        }
+      }
+    }
+  };
+
+  const handleAssignItem = async (itemId: string, name: string) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('list_items')
+      .update({ assigned_to: name })
+      .eq('id', itemId);
+    if (!error) {
+      setListItems((prev) =>
+        prev.map((li) => (li.id === itemId ? { ...li, assigned_to: name } : li))
+      );
+    }
+  };
+
   function toggleGearSelection(gearId: string) {
     setSelectedGearIds(prev => {
       const next = new Set(prev);
@@ -595,6 +656,35 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
 
+        {(list?.participants?.length ?? 0) > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                {t('participants')}:
+              </span>
+              {list!.participants!.map((p, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[#75a93a]/10 text-[#75a93a] font-medium">
+                  {p.name}{p.weight_kg ? ` ${p.weight_kg} кг` : ''}
+                  <button
+                    onClick={() => handleRemoveParticipant(idx)}
+                    className="ml-0.5 hover:text-red-500 transition-colors"
+                    aria-label={`Remove ${p.name}`}
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={() => setParticipantModalOpen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px]"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                {t('add_participant')}
+              </button>
+            </div>
+          </div>
+        )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
@@ -724,6 +814,18 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               </div>
 
               <div className="flex items-center gap-2 mt-2 ml-8 flex-wrap">
+                {(list?.participants?.length ?? 0) > 0 && (
+                  <select
+                    value={item.assigned_to || ''}
+                    onChange={(e) => handleAssignItem(item.id, e.target.value)}
+                    className="text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-zinc-600 dark:text-zinc-400 min-h-[44px]"
+                  >
+                    <option value="">{t('unassigned')}</option>
+                    {list!.participants!.map((p) => (
+                      <option key={p.name} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                )}
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleUpdateQuantity(item.id, -1)}
@@ -783,6 +885,46 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           ))}
         </div>
       )}
+
+      {(list?.participants?.length ?? 0) > 0 && (() => {
+        const maxWeightPct = list?.gpx_data && list.gpx_data.elevation_gain_m && list.gpx_data.distance_km
+          ? 0.20 : 0.25;
+        return (
+          <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-3">
+              {t('weight_progress')}
+            </div>
+            {list!.participants!.map((p) => {
+              const weight = listItems
+                .filter((li) => li.assigned_to === p.name)
+                .reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * li.quantity, 0);
+              const bodyWeight = (p.weight_kg || 80) * 1000;
+              const maxWeight = bodyWeight * maxWeightPct;
+              const pct = maxWeight > 0 ? Math.min(100, Math.round((weight / maxWeight) * 100)) : 0;
+              return (
+                <div key={p.name} className="mb-3">
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="font-medium text-zinc-700 dark:text-zinc-300">{p.name}</span>
+                    <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">
+                      {formatWeight(weight)} / {formatWeight(maxWeight)}
+                      <span className="text-xs ml-1">({pct}%)</span>
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${pct > 90 ? 'bg-red-400' : pct > 75 ? 'bg-amber-400' : 'bg-[#75a93a]'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                    {p.weight_kg ? `${p.weight_kg} кг × ${Math.round(maxWeightPct * 100)}%` : `80 кг × ${Math.round(maxWeightPct * 100)}% (приблизно)`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {editModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -957,6 +1099,56 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {tCommon('add')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {participantModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                {t('add_participant')}
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('participant_name')}</label>
+                  <input
+                    type="text"
+                    value={participantForm.name}
+                    onChange={(e) => setParticipantForm((f) => ({ ...f, name: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('participant_weight')}</label>
+                  <input
+                    type="number"
+                    value={participantForm.weight_kg}
+                    onChange={(e) => setParticipantForm((f) => ({ ...f, weight_kg: e.target.value }))}
+                    placeholder="80"
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                  />
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t('participant_weight_hint')}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 mt-6">
+                <button
+                  onClick={() => { setParticipantModalOpen(false); setParticipantForm({ name: '', weight_kg: '' }); }}
+                  className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 min-h-[44px]"
+                >
+                  {tCommon('cancel')}
+                </button>
+                <button
+                  onClick={handleAddParticipant}
+                  disabled={participantSaving || !participantForm.name.trim()}
+                  className="px-4 py-2 text-sm bg-[#75a93a] text-white rounded-lg hover:bg-[#5a8a2a] disabled:opacity-50 transition-colors min-h-[44px]"
+                >
+                  {participantSaving ? tCommon('loading') : tCommon('add')}
                 </button>
               </div>
             </div>

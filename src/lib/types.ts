@@ -15,6 +15,10 @@ export interface GearList {
   name: string;
   season: string;
   trip_date: string;
+  participants?: {
+    name: string;
+    weight_kg?: number;
+  }[];
   gpx_data?: {
     track_name?: string;
     distance_km?: number;
@@ -37,10 +41,12 @@ export interface ListItem {
   is_packed: boolean;
   worn: boolean;
   consumable: boolean;
+  assigned_to: string;
 }
 
 export interface ListItemWithGear extends ListItem {
   gear_item: GearItem;
+  assigned_to: string;
 }
 
 export interface MealPlan {

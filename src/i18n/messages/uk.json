@@ -123,7 +123,15 @@
     "gpx_max_elevation": "Макс. висота",
     "gpx_show_on_map": "Показати на карті",
     "gpx_download": "Скачати GPX",
-    "gpx_weather": "Погода на маршруті"
+    "gpx_weather": "Погода на маршруті",
+    "participants": "Учасники",
+    "add_participant": "Додати учасника",
+    "participant_name": "Ім'я",
+    "participant_weight": "Вага (кг)",
+    "participant_weight_hint": "необов'язково, за замовчуванням 80 кг",
+    "assigned_to": "Кому",
+    "unassigned": "—",
+    "weight_progress": "Вага відносно рекомендованої"
   },
   "meals": {
     "title": "Розкладки харчування",
