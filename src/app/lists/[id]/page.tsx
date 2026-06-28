@@ -357,7 +357,16 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       const supabase = createClient();
       const track = parser.tracks[0];
       const points: [number, number, number][] = track.points.map((p: { lat: number; lon: number; ele: number }) => [p.lat, p.lon, p.ele]);
-      const rawBase64 = btoa(text);
+      
+      const reader = new FileReader();
+      const rawBase64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          resolve(dataUrl.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
       const gpxData = {
         track_name: track.name || file.name.replace('.gpx', ''),
