@@ -363,11 +363,12 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       let elevLoss = 0;
       let maxElev = track.elevation.max || 0;
       if (validPoints.length > 1) {
+        const MIN_ELEV_DELTA = 3;
         maxElev = validPoints[0][2];
         for (let i = 1; i < validPoints.length; i++) {
           const diff = validPoints[i][2] - validPoints[i - 1][2];
-          if (diff > 0) elevGain += diff;
-          else elevLoss += Math.abs(diff);
+          if (diff > MIN_ELEV_DELTA) elevGain += diff;
+          else if (diff < -MIN_ELEV_DELTA) elevLoss += Math.abs(diff);
           if (validPoints[i][2] > maxElev) maxElev = validPoints[i][2];
         }
       }
