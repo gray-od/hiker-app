@@ -814,7 +814,18 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcTotalWeight())}</div>
+          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
+            {(() => {
+              const lp = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
+              const foodGrams = lp ? lp.total_weight_g : 0;
+              return formatWeight(calcTotalWeight() + foodGrams);
+            })()}
+          </div>
+          {list?.meal_plan_id && mealPlans.find(mp => mp.id === list.meal_plan_id) && (
+            <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+              {t('food_weight')}: {formatWeight(mealPlans.find(mp => mp.id === list!.meal_plan_id)!.total_weight_g)}
+            </div>
+          )}
         </div>
       </div>
 
