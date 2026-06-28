@@ -358,17 +358,41 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       const track = parser.tracks[0];
       const points: [number, number, number][] = track.points.map((p: { lat: number; lon: number; ele: number }) => [p.lat, p.lon, p.ele]);
 
+      let elevGain = track.elevation.pos;
+      let elevLoss = track.elevation.neg;
+      let maxElev = track.elevation.max;
+      let descDistKm: number | null = null;
+
+      const descMatch = text.match(/<desc>[^]*?<\/desc>/);
+      const trackDesc = descMatch ? descMatch[0].replace(/<desc>|<\/desc>/g, '').replace(/&lt;br&gt;/g, '\n').replace(/<br>/g, '\n') : '';
+      if (trackDesc) {
+        const distMatch = trackDesc.match(/Відстань:\s*([\d.,]+)\s*км|Distance:\s*([\d.,]+)\s*km/);
+        if (distMatch) {
+          descDistKm = parseFloat((distMatch[1] || distMatch[2]).replace(',', '.'));
+        }
+        const gainMatch = trackDesc.match(/Загальний підйом:\s*(\d+)\s*м|Total[e]?\s*ascent:\s*(\d+)\s*m/i);
+        if (gainMatch) {
+          elevGain = parseInt(gainMatch[1] || gainMatch[2], 10);
+        }
+        const lossMatch = trackDesc.match(/Загальний спуск:\s*(\d+)\s*м|Total[e]?\s*descent:\s*(\d+)\s*m/i);
+        if (lossMatch) {
+          elevLoss = parseInt(lossMatch[1] || lossMatch[2], 10);
+        }
+        const maxMatch = trackDesc.match(/Максимальна висота:\s*(\d+)\s*м|Max[imum]*[e]?\s*elevation:\s*(\d+)\s*m/i);
+        if (maxMatch) {
+          maxElev = parseInt(maxMatch[1] || maxMatch[2], 10);
+        }
+      }
+
       const validPoints = points.filter((p) => p[2] > 0);
-      let elevGain = 0;
-      let elevLoss = 0;
-      let maxElev = track.elevation.max || 0;
-      if (validPoints.length > 1) {
-        const MIN_ELEV_DELTA = 3;
+      if (!trackDesc && validPoints.length > 1) {
+        elevGain = 0;
+        elevLoss = 0;
         maxElev = validPoints[0][2];
         for (let i = 1; i < validPoints.length; i++) {
           const diff = validPoints[i][2] - validPoints[i - 1][2];
-          if (diff > MIN_ELEV_DELTA) elevGain += diff;
-          else if (diff < -MIN_ELEV_DELTA) elevLoss += Math.abs(diff);
+          if (diff > 3) elevGain += diff;
+          else if (diff < -3) elevLoss += Math.abs(diff);
           if (validPoints[i][2] > maxElev) maxElev = validPoints[i][2];
         }
       }
@@ -383,12 +407,14 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         reader.readAsDataURL(file);
       });
 
+      const distanceKm = descDistKm != null ? descDistKm : Math.round(track.distance.total / 1000 * 10) / 10;
+
       const gpxData = {
         track_name: track.name || file.name.replace('.gpx', ''),
-        distance_km: Math.round(track.distance.total / 1000 * 10) / 10,
-        elevation_gain_m: Math.round(elevGain || track.elevation.pos),
-        elevation_loss_m: Math.round(elevLoss || track.elevation.neg),
-        max_elevation_m: Math.round(maxElev || track.elevation.max),
+        distance_km: distanceKm,
+        elevation_gain_m: Math.round(elevGain),
+        elevation_loss_m: Math.round(elevLoss),
+        max_elevation_m: Math.round(maxElev),
         points: points,
         raw_file_base64: rawBase64,
         weather: null as string | null,
@@ -639,6 +665,12 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6,20 12,4 18,20"/></svg>
                 +{list!.gpx_data.elevation_gain_m} м
               </span>
+              {list!.gpx_data.max_elevation_m != null && list!.gpx_data.max_elevation_m > 0 && (
+                <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22,17 12,3 2,17"/></svg>
+                  {list!.gpx_data.max_elevation_m} м
+                </span>
+              )}
             </>
           )}
         </div>
