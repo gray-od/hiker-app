@@ -123,6 +123,7 @@
     "gpx_max_elevation": "Max elevation",
     "gpx_show_on_map": "Show on map",
     "gpx_download": "Download GPX",
+    "gpx_remove": "Remove GPX",
     "gpx_weather": "Route weather",
     "participants": "Participants",
     "add_participant": "Add participant",
