@@ -447,13 +447,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     if (isMobile) {
       window.open(`geo:${lat},${lng}`, '_blank');
     } else {
-      const pts = list.gpx_data.points;
-      const step = Math.max(1, Math.floor(pts.length / 9));
-      const waypoints = [];
-      for (let i = 0; i < pts.length && waypoints.length < 10; i += step) {
-        waypoints.push(`${pts[i][0]},${pts[i][1]}`);
-      }
-      window.open(`https://www.google.com/maps/dir/${waypoints.join('/')}`, '_blank');
+      handleDownloadGpx();
     }
   };
 
@@ -976,26 +970,27 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       )}
 
       {(list?.participants?.length ?? 0) > 0 && (() => {
-        const maxWeightPct = list?.gpx_data && list.gpx_data.elevation_gain_m && list.gpx_data.distance_km
-          ? 0.20 : 0.25;
+        const hasGpx = !!(list?.gpx_data && list.gpx_data.elevation_gain_m && list.gpx_data.distance_km);
+        const limitPct = hasGpx ? 0.20 : 0.25;
         return (
           <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-3">
               {t('weight_progress')}
             </div>
             {list!.participants!.map((p) => {
-              const weight = listItems
+              const assignedGrams = listItems
                 .filter((li) => li.assigned_to === p.name)
                 .reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * li.quantity, 0);
-              const bodyWeight = (p.weight_kg || 80) * 1000;
-              const maxWeight = bodyWeight * maxWeightPct;
-              const pct = maxWeight > 0 ? Math.min(100, Math.round((weight / maxWeight) * 100)) : 0;
+              const assignedKg = assignedGrams / 1000;
+              const bodyKg = Number(p.weight_kg) || 80;
+              const maxKg = Math.round(bodyKg * limitPct * 100) / 100;
+              const pct = maxKg > 0 ? Math.min(100, Math.round((assignedKg / maxKg) * 100)) : 0;
               return (
                 <div key={p.name} className="mb-3">
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">{p.name}</span>
                     <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">
-                      {formatWeight(weight)} / {formatWeight(maxWeight)}
+                      {assignedKg.toFixed(2)} кг / {formatWeight(maxKg * 1000)}
                       <span className="text-xs ml-1">({pct}%)</span>
                     </span>
                   </div>
@@ -1006,7 +1001,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     />
                   </div>
                   <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-                    {p.weight_kg ? `${p.weight_kg} кг × ${Math.round(maxWeightPct * 100)}%` : `80 кг × ${Math.round(maxWeightPct * 100)}% (приблизно)`}
+                    {bodyKg} кг × {Math.round(limitPct * 100)}% = {formatWeight(maxKg * 1000)} рекомендовано
                   </div>
                 </div>
               );
