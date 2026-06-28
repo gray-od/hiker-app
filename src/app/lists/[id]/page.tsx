@@ -814,20 +814,44 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-            {(() => {
-              const lp = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
-              const foodGrams = lp ? lp.total_weight_g : 0;
-              return formatWeight(calcTotalWeight() + foodGrams);
-            })()}
-          </div>
-          {list?.meal_plan_id && mealPlans.find(mp => mp.id === list.meal_plan_id) && (
-            <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-              {t('food_weight')}: {formatWeight(mealPlans.find(mp => mp.id === list!.meal_plan_id)!.total_weight_g)}
-            </div>
-          )}
+          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcTotalWeight())}</div>
         </div>
       </div>
+
+      {(() => {
+        const lp = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
+        if (!lp) return null;
+        const gearTotal = calcTotalWeight();
+        const foodTotal = lp.total_weight_g;
+        const groupTotal = gearTotal + foodTotal;
+        let limitPct = 0.25;
+        if (list?.gpx_data?.distance_km && list.gpx_data.elevation_gain_m) {
+          const epk = list.gpx_data.elevation_gain_m / list.gpx_data.distance_km;
+          if (epk > 30) limitPct = 0.13;
+          else if (epk > 15) limitPct = 0.17;
+          else if (epk > 5) limitPct = 0.20;
+        }
+        const peopleCount = (list?.participants?.length || 1);
+        let maxPerPerson = 80 * 1000 * limitPct;
+        if (list?.participants?.length) {
+          const totalBody = list.participants.reduce((s, p) => s + (Number(p.weight_kg) || 80) * 1000, 0);
+          maxPerPerson = totalBody / peopleCount * limitPct;
+        }
+        const groupMax = maxPerPerson * peopleCount;
+        const pct = groupMax > 0 ? Math.round((groupTotal / groupMax) * 100) : 0;
+        return (
+          <div className={`mb-4 p-3 rounded-xl border text-sm ${pct > 100 ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400' : pct > 75 ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400' : 'bg-[#75a93a]/5 border-[#75a93a]/20 text-[#75a93a]'}`}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span>
+                {t('total_weight')}: {formatWeight(gearTotal)} + {t('food_weight')}: {formatWeight(foodTotal)} = {formatWeight(groupTotal)}
+              </span>
+              <span className="tabular-nums font-medium">
+                ≤ {formatWeight(groupMax)} / {peopleCount} {peopleCount === 1 ? 'ос' : 'осіб'} ({pct}%)
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       {totalItems > 0 && (
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 mb-6">
