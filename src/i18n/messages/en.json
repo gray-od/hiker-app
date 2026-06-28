@@ -243,6 +243,7 @@
     "welcome": "Welcome, {name}!",
     "welcome_anonymous": "Welcome!",
     "trip_weight": "Current Trip Weight",
+    "my_weight": "My weight",
     "select_list": "Select gear list",
     "select_plan": "Select meal plan",
     "gear_weight": "Gear",

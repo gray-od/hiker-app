@@ -243,6 +243,7 @@
     "welcome": "Вітаємо, {name}!",
     "welcome_anonymous": "Вітаємо!",
     "trip_weight": "Вага поточного походу",
+    "my_weight": "Моя вага",
     "select_list": "Оберіть список спорядження",
     "select_plan": "Оберіть розкладку харчування",
     "gear_weight": "Спорядження",

@@ -125,7 +125,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
           )}
           {selectedList && (
             <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span>Моя вага:</span>
+              <span>{t('my_weight')}:</span>
               <input
                 type="number"
                 value={myWeight}
