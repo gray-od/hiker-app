@@ -985,24 +985,27 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               const assignedKg = assignedGrams / 1000;
               const bodyKg = Number(p.weight_kg) || 80;
               const maxKg = Math.round(bodyKg * limitPct * 100) / 100;
-              const pct = maxKg > 0 ? Math.min(100, Math.round((assignedKg / maxKg) * 100)) : 0;
+              const pct = maxKg > 0 ? Math.round((assignedKg / maxKg) * 100) : 0;
+              const barWidth = Math.min(100, pct);
               return (
                 <div key={p.name} className="mb-3">
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">{p.name}</span>
                     <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">
                       {assignedKg.toFixed(2)} кг / {formatWeight(maxKg * 1000)}
-                      <span className="text-xs ml-1">({pct}%)</span>
                     </span>
                   </div>
                   <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${pct > 90 ? 'bg-red-400' : pct > 75 ? 'bg-amber-400' : 'bg-[#75a93a]'}`}
-                      style={{ width: `${pct}%` }}
+                      className={`h-full rounded-full transition-all duration-300 ${pct > 100 ? 'bg-red-400' : pct > 75 ? 'bg-amber-400' : 'bg-[#75a93a]'}`}
+                      style={{ width: `${barWidth}%` }}
                     />
                   </div>
-                  <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-                    {bodyKg} кг × {Math.round(limitPct * 100)}% = {formatWeight(maxKg * 1000)} рекомендовано
+                  <div className="flex items-center justify-between text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                    <span>{bodyKg} кг × {Math.round(limitPct * 100)}% = рекомендовано</span>
+                    <span className={pct > 100 ? 'text-red-400 font-medium' : pct > 75 ? 'text-amber-400' : 'text-[#75a93a]'}>
+                      {pct}%{pct > 100 ? ' ⚠' : ''}
+                    </span>
                   </div>
                 </div>
               );
