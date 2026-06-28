@@ -370,7 +370,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       
       const gpxData = {
         track_name: track.name || file.name.replace('.gpx', ''),
-        distance_km: Math.round(track.distance.total * 10) / 10,
+        distance_km: Math.round(track.distance.total / 1000 * 10) / 10,
         elevation_gain_m: Math.round(track.elevation.pos),
         elevation_loss_m: Math.round(track.elevation.neg),
         max_elevation_m: Math.round(track.elevation.max),
@@ -403,7 +403,12 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const handleShowOnMap = () => {
     if (!list?.gpx_data?.points?.length) return;
     const [lat, lng] = list.gpx_data.points[0];
-    window.open(`geo:${lat},${lng}`, '_blank');
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.open(`geo:${lat},${lng}`, '_blank');
+    } else {
+      window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+    }
   };
 
   const handleDownloadGpx = () => {
