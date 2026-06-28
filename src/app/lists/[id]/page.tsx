@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
-import GPXParser from 'gpxparser';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
+import { getTerrainLimitPct, calcPerPersonMax, calcGroupMax, progressColor, textColor, bannerColor } from '@/lib/weight-calc';
+import { parseGpxFile } from '@/lib/gpx-parser';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
 
@@ -354,93 +355,32 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     setGpxError(null);
     
     try {
-      const text = await file.text();
-      const parser = new GPXParser();
-      parser.parse(text);
-      
-      if (parser.tracks.length === 0) {
-        setGpxError('No tracks found in GPX file');
-        setGpxUploading(false);
-        return;
-      }
-      
+      const result = await parseGpxFile(file);
       const supabase = createClient();
-      const track = parser.tracks[0];
-      const points: [number, number, number][] = track.points.map((p: { lat: number; lon: number; ele: number }) => [p.lat, p.lon, p.ele]);
-
-      let elevGain = track.elevation.pos;
-      let elevLoss = track.elevation.neg;
-      let maxElev = track.elevation.max;
-      let descDistKm: number | null = null;
-
-      const trackDesc = track.desc || '';
-      if (trackDesc) {
-        const distMatch = trackDesc.match(/Відстань:\s*([\d.,]+)\s*км|Distance:\s*([\d.,]+)\s*km/);
-        if (distMatch) {
-          descDistKm = parseFloat((distMatch[1] || distMatch[2]).replace(',', '.'));
-        }
-        const gainMatch = trackDesc.match(/Загальний підйом:\s*(\d+)\s*м|Total[e]?\s*ascent:\s*(\d+)\s*m/i);
-        if (gainMatch) {
-          elevGain = parseInt(gainMatch[1] || gainMatch[2], 10);
-        }
-        const lossMatch = trackDesc.match(/Загальний спуск:\s*(\d+)\s*м|Total[e]?\s*descent:\s*(\d+)\s*m/i);
-        if (lossMatch) {
-          elevLoss = parseInt(lossMatch[1] || lossMatch[2], 10);
-        }
-        const maxMatch = trackDesc.match(/Максимальна висота:\s*(\d+)\s*м|Max[imum]*[e]?\s*elevation:\s*(\d+)\s*m/i);
-        if (maxMatch) {
-          maxElev = parseInt(maxMatch[1] || maxMatch[2], 10);
-        }
-      }
-
-      const validPoints = points.filter((p) => p[2] > 0);
-      if (!trackDesc && validPoints.length > 1) {
-        elevGain = 0;
-        elevLoss = 0;
-        maxElev = validPoints[0][2];
-        for (let i = 1; i < validPoints.length; i++) {
-          const diff = validPoints[i][2] - validPoints[i - 1][2];
-          if (diff > 3) elevGain += diff;
-          else if (diff < -3) elevLoss += Math.abs(diff);
-          if (validPoints[i][2] > maxElev) maxElev = validPoints[i][2];
-        }
-      }
-
-      const reader = new FileReader();
-      const rawBase64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          resolve(dataUrl.split(',')[1]);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const distanceKm = descDistKm != null ? descDistKm : Math.round(track.distance.total / 1000 * 10) / 10;
 
       const gpxData = {
-        track_name: track.name || file.name.replace('.gpx', ''),
-        distance_km: distanceKm,
-        elevation_gain_m: Math.round(elevGain),
-        elevation_loss_m: Math.round(elevLoss),
-        max_elevation_m: Math.round(maxElev),
-        points: points,
-        raw_file_base64: rawBase64,
+        track_name: result.trackName,
+        distance_km: result.distanceKm,
+        elevation_gain_m: result.elevationGainM,
+        elevation_loss_m: result.elevationLossM,
+        max_elevation_m: result.maxElevationM,
+        points: result.points,
+        raw_file_base64: result.rawBase64,
         weather: null as string | null,
       };
-      
-      if (points.length > 0) {
-        const weather = await fetchRouteWeather(points[0][0], points[0][1], list!.trip_date || undefined);
+
+      if (result.points.length > 0) {
+        const weather = await fetchRouteWeather(result.points[0][0], result.points[0][1], list!.trip_date || undefined);
         gpxData.weather = weather;
       }
-      
+
       const { error: updateError } = await supabase
         .from('gear_lists')
         .update({ gpx_data: gpxData })
         .eq('id', id);
-      
+
       if (updateError) throw updateError;
-      
+
       setList((prev) => prev ? { ...prev, gpx_data: gpxData } as GearList : null);
     } catch (err: any) {
       setGpxError(err.message || 'Failed to parse GPX');
@@ -622,7 +562,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </a>
           <button
             onClick={openEditModal}
-            className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+            className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors min-h-[44px]"
             title={tCommon('edit')}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -631,7 +571,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </button>
           <button
             onClick={() => setConfirmDelete(true)}
-            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors min-h-[44px]"
             title={tCommon('delete')}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -824,29 +764,19 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         const gearTotal = calcTotalWeight();
         const foodTotal = lp.total_weight_g;
         const groupTotal = gearTotal + foodTotal;
-        let limitPct = 0.25;
-        if (list?.gpx_data?.distance_km && list.gpx_data.elevation_gain_m) {
-          const epk = list.gpx_data.elevation_gain_m / list.gpx_data.distance_km;
-          if (epk > 30) limitPct = 0.13;
-          else if (epk > 15) limitPct = 0.17;
-          else if (epk > 5) limitPct = 0.20;
-        }
+        const limitPct = getTerrainLimitPct(list?.gpx_data);
         const peopleCount = (list?.participants?.length || 1);
-        let maxPerPerson = 80 * 1000 * limitPct;
-        if (list?.participants?.length) {
-          const totalBody = list.participants.reduce((s, p) => s + (Number(p.weight_kg) || 80) * 1000, 0);
-          maxPerPerson = totalBody / peopleCount * limitPct;
-        }
-        const groupMax = maxPerPerson * peopleCount;
+        const maxPerPersonGrams = calcGroupMax(list?.participants || [], list?.gpx_data);
+        const groupMax = maxPerPersonGrams * peopleCount;
         const pct = groupMax > 0 ? Math.round((groupTotal / groupMax) * 100) : 0;
         return (
-          <div className={`mb-4 p-3 rounded-xl border text-sm ${pct > 100 ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400' : pct > 75 ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400' : 'bg-[#75a93a]/5 border-[#75a93a]/20 text-[#75a93a]'}`}>
+          <div className={`mb-4 p-3 rounded-xl border text-sm ${bannerColor(pct)}`}>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span>
                 {t('total_weight')}: {formatWeight(gearTotal)} + {t('food_weight')}: {formatWeight(foodTotal)} = {formatWeight(groupTotal)}
               </span>
               <span className="tabular-nums font-medium">
-                ≤ {formatWeight(groupMax)} / {peopleCount} {peopleCount === 1 ? 'ос' : 'осіб'} ({pct}%)
+                ≤ {formatWeight(groupMax)} / {peopleCount} ({pct}%)
               </span>
             </div>
           </div>
@@ -1012,14 +942,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       )}
 
       {(list?.participants?.length ?? 0) > 0 && (() => {
-        let limitPct = 0.25;
-        if (list?.gpx_data?.distance_km && list.gpx_data.elevation_gain_m) {
-          const elevPerKm = list.gpx_data.elevation_gain_m / list.gpx_data.distance_km;
-          if (elevPerKm > 30) limitPct = 0.13;
-          else if (elevPerKm > 15) limitPct = 0.17;
-          else if (elevPerKm > 5) limitPct = 0.20;
-          else limitPct = 0.25;
-        }
+        const limitPct = getTerrainLimitPct(list?.gpx_data);
         const linkedPlan = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
         const foodPerPerson = linkedPlan ? linkedPlan.total_weight_g / linkedPlan.people_count : 0;
         return (
@@ -1033,7 +956,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 .reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * li.quantity, 0);
               const assignedKg = assignedGrams / 1000;
               const bodyKg = Number(p.weight_kg) || 80;
-              const maxKg = Math.round(bodyKg * limitPct * 100) / 100;
+              const maxKg = calcPerPersonMax(p, list?.gpx_data) / 1000;
               const totalKg = assignedKg + foodPerPerson / 1000;
               const totalPct = maxKg > 0 ? Math.round((totalKg / maxKg) * 100) : 0;
               const barWidth = Math.min(100, totalPct);
@@ -1041,24 +964,24 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 <div key={p.name} className="mb-3">
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">{p.name}</span>
-                    <span className={`tabular-nums text-sm font-medium ${totalPct > 100 ? 'text-red-400' : totalPct > 75 ? 'text-amber-400' : 'text-[#75a93a]'}`}>
+                    <span className={`tabular-nums text-sm font-medium ${textColor(totalPct)}`}>
                       {totalKg.toFixed(2)} кг / {formatWeight(maxKg * 1000)}
                     </span>
                   </div>
                   {foodPerPerson > 0 && (
                     <div className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">
-                      {t('food_weight')}: +{formatWeight(foodPerPerson)} ({linkedPlan!.people_count} {linkedPlan!.people_count === 1 ? 'ос' : 'осіб'})
+                      {t('food_weight')}: +{formatWeight(foodPerPerson)}
                     </div>
                   )}
                   <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${totalPct > 100 ? 'bg-red-400' : totalPct > 75 ? 'bg-amber-400' : 'bg-[#75a93a]'}`}
+                      className={`h-full rounded-full transition-all duration-300 ${progressColor(totalPct)}`}
                       style={{ width: `${barWidth}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
                     <span>{bodyKg} кг × {Math.round(limitPct * 100)}% = рекомендовано</span>
-                    <span className={totalPct > 100 ? 'text-red-400 font-medium' : totalPct > 75 ? 'text-amber-400' : 'text-[#75a93a]'}>
+                    <span className={`${textColor(totalPct)} ${totalPct > 100 ? 'font-medium' : ''}`}>
                       {totalPct}%{totalPct > 100 ? ' ⚠' : ''}
                     </span>
                   </div>
@@ -1138,7 +1061,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               <div className="flex items-center justify-end gap-3 mt-6">
                 <button
                   onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                  className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
                 >
                   {tCommon('cancel')}
                 </button>
@@ -1246,7 +1169,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     setSelectedGearIds(new Set());
                     setSearchQuery('');
                   }}
-                  className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                  className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
                 >
                   {tCommon('cancel')}
                 </button>
@@ -1325,7 +1248,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
               >
                 {tCommon('cancel')}
               </button>
