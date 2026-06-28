@@ -52,7 +52,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
   const selectedList = lists.find(l => l.id === selectedListId);
   const linkedPlan = plans.find(p => p.id === selectedList?.meal_plan_id);
   const gearWeight = selectedList?.totalWeight || 0;
-  const foodWeight = linkedPlan?.totalWeight || 0;
+  const foodWeight = linkedPlan ? linkedPlan.totalWeight / linkedPlan.people_count : 0;
   const totalWeight = gearWeight + foodWeight;
 
   if (lists.length === 0 && plans.length === 0) return null;
@@ -85,7 +85,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                     <span>{t('food_weight')}:</span>
                     <span className="text-[#75a93a]">{linkedPlan.name}</span>
-                    <span>· {formatWeight(linkedPlan.totalWeight)} · {linkedPlan.people_count} ос</span>
+                    <span>· {formatWeight(linkedPlan.totalWeight)} на {linkedPlan.people_count}</span>
                   </div>
                 ) : (
                   <div className="text-xs text-zinc-400 dark:text-zinc-500">
@@ -105,7 +105,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
               <span>{t('gear_weight')}: {formatWeight(gearWeight)}</span>
               {(() => {
                 const lp = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
-                return lp ? <span>{t('food_weight')}: {formatWeight(lp.totalWeight)}</span> : null;
+                return lp ? <span>{t('food_weight')}: {formatWeight(lp.totalWeight / lp.people_count)}</span> : null;
               })()}
             </div>
             <div className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
@@ -148,7 +148,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
             const lp = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
             if (!lp) return null;
             const gearTotal = selectedList.totalWeight || 0;
-            const foodTotal = lp.totalWeight || 0;
+            const foodTotal = lp.totalWeight / lp.people_count;
             const groupTotal = gearTotal + foodTotal;
             const limitPct = getTerrainLimitPct(selectedList.gpx_data);
             const bodyKg = myWeight;
