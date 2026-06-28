@@ -447,7 +447,13 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     if (isMobile) {
       window.open(`geo:${lat},${lng}`, '_blank');
     } else {
-      window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+      const pts = list.gpx_data.points;
+      const step = Math.max(1, Math.floor(pts.length / 9));
+      const waypoints = [];
+      for (let i = 0; i < pts.length && waypoints.length < 10; i += step) {
+        waypoints.push(`${pts[i][0]},${pts[i][1]}`);
+      }
+      window.open(`https://www.google.com/maps/dir/${waypoints.join('/')}`, '_blank');
     }
   };
 
