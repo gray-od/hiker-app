@@ -1,0 +1,1 @@
+ALTER TABLE gear_lists ADD COLUMN IF NOT EXISTS meal_plan_id UUID REFERENCES meal_plans(id) ON DELETE SET NULL;

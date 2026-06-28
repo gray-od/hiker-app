@@ -132,7 +132,11 @@
     "participant_weight_hint": "optional, default 80 kg",
     "assigned_to": "Assigned to",
     "unassigned": "—",
-    "weight_progress": "Weight vs. recommended"
+    "weight_progress": "Weight vs. recommended",
+    "linked_meal_plan": "Meal plan",
+    "no_meal_plan": "— none —",
+    "food_weight": "Food",
+    "total_with_food": "Total"
   },
   "meals": {
     "title": "Meal Plans",

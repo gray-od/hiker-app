@@ -19,6 +19,7 @@ export interface GearList {
     name: string;
     weight_kg?: number;
   }[];
+  meal_plan_id?: string | null;
   gpx_data?: {
     track_name?: string;
     distance_km?: number;

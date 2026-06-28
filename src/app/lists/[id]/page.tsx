@@ -24,7 +24,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addItemsModalOpen, setAddItemsModalOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', season: 'summer', trip_date: '' });
+  const [editForm, setEditForm] = useState<{ name: string; season: string; trip_date: string; meal_plan_id?: string }>({ name: '', season: 'summer', trip_date: '', meal_plan_id: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGearIds, setSelectedGearIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -36,6 +36,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [gpxUploading, setGpxUploading] = useState(false);
   const [gpxError, setGpxError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
   useEffect(() => {
     const supabase = createClient();
 
@@ -79,6 +80,13 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       if (gearData) {
         setAllGear(gearData as GearItem[]);
       }
+
+      const { data: plansData } = await supabase
+        .from('meal_plans')
+        .select('id, name, people_count, total_weight_g')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (plansData) setMealPlans(plansData);
 
       setLoading(false);
     });
@@ -130,6 +138,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       name: list.name,
       season: list.season,
       trip_date: list.trip_date || '',
+      meal_plan_id: list.meal_plan_id || '',
     });
     setEditModalOpen(true);
   }
@@ -146,6 +155,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         name: editForm.name,
         season: editForm.season,
         trip_date: editForm.trip_date || null,
+        meal_plan_id: editForm.meal_plan_id || null,
       })
       .eq('id', id);
 
@@ -155,7 +165,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       return;
     }
 
-    setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
+    setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date, meal_plan_id: editForm.meal_plan_id || null } : null);
     setSaving(false);
     setEditModalOpen(false);
   }
@@ -975,6 +985,8 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           else if (elevPerKm > 5) limitPct = 0.20;
           else limitPct = 0.25;
         }
+        const linkedPlan = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
+        const foodPerPerson = linkedPlan ? linkedPlan.total_weight_g / linkedPlan.people_count : 0;
         return (
           <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-3">
@@ -987,26 +999,32 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               const assignedKg = assignedGrams / 1000;
               const bodyKg = Number(p.weight_kg) || 80;
               const maxKg = Math.round(bodyKg * limitPct * 100) / 100;
-              const pct = maxKg > 0 ? Math.round((assignedKg / maxKg) * 100) : 0;
-              const barWidth = Math.min(100, pct);
+              const totalKg = assignedKg + foodPerPerson / 1000;
+              const totalPct = maxKg > 0 ? Math.round((totalKg / maxKg) * 100) : 0;
+              const barWidth = Math.min(100, totalPct);
               return (
                 <div key={p.name} className="mb-3">
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">{p.name}</span>
-                    <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">
-                      {assignedKg.toFixed(2)} кг / {formatWeight(maxKg * 1000)}
+                    <span className={`tabular-nums text-sm font-medium ${totalPct > 100 ? 'text-red-400' : totalPct > 75 ? 'text-amber-400' : 'text-[#75a93a]'}`}>
+                      {totalKg.toFixed(2)} кг / {formatWeight(maxKg * 1000)}
                     </span>
                   </div>
+                  {foodPerPerson > 0 && (
+                    <div className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">
+                      {t('food_weight')}: +{formatWeight(foodPerPerson)} ({linkedPlan!.people_count} {linkedPlan!.people_count === 1 ? 'ос' : 'осіб'})
+                    </div>
+                  )}
                   <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${pct > 100 ? 'bg-red-400' : pct > 75 ? 'bg-amber-400' : 'bg-[#75a93a]'}`}
+                      className={`h-full rounded-full transition-all duration-300 ${totalPct > 100 ? 'bg-red-400' : totalPct > 75 ? 'bg-amber-400' : 'bg-[#75a93a]'}`}
                       style={{ width: `${barWidth}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
                     <span>{bodyKg} кг × {Math.round(limitPct * 100)}% = рекомендовано</span>
-                    <span className={pct > 100 ? 'text-red-400 font-medium' : pct > 75 ? 'text-amber-400' : 'text-[#75a93a]'}>
-                      {pct}%{pct > 100 ? ' ⚠' : ''}
+                    <span className={totalPct > 100 ? 'text-red-400 font-medium' : totalPct > 75 ? 'text-amber-400' : 'text-[#75a93a]'}>
+                      {totalPct}%{totalPct > 100 ? ' ⚠' : ''}
                     </span>
                   </div>
                 </div>
@@ -1065,6 +1083,20 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     onChange={(e) => setEditForm(prev => ({ ...prev, trip_date: e.target.value }))}
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('linked_meal_plan')}</label>
+                  <select
+                    value={editForm.meal_plan_id || ''}
+                    onChange={(e) => setEditForm((f) => ({ ...f, meal_plan_id: e.target.value || '' }))}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="">{t('no_meal_plan')}</option>
+                    {mealPlans.map((mp) => (
+                      <option key={mp.id} value={mp.id}>{mp.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

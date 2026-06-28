@@ -132,7 +132,11 @@
     "participant_weight_hint": "необов'язково, за замовчуванням 80 кг",
     "assigned_to": "Кому",
     "unassigned": "—",
-    "weight_progress": "Вага відносно рекомендованої"
+    "weight_progress": "Вага відносно рекомендованої",
+    "linked_meal_plan": "Розкладка харчування",
+    "no_meal_plan": "— не вибрано —",
+    "food_weight": "Харчування",
+    "total_with_food": "Разом"
   },
   "meals": {
     "title": "Розкладки харчування",
