@@ -3,10 +3,6 @@ interface GpxLike {
   elevation_gain_m?: number;
 }
 
-interface ParticipantLike {
-  weight_kg?: number;
-}
-
 export function getTerrainLimitPct(gpxData?: GpxLike | null): number {
   if (gpxData?.distance_km && gpxData.elevation_gain_m) {
     const elevPerKm = gpxData.elevation_gain_m / gpxData.distance_km;
@@ -15,18 +11,6 @@ export function getTerrainLimitPct(gpxData?: GpxLike | null): number {
     if (elevPerKm > 5) return 0.20;
   }
   return 0.25;
-}
-
-export function calcPerPersonMax(participant: ParticipantLike, gpxData?: GpxLike | null): number {
-  const bodyGrams = (Number(participant.weight_kg) || 80) * 1000;
-  const pct = getTerrainLimitPct(gpxData);
-  return Math.round(bodyGrams * pct);
-}
-
-export function calcGroupMax(participants: ParticipantLike[], gpxData?: GpxLike | null): number {
-  if (participants.length === 0) return 80 * 1000 * getTerrainLimitPct(gpxData);
-  const totalBody = participants.reduce((sum, p) => sum + (Number(p.weight_kg) || 80) * 1000, 0);
-  return Math.round(totalBody / participants.length * getTerrainLimitPct(gpxData));
 }
 
 export function progressColor(pct: number): string {

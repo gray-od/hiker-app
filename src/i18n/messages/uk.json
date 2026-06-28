@@ -125,20 +125,10 @@
     "gpx_download": "Скачати GPX",
     "gpx_remove": "Видалити GPX",
     "gpx_weather": "Погода на маршруті",
-    "participants": "Учасники",
-    "add_participant": "Додати учасника",
-    "participant_name": "Ім'я",
-    "participant_weight": "Вага (кг)",
-    "participant_weight_hint": "необов'язково, за замовчуванням 80 кг",
-    "assigned_to": "Кому",
-    "unassigned": "—",
-    "weight_progress": "Вага відносно рекомендованої",
     "linked_meal_plan": "Розкладка харчування",
     "no_meal_plan": "— не вибрано —",
     "food_weight": "Харчування",
-    "total_with_food": "Разом",
-    "group_mode": "Груповий похід",
-    "edit_participant": "Редагувати учасника"
+    "total_with_food": "Разом"
   },
   "meals": {
     "title": "Розкладки харчування",

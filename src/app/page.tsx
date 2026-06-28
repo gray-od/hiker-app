@@ -44,7 +44,7 @@ export default async function DashboardPage() {
   const [{ data: recentListsRaw }, { data: recentMealsRaw }, { data: profileData }] = await Promise.all([
     supabase
       .from('gear_lists')
-      .select('id, name, season, created_at, gpx_data, participants, meal_plan_id, list_items(quantity, gear_item:gear_items(weight_g))')
+      .select('id, name, season, created_at, gpx_data, meal_plan_id, list_items(quantity, gear_item:gear_items(weight_g))')
       .order('created_at', { ascending: false }),
     supabase
       .from('meal_plans')
@@ -68,7 +68,6 @@ export default async function DashboardPage() {
     name: list.name,
     totalWeight: (list.list_items || []).reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * (li.quantity || 1), 0),
     gpx_data: (list as any).gpx_data,
-    participants: (list as any).participants,
     meal_plan_id: (list as any).meal_plan_id,
   }));
 

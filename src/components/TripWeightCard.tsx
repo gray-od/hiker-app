@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { getTerrainLimitPct, calcGroupMax, bannerColor } from '@/lib/weight-calc';
+import { getTerrainLimitPct, bannerColor } from '@/lib/weight-calc';
 
 interface TripWeightCardProps {
   lists: Array<{
@@ -10,7 +10,6 @@ interface TripWeightCardProps {
     name: string;
     totalWeight: number;
     gpx_data?: any;
-    participants?: Array<{ name: string; weight_kg?: number }>;
     meal_plan_id?: string;
   }>;
   plans: Array<{
@@ -31,22 +30,24 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
 
   const [selectedListId, setSelectedListId] = useState<string>('');
   const [mounted, setMounted] = useState(false);
+  const [myWeight, setMyWeight] = useState(80);
 
   useEffect(() => {
     setMounted(true);
     try {
       const saved = localStorage.getItem('trip_weight_selection');
       if (saved) {
-        const { listId } = JSON.parse(saved);
+        const { listId, weight } = JSON.parse(saved);
         if (listId) setSelectedListId(listId);
+        if (weight) setMyWeight(weight);
       }
     } catch {}
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
-    localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId }));
-  }, [selectedListId, mounted]);
+    localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId, weight: myWeight }));
+  }, [selectedListId, myWeight, mounted]);
 
   const selectedList = lists.find(l => l.id === selectedListId);
   const linkedPlan = plans.find(p => p.id === selectedList?.meal_plan_id);
@@ -129,11 +130,18 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
               )}
             </div>
           )}
-          {selectedList && selectedList.participants && selectedList.participants.length > 0 && (
-            <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
-              {selectedList.participants.map((p: any, i: number) => (
-                <span key={i} className="px-2 py-0.5 rounded-full bg-[#75a93a]/10 text-[#75a93a]">{p.name}{p.weight_kg ? ` ${p.weight_kg}кг` : ''}</span>
-              ))}
+          {selectedList && (
+            <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <span>{t('gear_weight')}:</span>
+              <input
+                type="number"
+                value={myWeight}
+                onChange={(e) => setMyWeight(Number(e.target.value) || 80)}
+                className="w-16 px-1.5 py-0.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded text-xs text-zinc-900 dark:text-zinc-100"
+                min={30}
+                max={200}
+              />
+              <span>кг</span>
             </div>
           )}
           {selectedList && (() => {
@@ -143,16 +151,13 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
             const foodTotal = lp.totalWeight || 0;
             const groupTotal = gearTotal + foodTotal;
             const limitPct = getTerrainLimitPct(selectedList.gpx_data);
-            const peopleCount = selectedList.participants?.length || 1;
-            const maxPerPerson = selectedList.participants?.length
-              ? calcGroupMax(selectedList.participants, selectedList.gpx_data)
-              : 80 * 1000 * limitPct;
-            const groupMax = maxPerPerson * peopleCount;
-            const pct = groupMax > 0 ? Math.round((groupTotal / groupMax) * 100) : 0;
+            const bodyKg = myWeight;
+            const maxGrams = bodyKg * 1000 * limitPct;
+            const pct = maxGrams > 0 ? Math.round((groupTotal / maxGrams) * 100) : 0;
             return (
               <div className={`mt-3 p-2 rounded-lg text-xs flex items-center justify-between flex-wrap gap-2 ${bannerColor(pct)}`}>
                 <span>⚖ {formatWeight(gearTotal)} + {formatWeight(foodTotal)} = {formatWeight(groupTotal)}</span>
-                <span className="tabular-nums font-medium">≤ {formatWeight(groupMax)} ({pct}%)</span>
+                <span className="tabular-nums font-medium">≤ {formatWeight(maxGrams)} ({pct}%)</span>
               </div>
             );
           })()}

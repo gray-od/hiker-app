@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
-import { getTerrainLimitPct, calcPerPersonMax, progressColor, textColor } from '@/lib/weight-calc';
 import { parseGpxFile } from '@/lib/gpx-parser';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
@@ -31,15 +30,9 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [weightHint, setWeightHint] = useState<string | null>(null);
-  const [participantModalOpen, setParticipantModalOpen] = useState(false);
-  const [participantForm, setParticipantForm] = useState({ name: '', weight_kg: '' });
-  const [participantSaving, setParticipantSaving] = useState(false);
   const [gpxUploading, setGpxUploading] = useState(false);
   const [gpxError, setGpxError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [groupMode, setGroupMode] = useState(false);
-  const [soloWeight, setSoloWeight] = useState(80);
-  const [editingParticipantIdx, setEditingParticipantIdx] = useState(-1);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
   useEffect(() => {
     const supabase = createClient();
@@ -65,11 +58,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       }
 
       setList(listData as GearList);
-      if (listData.participants && listData.participants.length > 0) {
-        const isSolo = listData.participants.length === 1 && listData.participants[0].name === '\u042F';
-        setGroupMode(!isSolo);
-        if (isSolo && listData.participants[0].weight_kg) setSoloWeight(listData.participants[0].weight_kg);
-      }
 
       const { data: itemsData } = await supabase
         .from('list_items')
@@ -425,94 +413,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  const handleAddParticipant = async () => {
-    if (!participantForm.name.trim()) return;
-    setParticipantSaving(true);
-    const supabase = createClient();
-    const participants = list?.participants || [];
-    const newParticipant = {
-      name: participantForm.name.trim(),
-      weight_kg: participantForm.weight_kg ? Number(participantForm.weight_kg) : undefined,
-    };
-    let updated;
-    if (editingParticipantIdx >= 0) {
-      updated = participants.map((p, i) => i === editingParticipantIdx ? newParticipant : p);
-    } else {
-      updated = [...participants, newParticipant];
-    }
-    const { error } = await supabase
-      .from('gear_lists')
-      .update({ participants: updated })
-      .eq('id', id);
-    if (!error) {
-      setList((prev) => prev ? { ...prev, participants: updated } : null);
-      setParticipantForm({ name: '', weight_kg: '' });
-      setEditingParticipantIdx(-1);
-      setParticipantModalOpen(false);
-    }
-    setParticipantSaving(false);
-  };
-
-  const handleRemoveParticipant = async (index: number) => {
-    const supabase = createClient();
-    const participants = list?.participants || [];
-    const name = participants[index].name;
-    const updated = participants.filter((_, i) => i !== index);
-    const { error } = await supabase
-      .from('gear_lists')
-      .update({ participants: updated })
-      .eq('id', id);
-    if (!error) {
-      setList((prev) => prev ? { ...prev, participants: updated } : null);
-      const clearedItems = listItems.map((li) =>
-        li.assigned_to === name ? { ...li, assigned_to: '' } : li
-      );
-      setListItems(clearedItems);
-      for (const li of clearedItems) {
-        if (li.assigned_to === '') {
-          await supabase.from('list_items').update({ assigned_to: '' }).eq('id', li.id);
-        }
-      }
-    }
-  };
-
-  const handleToggleGroupMode = async (enabled: boolean) => {
-    setGroupMode(enabled);
-    if (!enabled) {
-      const supabase = createClient();
-      const { error } = await supabase.from('gear_lists').update({ participants: [] }).eq('id', id);
-      if (!error) setList((prev) => prev ? { ...prev, participants: [] } : null);
-    }
-  };
-
-  const handleSaveSoloWeight = async () => {
-    const supabase = createClient();
-    const participant = [{ name: '\u042F', weight_kg: soloWeight }];
-    const { error } = await supabase.from('gear_lists').update({ participants: participant }).eq('id', id);
-    if (!error) setList((prev) => prev ? { ...prev, participants: participant } : null);
-  };
-
-  const handleEditParticipant = (idx: number) => {
-    const p = list?.participants?.[idx];
-    if (!p) return;
-    setParticipantForm({ name: p.name, weight_kg: p.weight_kg?.toString() || '' });
-    setEditingParticipantIdx(idx);
-    setParticipantModalOpen(true);
-  };
-
-  const handleAssignItem = async (itemId: string, name: string) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from('list_items')
-      .update({ assigned_to: name })
-      .eq('id', itemId);
-    if (!error) {
-      setListItems((prev) =>
-        prev.map((li) => (li.id === itemId ? { ...li, assigned_to: name } : li))
-      );
-    }
-  };
-
   function toggleGearSelection(gearId: string) {
     setSelectedGearIds(prev => {
       const next = new Set(prev);
@@ -720,72 +620,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
 
-        <div className="mb-4">
-          <div className="flex items-center gap-3 mb-3 flex-wrap">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={groupMode}
-                onChange={(e) => handleToggleGroupMode(e.target.checked)}
-                className="w-4 h-4 rounded border-zinc-300 text-[#75a93a] focus:ring-[#75a93a]"
-              />
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('group_mode')}</span>
-            </label>
-          </div>
-
-          {!groupMode ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">{t('participant_weight')}:</span>
-              <input
-                type="number"
-                value={soloWeight}
-                onChange={(e) => setSoloWeight(Number(e.target.value))}
-                onBlur={handleSaveSoloWeight}
-                className="w-20 px-2 py-1 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100"
-                min={30}
-                max={200}
-              />
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">кг</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                {t('participants')}:
-              </span>
-              {list!.participants!.map((p, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[#75a93a]/10 text-[#75a93a] font-medium">
-                  {p.name}{p.weight_kg ? ` ${p.weight_kg} кг` : ''}
-                  <button
-                    onClick={() => handleEditParticipant(idx)}
-                    className="ml-0.5 hover:text-[#75a93a] transition-colors"
-                    aria-label={`Edit ${p.name}`}
-                  >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
-                  <button
-                    onClick={() => handleRemoveParticipant(idx)}
-                    className="ml-0.5 hover:text-red-500 transition-colors"
-                    aria-label={`Remove ${p.name}`}
-                  >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </span>
-              ))}
-              <button
-                onClick={() => {
-                  setParticipantForm({ name: '', weight_kg: '' });
-                  setEditingParticipantIdx(-1);
-                  setParticipantModalOpen(true);
-                }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px]"
-              >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                {t('add_participant')}
-              </button>
-            </div>
-          )}
-        </div>
-
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
@@ -948,18 +782,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               </div>
 
               <div className="flex items-center gap-2 mt-2 ml-8 flex-wrap">
-                {(list?.participants?.length ?? 0) > 0 && (
-                  <select
-                    value={item.assigned_to || ''}
-                    onChange={(e) => handleAssignItem(item.id, e.target.value)}
-                    className="text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-zinc-600 dark:text-zinc-400 min-h-[44px]"
-                  >
-                    <option value="">{t('unassigned')}</option>
-                    {list!.participants!.map((p) => (
-                      <option key={p.name} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
-                )}
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleUpdateQuantity(item.id, -1)}
@@ -1019,57 +841,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           ))}
         </div>
       )}
-
-      {(list?.participants?.length ?? 0) > 0 && (() => {
-        const limitPct = getTerrainLimitPct(list?.gpx_data);
-        const linkedPlan = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
-        const foodPerPerson = linkedPlan ? linkedPlan.total_weight_g / linkedPlan.people_count : 0;
-        return (
-          <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-3">
-              {t('weight_progress')}
-            </div>
-            {list!.participants!.map((p) => {
-              const assignedGrams = listItems
-                .filter((li) => li.assigned_to === p.name)
-                .reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * li.quantity, 0);
-              const assignedKg = assignedGrams / 1000;
-              const bodyKg = Number(p.weight_kg) || 80;
-              const maxKg = calcPerPersonMax(p, list?.gpx_data) / 1000;
-              const totalKg = assignedKg + foodPerPerson / 1000;
-              const totalPct = maxKg > 0 ? Math.round((totalKg / maxKg) * 100) : 0;
-              const barWidth = Math.min(100, totalPct);
-              return (
-                <div key={p.name} className="mb-3">
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-medium text-zinc-700 dark:text-zinc-300">{p.name}</span>
-                    <span className={`tabular-nums text-sm font-medium ${textColor(totalPct)}`}>
-                      {totalKg.toFixed(2)} кг / {formatWeight(maxKg * 1000)}
-                    </span>
-                  </div>
-                  {foodPerPerson > 0 && (
-                    <div className="text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">
-                      {t('food_weight')}: +{formatWeight(foodPerPerson)}
-                    </div>
-                  )}
-                  <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${progressColor(totalPct)}`}
-                      style={{ width: `${barWidth}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-                    <span>{bodyKg} кг × {Math.round(limitPct * 100)}% = рекомендовано</span>
-                    <span className={`${textColor(totalPct)} ${totalPct > 100 ? 'font-medium' : ''}`}>
-                      {totalPct}%{totalPct > 100 ? ' ⚠' : ''}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
 
       {editModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -1176,7 +947,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 const filteredGear = allGear.filter(g =>
                   g.name.toLowerCase().includes(searchQuery.toLowerCase())
                 );
-                const availableGear = filteredGear;
+                const availableGear = filteredGear.filter(g => !listItemGearIds.has(g.id));
 
                 if (filteredGear.length === 0) {
                   return (
@@ -1246,56 +1017,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {tCommon('add')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {participantModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                {editingParticipantIdx >= 0 ? t('edit_participant') : t('add_participant')}
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('participant_name')}</label>
-                  <input
-                    type="text"
-                    value={participantForm.name}
-                    onChange={(e) => setParticipantForm((f) => ({ ...f, name: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('participant_weight')}</label>
-                  <input
-                    type="number"
-                    value={participantForm.weight_kg}
-                    onChange={(e) => setParticipantForm((f) => ({ ...f, weight_kg: e.target.value }))}
-                    placeholder="80"
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
-                  />
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t('participant_weight_hint')}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <button
-                  onClick={() => { setParticipantModalOpen(false); setParticipantForm({ name: '', weight_kg: '' }); setEditingParticipantIdx(-1); }}
-                  className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 min-h-[44px]"
-                >
-                  {tCommon('cancel')}
-                </button>
-                <button
-                  onClick={handleAddParticipant}
-                  disabled={participantSaving || !participantForm.name.trim()}
-                  className="px-4 py-2 text-sm bg-[#75a93a] text-white rounded-lg hover:bg-[#5a8a2a] disabled:opacity-50 transition-colors min-h-[44px]"
-                >
-                  {participantSaving ? tCommon('loading') : editingParticipantIdx >= 0 ? tCommon('save') : tCommon('add')}
                 </button>
               </div>
             </div>

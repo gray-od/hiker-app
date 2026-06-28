@@ -125,20 +125,10 @@
     "gpx_download": "Скачать GPX",
     "gpx_remove": "Удалить GPX",
     "gpx_weather": "Погода на маршруте",
-    "participants": "Участники",
-    "add_participant": "Добавить участника",
-    "participant_name": "Имя",
-    "participant_weight": "Вес (кг)",
-    "participant_weight_hint": "необязательно, по умолчанию 80 кг",
-    "assigned_to": "Кому",
-    "unassigned": "—",
-    "weight_progress": "Вес относительно рекомендованного",
     "linked_meal_plan": "Раскладка питания",
     "no_meal_plan": "— не выбрано —",
     "food_weight": "Питание",
-    "total_with_food": "Итого",
-    "group_mode": "Групповой поход",
-    "edit_participant": "Редактировать участника"
+    "total_with_food": "Итого"
   },
   "meals": {
     "title": "Раскладки питания",

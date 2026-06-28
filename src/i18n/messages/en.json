@@ -125,20 +125,10 @@
     "gpx_download": "Download GPX",
     "gpx_remove": "Remove GPX",
     "gpx_weather": "Route weather",
-    "participants": "Participants",
-    "add_participant": "Add participant",
-    "participant_name": "Name",
-    "participant_weight": "Weight (kg)",
-    "participant_weight_hint": "optional, default 80 kg",
-    "assigned_to": "Assigned to",
-    "unassigned": "—",
-    "weight_progress": "Weight vs. recommended",
     "linked_meal_plan": "Meal plan",
     "no_meal_plan": "— none —",
     "food_weight": "Food",
-    "total_with_food": "Total",
-    "group_mode": "Group hike",
-    "edit_participant": "Edit participant"
+    "total_with_food": "Total"
   },
   "meals": {
     "title": "Meal Plans",
