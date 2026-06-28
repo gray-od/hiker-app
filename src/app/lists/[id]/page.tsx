@@ -357,7 +357,21 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       const supabase = createClient();
       const track = parser.tracks[0];
       const points: [number, number, number][] = track.points.map((p: { lat: number; lon: number; ele: number }) => [p.lat, p.lon, p.ele]);
-      
+
+      const validPoints = points.filter((p) => p[2] > 0);
+      let elevGain = 0;
+      let elevLoss = 0;
+      let maxElev = track.elevation.max || 0;
+      if (validPoints.length > 1) {
+        maxElev = validPoints[0][2];
+        for (let i = 1; i < validPoints.length; i++) {
+          const diff = validPoints[i][2] - validPoints[i - 1][2];
+          if (diff > 0) elevGain += diff;
+          else elevLoss += Math.abs(diff);
+          if (validPoints[i][2] > maxElev) maxElev = validPoints[i][2];
+        }
+      }
+
       const reader = new FileReader();
       const rawBase64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
@@ -367,13 +381,13 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      
+
       const gpxData = {
         track_name: track.name || file.name.replace('.gpx', ''),
         distance_km: Math.round(track.distance.total / 1000 * 10) / 10,
-        elevation_gain_m: Math.round(track.elevation.pos),
-        elevation_loss_m: Math.round(track.elevation.neg),
-        max_elevation_m: Math.round(track.elevation.max),
+        elevation_gain_m: Math.round(elevGain || track.elevation.pos),
+        elevation_loss_m: Math.round(elevLoss || track.elevation.neg),
+        max_elevation_m: Math.round(maxElev || track.elevation.max),
         points: points,
         raw_file_base64: rawBase64,
         weather: null as string | null,
