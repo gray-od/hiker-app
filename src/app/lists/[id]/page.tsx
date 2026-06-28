@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
+import { getSeasonBadgeClass } from '@/lib/badges';
+import { formatWeight, formatDate } from '@/lib/format';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
 import { parseGpxFile } from '@/lib/gpx-parser';
 
@@ -89,11 +91,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     });
   }, [id, router]);
 
-  function formatWeight(grams: number): string {
-    if (grams >= 1000) return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
-    return `${grams} ${tCommon('weight_g')}`;
-  }
-
   function calcBaseWeight(): number {
     return listItems.reduce((sum, li) => {
       if (li.worn || li.consumable) return sum;
@@ -121,12 +118,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
   function calcPackedCount(): number {
     return listItems.filter(li => li.is_packed).length;
-  }
-
-  function getSeasonBadgeClass(season: string): string {
-    if (season === 'summer') return 'bg-[#ffec6d]/20 text-[#b8960f] dark:bg-[#ffec6d]/10 dark:text-[#ffec6d]';
-    if (season === 'winter') return 'bg-[#6db3ff]/20 text-[#2563eb] dark:bg-[#6db3ff]/10 dark:text-[#6db3ff]';
-    return 'bg-[#f5a623]/20 text-[#c2841a] dark:bg-[#f5a623]/10 dark:text-[#f5a623]';
   }
 
   function openEditModal() {
@@ -392,14 +383,20 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleDownloadGpx = () => {
     if (!list?.gpx_data?.raw_file_base64) return;
-    const byteString = atob(list.gpx_data.raw_file_base64);
-    const blob = new Blob([byteString], { type: 'application/gpx+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${list.name || 'track'}.gpx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const binaryStr = atob(list.gpx_data.raw_file_base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/gpx+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${list.name || 'track'}.gpx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
   };
 
   const handleRemoveGpx = async () => {
@@ -423,12 +420,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       }
       return next;
     });
-  }
-
-  function formatDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString();
   }
 
   if (loading) {
@@ -628,7 +619,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             </button>
           </div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcBaseWeight())}</div>
+          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcBaseWeight(), tCommon)}</div>
           {weightHint === 'base' && (
             <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('base_weight_hint')}</div>
           )}
@@ -640,7 +631,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             </button>
           </div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcWornWeight())}</div>
+          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcWornWeight(), tCommon)}</div>
           {weightHint === 'worn' && (
             <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('worn_weight_hint')}</div>
           )}
@@ -652,14 +643,14 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             </button>
           </div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcConsumableWeight())}</div>
+          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcConsumableWeight(), tCommon)}</div>
           {weightHint === 'consumable' && (
             <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('consumable_weight_hint')}</div>
           )}
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcTotalWeight())}</div>
+          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcTotalWeight(), tCommon)}</div>
         </div>
       </div>
 
@@ -676,7 +667,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     const newId = e.target.value || null;
                     const supabase = createClient();
                     const { error } = await supabase.from('gear_lists').update({ meal_plan_id: newId }).eq('id', id);
-                    if (!error) setList((prev) => prev ? { ...prev, meal_plan_id: newId as any } : null);
+                    if (!error) setList((prev) => prev ? { ...prev, meal_plan_id: newId as string | null } : null);
                   }}
                   className="text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-zinc-600 dark:text-zinc-400"
                 >
@@ -687,7 +678,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 </select>
                 {linkedPlan && (
                   <span className="text-xs text-[#75a93a]">
-                    · {formatWeight(linkedPlan.total_weight_g)} · {linkedPlan.people_count} {linkedPlan.people_count === 1 ? 'ос' : 'осіб'}
+                    · {formatWeight(linkedPlan.total_weight_g / linkedPlan.people_count, tCommon)} на особу · всього {formatWeight(linkedPlan.total_weight_g, tCommon)}
                   </span>
                 )}
               </>
@@ -775,7 +766,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                       </span>
                     )}
                     <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                      {formatWeight((item.gear_item?.weight_g || 0) * item.quantity)}
+                      {formatWeight((item.gear_item?.weight_g || 0) * item.quantity, tCommon)}
                     </span>
                   </div>
                 </div>
@@ -985,7 +976,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                           {tGear(`categories.${gear.category}`)}
                         </span>
                         <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                          {formatWeight(gear.weight_g)}
+                          {formatWeight(gear.weight_g, tCommon)}
                         </span>
                       </div>
                     </div>

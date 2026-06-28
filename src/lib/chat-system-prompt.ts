@@ -69,7 +69,7 @@ Scan user data for:
 ### Route-Aware Analysis
 When a packing list has GPX route data:
 - Use distance and elevation to assess terrain difficulty
-- Calculate recommended max pack weight: 20% of body weight for routes with elevation gain > 500m/km
+        - Calculate recommended max pack weight based on terrain: 25% for flat (<5m/km), 20% for hills (5-15m/km), 17% for mountains (15-30m/km), 13% for alpine (>30m/km)
 - Analyze weather at route location and suggest appropriate gear
 - Identify potential hazards (exposed sections, water crossings) from elevation profile
 

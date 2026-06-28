@@ -33,7 +33,8 @@
     "no_account": "Немає акаунту?",
     "have_account": "Вже є акаунт?",
     "privacy_policy": "Політика конфіденційності",
-    "source_code": "GitHub"
+    "source_code": "GitHub",
+    "template_apply_error": "Не вдалося застосувати шаблон"
   },
   "nav": {
     "dashboard": "Головна",

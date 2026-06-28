@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { MealPlan } from '@/lib/types';
+import { getPlanTypeBadgeClass } from '@/lib/badges';
+import { formatWeight } from '@/lib/format';
 import { PLAN_TYPES, getPlanType } from '@/lib/hiking-standards';
 import type { PlanTypeId } from '@/lib/hiking-standards';
 import { FOOD_CATALOG, calculateNutrition, getFoodItem } from '@/lib/food-catalog';
@@ -25,23 +27,6 @@ const EMPTY_FORM = {
   target_weight_g: 650,
   template_id: '',
 };
-
-function formatWeight(grams: number, tCommon: ReturnType<typeof useTranslations<'common'>>): string {
-  if (grams >= 1000) {
-    return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
-  }
-  return `${grams} ${tCommon('weight_g')}`;
-}
-
-function getPlanTypeBadgeClass(planType: string): string {
-  if (planType === 'comfort') {
-    return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
-  }
-  if (planType === 'ultralight') {
-    return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400';
-  }
-  return 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400';
-}
 
 export default function MealsPage() {
   const router = useRouter();

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { MealPlan, MealDayWithEntries } from '@/lib/types';
+import { formatWeight } from '@/lib/format';
 
 const planTypeNames: Record<string, Record<string, string>> = {
   comfort: { uk: 'Комфорт', ru: 'Комфорт', en: 'Comfort' },
@@ -117,11 +118,6 @@ export default function ShoppingListPage() {
   const items = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, locale));
   const totalWeight = items.reduce((s, i) => s + i.weight_g, 0);
 
-  function formatWeight(grams: number): string {
-    if (grams >= 1000) return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
-    return `${grams} ${tCommon('weight_g')}`;
-  }
-
   return (
     <>
       <style>{`
@@ -183,7 +179,7 @@ export default function ShoppingListPage() {
                     <tr key={item.name}>
                       <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-zinc-500">{idx + 1}</td>
                       <td className="border border-zinc-300 px-2 py-1 text-black break-words">{item.name}</td>
-                      <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatWeight(item.weight_g)}</td>
+                      <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatWeight(item.weight_g, tCommon)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -192,7 +188,7 @@ export default function ShoppingListPage() {
 
             <div className="border-t-2 border-black pt-3 mt-4 text-right">
               <span className="text-base font-semibold text-black">
-                {t('total_weight')}: {formatWeight(totalWeight)}
+                {t('total_weight')}: {formatWeight(totalWeight, tCommon)}
               </span>
             </div>
           </>

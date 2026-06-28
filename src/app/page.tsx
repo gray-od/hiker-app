@@ -6,6 +6,12 @@ import Link from 'next/link';
 import { getPlanType, type PlanTypeId } from '@/lib/hiking-standards';
 import type { GearList, MealPlan } from '@/lib/types';
 import TripWeightCard from '@/components/TripWeightCard';
+import { formatDate } from '@/lib/format';
+import { getSeasonBadgeClass, getPlanTypeBadgeClass } from '@/lib/badges';
+
+interface GearListWithExtras extends GearList {
+  list_items?: Array<{quantity: number; gear_item: {weight_g: number} | null}>;
+}
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -48,7 +54,7 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('meal_plans')
-      .select('id, name, plan_type, days_count, created_at, meal_days(total_weight_g)')
+      .select('id, name, plan_type, days_count, people_count, created_at, meal_days(total_weight_g)')
       .order('created_at', { ascending: false }),
     supabase
       .from('profiles')
@@ -60,15 +66,15 @@ export default async function DashboardPage() {
   const recentLists = (recentListsRaw as GearList[] | null)?.slice(0, 3) || null;
   const recentMeals = (recentMealsRaw as MealPlan[] | null)?.slice(0, 3) || null;
 
-  const allLists = recentListsRaw as (GearList & { list_items?: { quantity: number; gear_item: { weight_g: number } | null }[] })[] | null;
+  const allLists = recentListsRaw as GearListWithExtras[] | null;
   const allPlans = recentMealsRaw as (MealPlan & { meal_days?: { total_weight_g: number }[] })[] | null;
 
   const listsWithWeight = (allLists || []).map(list => ({
     id: list.id,
     name: list.name,
     totalWeight: (list.list_items || []).reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * (li.quantity || 1), 0),
-    gpx_data: (list as any).gpx_data,
-    meal_plan_id: (list as any).meal_plan_id,
+      gpx_data: list.gpx_data,
+      meal_plan_id: list.meal_plan_id,
   }));
 
   const plansWithWeight = (allPlans || []).map(plan => ({
@@ -83,26 +89,6 @@ export default async function DashboardPage() {
   const tMeals = await getTranslations('meals');
   const user = session.user;
   const displayName = profileData?.name || user.user_metadata?.full_name;
-
-  function formatDate(dateStr: string): string {
-    const d = new Date(dateStr);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}.${mm}.${yyyy}`;
-  }
-
-  function getSeasonBadgeClass(season: string): string {
-    if (season === 'summer') return 'bg-[#ffec6d]/20 text-[#b8960f] dark:bg-[#ffec6d]/10 dark:text-[#ffec6d]';
-    if (season === 'winter') return 'bg-[#6db3ff]/20 text-[#2563eb] dark:bg-[#6db3ff]/10 dark:text-[#6db3ff]';
-    return 'bg-[#f5a623]/20 text-[#c2841a] dark:bg-[#f5a623]/10 dark:text-[#f5a623]';
-  }
-
-  function getPlanTypeBadgeClass(planType: string): string {
-    if (planType === 'comfort') return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
-    if (planType === 'ultralight') return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400';
-    return 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400';
-  }
 
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">

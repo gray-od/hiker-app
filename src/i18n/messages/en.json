@@ -33,7 +33,8 @@
     "no_account": "No account?",
     "have_account": "Already have an account?",
     "privacy_policy": "Privacy Policy",
-    "source_code": "GitHub"
+    "source_code": "GitHub",
+    "template_apply_error": "Failed to apply template"
   },
   "nav": {
     "dashboard": "Dashboard",

@@ -8,6 +8,7 @@ import type { MealPlan, MealDay, MealEntry, MealDayWithEntries, UserFoodItem } f
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
 import { getAdaptationCoefficient, PLAN_TYPES } from '@/lib/hiking-standards';
+import { formatWeight } from '@/lib/format';
 import type { PlanTypeId } from '@/lib/hiking-standards';
 import { MEAL_TEMPLATES, getMealTemplate } from '@/lib/meal-templates';
 
@@ -111,11 +112,6 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       setLoading(false);
     });
   }, [id, router]);
-
-  function formatWeight(grams: number): string {
-    if (grams >= 1000) return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
-    return `${grams} ${tCommon('weight_g')}`;
-  }
 
   function getProgressColor(ratio: number): string {
     if (ratio >= 0.8 && ratio <= 1.1) return '#75a93a';
@@ -487,7 +483,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       setTemplateModalOpen(false);
       await recalculateTotals();
     } catch (err) {
-      console.error(err);
+      setError(tCommon('template_apply_error'));
     } finally {
       setApplyingTemplate(false);
     }
@@ -661,7 +657,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>
           <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-            {formatWeight(totalWeight)}
+            {formatWeight(totalWeight, tCommon)}
           </div>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
@@ -741,7 +737,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                     {t('day')} {day.day_number}
                   </h3>
                   <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
-                    {dayTotalCal} {t('kcal')} / {formatWeight(dayTotalWeight)}
+                    {dayTotalCal} {t('kcal')} / {formatWeight(dayTotalWeight, tCommon)}
                   </span>
                 </div>
                 <svg

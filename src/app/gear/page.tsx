@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearItem } from '@/lib/types';
+import { formatWeight } from '@/lib/format';
 
 const CATEGORIES = [
   'backpack', 'shelter', 'sleep_system', 'cooking', 'water',
@@ -162,13 +163,6 @@ export default function GearPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   }
 
-  function formatWeight(grams: number): string {
-    if (grams >= 1000) {
-      return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
-    }
-    return `${grams} ${tCommon('weight_g')}`;
-  }
-
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
       {/* Header */}
@@ -266,7 +260,7 @@ export default function GearPage() {
                       </span>
                       <span className="text-zinc-300 dark:text-zinc-600">·</span>
                       <span className="text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
-                        {formatWeight(item.weight_g)}
+                        {formatWeight(item.weight_g, tCommon)}
                       </span>
                       <span className="text-zinc-300 dark:text-zinc-600">·</span>
                       <span className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -332,7 +326,7 @@ export default function GearPage() {
                         {tGear(`categories.${item.category}`)}
                       </td>
                       <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                        {formatWeight(item.weight_g)}
+                        {formatWeight(item.weight_g, tCommon)}
                       </td>
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
                         {tGear(`season.${item.season}`)}

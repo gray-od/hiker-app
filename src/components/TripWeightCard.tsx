@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { getTerrainLimitPct, bannerColor } from '@/lib/weight-calc';
+import { formatWeight } from '@/lib/format';
 
 interface TripWeightCardProps {
   lists: Array<{
@@ -10,7 +11,7 @@ interface TripWeightCardProps {
     name: string;
     totalWeight: number;
     gpx_data?: any;
-    meal_plan_id?: string;
+    meal_plan_id?: string | null;
   }>;
   plans: Array<{
     id: string;
@@ -18,11 +19,6 @@ interface TripWeightCardProps {
     totalWeight: number;
     people_count: number;
   }>;
-}
-
-function formatWeight(grams: number): string {
-  if (grams >= 1000) return `${(grams / 1000).toFixed(1)} кг`;
-  return `${grams} г`;
 }
 
 export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
@@ -41,7 +37,9 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
         if (listId) setSelectedListId(listId);
         if (weight) setMyWeight(weight);
       }
-    } catch {}
+    } catch (e) {
+      // localStorage unavailable — use defaults
+    }
   }, []);
 
   useEffect(() => {
@@ -56,6 +54,8 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
   const totalWeight = gearWeight + foodWeight;
 
   if (lists.length === 0 && plans.length === 0) return null;
+
+  const linkedPlanDisplay = selectedList && selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5">
@@ -77,24 +77,17 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
 
       {selectedList && (
         <div className="mb-4">
-          {(() => {
-            const linkedPlan = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
-            return (
-              <>
-                {linkedPlan ? (
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                    <span>{t('food_weight')}:</span>
-                    <span className="text-[#75a93a]">{linkedPlan.name}</span>
-                    <span>· {formatWeight(linkedPlan.totalWeight)} на {linkedPlan.people_count}</span>
-                  </div>
-                ) : (
-                  <div className="text-xs text-zinc-400 dark:text-zinc-500">
-                    <span>{t('food_weight')}: {t('no_meal_plan')}</span>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+          {linkedPlanDisplay ? (
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+              <span>{t('food_weight')}:</span>
+              <span className="text-[#75a93a]">{linkedPlanDisplay.name}</span>
+              <span>· {formatWeight(linkedPlanDisplay.totalWeight)} на {linkedPlanDisplay.people_count} осіб</span>
+            </div>
+          ) : (
+            <div className="text-xs text-zinc-400 dark:text-zinc-500">
+              <span>{t('food_weight')}: {t('no_meal_plan')}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -132,7 +125,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
           )}
           {selectedList && (
             <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span>{t('gear_weight')}:</span>
+              <span>Моя вага:</span>
               <input
                 type="number"
                 value={myWeight}

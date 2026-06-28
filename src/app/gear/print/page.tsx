@@ -5,11 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearItem } from '@/lib/types';
-
-function formatWeight(grams: number): string {
-  if (grams >= 1000) return `${(grams / 1000).toFixed(2)} kg`;
-  return `${grams} g`;
-}
+import { formatWeight } from '@/lib/format';
 
 export default function PrintGearPage() {
   const router = useRouter();
@@ -121,7 +117,7 @@ export default function PrintGearPage() {
                         {tGear(`categories.${item.category}`)}
                       </td>
                       <td className="px-3 py-1.5 text-right tabular-nums">
-                        {formatWeight(item.weight_g)}
+                        {formatWeight(item.weight_g, tCommon)}
                       </td>
                       <td className="px-3 py-1.5 text-zinc-500">
                         {tGear(`season.${item.season}`)}
@@ -138,7 +134,7 @@ export default function PrintGearPage() {
             <div className="border-t-2 border-zinc-300 pt-4 mb-8">
               <div className="grid grid-cols-2 gap-y-2 text-sm max-w-xs">
                 <span className="text-zinc-500">{tGear('weight')}:</span>
-                <span className="text-right tabular-nums font-medium">{formatWeight(totalWeight)}</span>
+                <span className="text-right tabular-nums font-medium">{formatWeight(totalWeight, tCommon)}</span>
               </div>
             </div>
           </>

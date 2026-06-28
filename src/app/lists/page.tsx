@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList } from '@/lib/types';
+import { formatDate, formatWeight } from '@/lib/format';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
 
@@ -25,15 +26,6 @@ const EMPTY_FORM = {
   trip_date: '',
   meal_plan_id: '',
 };
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  const dd = d.getDate().toString().padStart(2, '0');
-  const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
-}
 
 const SEASON_COLORS: Record<string, { light: string; dark: string }> = {
   summer: { light: 'bg-[#ffec6d]/20 text-[#b8960f]', dark: 'dark:bg-[#ffec6d]/10 dark:text-[#ffec6d]' },
@@ -94,15 +86,6 @@ export default function ListsPage() {
     return list.list_items?.length ?? 0;
   }
 
-  function getTotalWeight(list: GearListWithItems): number {
-    return (list.list_items ?? []).reduce((sum, li) => {
-      if (li.gear_item) {
-        return sum + li.gear_item.weight_g * li.quantity;
-      }
-      return sum;
-    }, 0);
-  }
-
   function getPackedCount(list: GearListWithItems): number {
     return (list.list_items ?? []).filter((li) => li.is_packed).length;
   }
@@ -111,13 +94,6 @@ export default function ListsPage() {
     const total = getItemsCount(list);
     if (total === 0) return 0;
     return Math.round((getPackedCount(list) / total) * 100);
-  }
-
-  function formatWeight(grams: number): string {
-    if (grams >= 1000) {
-      return `${(grams / 1000).toFixed(2)} ${tCommon('weight_kg')}`;
-    }
-    return `${grams} ${tCommon('weight_g')}`;
   }
 
   async function fetchLists() {
@@ -265,7 +241,7 @@ export default function ListsPage() {
       {!loading && lists.length > 0 && (
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {lists.map((list) => {
-            const totalWeight = getTotalWeight(list);
+            const totalWeight = (list.list_items ?? []).reduce((sum, li) => sum + (li.gear_item?.weight_g ?? 0) * li.quantity, 0);
             const itemsCount = getItemsCount(list);
             const progress = getPackingProgress(list);
 
@@ -311,7 +287,7 @@ export default function ListsPage() {
                     {itemsCount} {t('items')}
                   </span>
                   <span>
-                    {formatWeight(totalWeight)}
+                    {formatWeight(totalWeight, tCommon)}
                   </span>
                 </div>
 

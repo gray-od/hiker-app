@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { UserFoodItem } from '@/lib/types';
+import { formatKbju } from '@/lib/format';
 
 const CATEGORIES = [
   'cereals', 'pasta', 'meat', 'dairy', 'nuts', 'dried_fruits',
@@ -165,10 +166,6 @@ export default function FoodPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   }
 
-  function formatKbju(item: UserFoodItem): string {
-    return `${item.calories_per100g} ${tFood('kcal')} · ${tFood('protein_short')}:${item.protein_per100g} ${tFood('fat_short')}:${item.fat_per100g} ${tFood('carbs_short')}:${item.carbs_per100g}`;
-  }
-
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
       {/* Header */}
@@ -266,7 +263,7 @@ export default function FoodPage() {
                       </span>
                       <span className="text-zinc-300 dark:text-zinc-600">·</span>
                       <span className="text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
-                        {formatKbju(item)}
+                        {formatKbju(item.protein_per100g, item.fat_per100g, item.carbs_per100g, item.calories_per100g)}
                       </span>
                     </div>
                     <div className="mt-1">
