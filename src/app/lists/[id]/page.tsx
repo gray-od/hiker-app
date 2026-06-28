@@ -443,12 +443,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const handleShowOnMap = () => {
     if (!list?.gpx_data?.points?.length) return;
     const [lat, lng] = list.gpx_data.points[0];
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile) {
-      window.open(`geo:${lat},${lng}`, '_blank');
-    } else {
-      handleDownloadGpx();
-    }
+    window.open(`geo:${lat},${lng}`, '_blank');
   };
 
   const handleDownloadGpx = () => {
@@ -970,8 +965,14 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       )}
 
       {(list?.participants?.length ?? 0) > 0 && (() => {
-        const hasGpx = !!(list?.gpx_data && list.gpx_data.elevation_gain_m && list.gpx_data.distance_km);
-        const limitPct = hasGpx ? 0.20 : 0.25;
+        let limitPct = 0.25;
+        if (list?.gpx_data?.distance_km && list.gpx_data.elevation_gain_m) {
+          const elevPerKm = list.gpx_data.elevation_gain_m / list.gpx_data.distance_km;
+          if (elevPerKm > 30) limitPct = 0.13;
+          else if (elevPerKm > 15) limitPct = 0.17;
+          else if (elevPerKm > 5) limitPct = 0.20;
+          else limitPct = 0.25;
+        }
         return (
           <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-3">
