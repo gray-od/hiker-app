@@ -72,7 +72,7 @@ export default function GearPage() {
     setFormData({
       name: item.name,
       category: item.category,
-      weight_g: item.weight_g / 1000,
+      weight_g: item.weight_g,
       season: item.season,
       notes: item.notes || '',
     });
@@ -91,7 +91,7 @@ export default function GearPage() {
     const payload = {
       name: formData.name,
       category: formData.category,
-      weight_g: Math.round(formData.weight_g * 1000),
+      weight_g: Math.round(formData.weight_g),
       season: formData.season,
       notes: formData.notes,
     };
@@ -411,14 +411,15 @@ export default function GearPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    {tGear('weight')}, {tCommon('weight_kg')}
+                    {tGear('weight')}, г
                   </label>
                   <input
                     type="number"
-                    value={formData.weight_g}
-                    onChange={(e) => handleFormChange('weight_g', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    value={formData.weight_g > 0 ? formData.weight_g : ''}
+                    onChange={(e) => { const v = e.target.value; handleFormChange('weight_g', v === '' ? 0 : parseFloat(v)); }}
                     min={0}
-                    step={0.01}
+                    step={1}
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                   />
                 </div>

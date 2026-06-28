@@ -637,17 +637,17 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         )}
           {list!.gpx_data && (
             <>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_distance')}>
+                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="2.5" cy="8" r="1.5"/><line x1="4" y1="8" x2="12" y2="8"/><circle cx="13.5" cy="8" r="1.5"/></svg>
                 {list!.gpx_data.distance_km} км
               </span>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6,20 12,4 18,20"/></svg>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_elevation_gain')}>
+                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3,11 8,5 8,5"/><polyline points="5,7 8,5 11,7"/><line x1="8" y1="5" x2="8" y2="14"/></svg>
                 +{list!.gpx_data.elevation_gain_m} м
               </span>
               {list!.gpx_data.max_elevation_m != null && list!.gpx_data.max_elevation_m > 0 && (
-                <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22,17 12,3 2,17"/></svg>
+                <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_max_elevation')}>
+                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"><polygon points="8,2 14,12 2,12"/></svg>
                   {list!.gpx_data.max_elevation_m} м
                 </span>
               )}
@@ -1176,7 +1176,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 const filteredGear = allGear.filter(g =>
                   g.name.toLowerCase().includes(searchQuery.toLowerCase())
                 );
-                const availableGear = filteredGear.filter(g => !listItemGearIds.has(g.id));
+                const availableGear = filteredGear;
 
                 if (filteredGear.length === 0) {
                   return (
