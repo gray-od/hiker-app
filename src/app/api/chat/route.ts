@@ -227,6 +227,11 @@ export async function POST(req: Request) {
           listId: z.string().describe('ID of the packing list (from the Packing Lists context below)'),
         }),
         execute: async ({ listId }) => {
+          const { data: listData } = await supabase
+            .from('gear_lists')
+            .select('name, season, trip_date, gpx_data')
+            .eq('id', listId)
+            .single();
           const { data } = await supabase
             .from('list_items')
             .select('quantity, is_packed, worn, consumable, gear_items(name, category, weight_g)')
@@ -248,7 +253,17 @@ export async function POST(req: Request) {
             const flags = [it.worn ? 'worn' : '', it.consumable ? 'consumable' : '', it.is_packed ? 'packed' : ''].filter(Boolean).join(', ');
             lines.push(`- ${g.name} | ${g.category} | ${g.weight_g}g ×${it.quantity}${flags ? ' (' + flags + ')' : ''}`);
           }
-          return `Items (${lines.length}), total ${total}g:\n${lines.join('\n')}`;
+          let routeText = '';
+          if (listData?.gpx_data) {
+            const g = listData.gpx_data;
+            routeText = `\n\nRoute: ${g.track_name || 'Track'}
+  Distance: ${g.distance_km} km
+  Elevation gain: ${g.elevation_gain_m} m
+  Elevation loss: ${g.elevation_loss_m} m
+  Max elevation: ${g.max_elevation_m} m
+  Weather: ${g.weather || 'not available'}`;
+          }
+          return `Items (${lines.length}), total ${total}g:\n${lines.join('\n')}${routeText}`;
         },
       }),
 

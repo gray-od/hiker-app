@@ -1,0 +1,1 @@
+ALTER TABLE gear_lists ADD COLUMN gpx_data JSONB DEFAULT NULL;

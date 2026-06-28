@@ -114,7 +114,16 @@
     "all_added": "All gear already added to the list",
     "back_to_lists": "Back to lists",
     "packing_progress": "Packing Progress",
-    "deleted_item": "Deleted item"
+    "deleted_item": "Deleted item",
+    "upload_gpx": "Upload GPX",
+    "gpx_loading": "Analyzing track...",
+    "gpx_distance": "Distance",
+    "gpx_elevation_gain": "Elevation gain",
+    "gpx_elevation_loss": "Elevation loss",
+    "gpx_max_elevation": "Max elevation",
+    "gpx_show_on_map": "Show on map",
+    "gpx_download": "Download GPX",
+    "gpx_weather": "Route weather"
   },
   "meals": {
     "title": "Meal Plans",

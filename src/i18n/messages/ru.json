@@ -114,7 +114,16 @@
     "all_added": "Всё снаряжение уже добавлено в список",
     "back_to_lists": "К спискам",
     "packing_progress": "Прогресс упаковки",
-    "deleted_item": "Удалённый предмет"
+    "deleted_item": "Удалённый предмет",
+    "upload_gpx": "Загрузить GPX",
+    "gpx_loading": "Анализ трека...",
+    "gpx_distance": "Дистанция",
+    "gpx_elevation_gain": "Набор высоты",
+    "gpx_elevation_loss": "Сброс высоты",
+    "gpx_max_elevation": "Макс. высота",
+    "gpx_show_on_map": "Показать на карте",
+    "gpx_download": "Скачать GPX",
+    "gpx_weather": "Погода на маршруте"
   },
   "meals": {
     "title": "Раскладки питания",

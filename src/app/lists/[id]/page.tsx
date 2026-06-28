@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
+import GPXParser from 'gpxparser';
+import { fetchRouteWeather } from '@/lib/gpx-weather';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
 
@@ -28,6 +30,9 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [weightHint, setWeightHint] = useState<string | null>(null);
+  const [gpxUploading, setGpxUploading] = useState(false);
+  const [gpxError, setGpxError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const supabase = createClient();
 
@@ -328,6 +333,79 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  const handleGpxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setGpxUploading(true);
+    setGpxError(null);
+    
+    try {
+      const text = await file.text();
+      const parser = new GPXParser();
+      parser.parse(text);
+      
+      if (parser.tracks.length === 0) {
+        setGpxError('No tracks found in GPX file');
+        setGpxUploading(false);
+        return;
+      }
+      
+      const supabase = createClient();
+      const track = parser.tracks[0];
+      const points: [number, number, number][] = track.points.map((p: { lat: number; lon: number; ele: number }) => [p.lat, p.lon, p.ele]);
+      const rawBase64 = btoa(text);
+      
+      const gpxData = {
+        track_name: track.name || file.name.replace('.gpx', ''),
+        distance_km: Math.round(track.distance.total * 10) / 10,
+        elevation_gain_m: Math.round(track.elevation.pos),
+        elevation_loss_m: Math.round(track.elevation.neg),
+        max_elevation_m: Math.round(track.elevation.max),
+        points: points,
+        raw_file_base64: rawBase64,
+        weather: null as string | null,
+      };
+      
+      if (points.length > 0) {
+        const weather = await fetchRouteWeather(points[0][0], points[0][1], list!.trip_date || undefined);
+        gpxData.weather = weather;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('gear_lists')
+        .update({ gpx_data: gpxData })
+        .eq('id', id);
+      
+      if (updateError) throw updateError;
+      
+      setList((prev) => prev ? { ...prev, gpx_data: gpxData } as GearList : null);
+    } catch (err: any) {
+      setGpxError(err.message || 'Failed to parse GPX');
+    } finally {
+      setGpxUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleShowOnMap = () => {
+    if (!list?.gpx_data?.points?.length) return;
+    const [lat, lng] = list.gpx_data.points[0];
+    window.open(`geo:${lat},${lng}`, '_blank');
+  };
+
+  const handleDownloadGpx = () => {
+    if (!list?.gpx_data?.raw_file_base64) return;
+    const byteString = atob(list.gpx_data.raw_file_base64);
+    const blob = new Blob([byteString], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${list.name || 'track'}.gpx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   function toggleGearSelection(gearId: string) {
     setSelectedGearIds(prev => {
       const next = new Set(prev);
@@ -399,6 +477,13 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
           {list!.name}
         </h1>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".gpx"
+          onChange={handleGpxUpload}
+          className="hidden"
+        />
         <div className="flex items-center gap-1">
           <a
             href={`/lists/${id}/print`}
@@ -429,6 +514,30 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={gpxUploading}
+            className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors min-w-[44px] min-h-[44px]"
+            aria-label={t('upload_gpx')}
+            title={t('upload_gpx')}
+          >
+            <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17,8 12,3 7,8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
+          {gpxUploading && (
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2 ml-2">
+              <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" />
+              </svg>
+              {t('gpx_loading')}
+            </div>
+          )}
+          {gpxError && (
+            <div className="text-xs text-red-500 ml-2">{gpxError}</div>
+          )}
         </div>
       </div>
 
@@ -441,7 +550,53 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
             {formatDate(list!.trip_date)}
           </span>
         )}
+          {list!.gpx_data && (
+            <>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+                {list!.gpx_data.distance_km} км
+              </span>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6,20 12,4 18,20"/></svg>
+                +{list!.gpx_data.elevation_gain_m} м
+              </span>
+            </>
+          )}
       </div>
+
+        {list?.gpx_data?.weather && (
+          <div className="flex items-center gap-2 mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+            </svg>
+            <span>{t('gpx_weather')}: {list.gpx_data.weather}</span>
+          </div>
+        )}
+        {list?.gpx_data && (
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              onClick={handleShowOnMap}
+              className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              {t('gpx_show_on_map')}
+            </button>
+            <button
+              onClick={handleDownloadGpx}
+              className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7,10 12,15 17,10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              {t('gpx_download')}
+            </button>
+          </div>
+        )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">

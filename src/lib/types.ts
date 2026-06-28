@@ -15,6 +15,16 @@ export interface GearList {
   name: string;
   season: string;
   trip_date: string;
+  gpx_data?: {
+    track_name?: string;
+    distance_km?: number;
+    elevation_gain_m?: number;
+    elevation_loss_m?: number;
+    max_elevation_m?: number;
+    points?: [number, number, number][];
+    raw_file_base64?: string;
+    weather?: string | null;
+  } | null;
   shared_link: string;
   created_at: string;
 }

@@ -114,7 +114,16 @@
     "all_added": "Усе спорядження вже додано до списку",
     "back_to_lists": "До списків",
     "packing_progress": "Прогрес упаковки",
-    "deleted_item": "Видалений предмет"
+    "deleted_item": "Видалений предмет",
+    "upload_gpx": "Завантажити GPX",
+    "gpx_loading": "Аналіз треку...",
+    "gpx_distance": "Дистанція",
+    "gpx_elevation_gain": "Набір висоти",
+    "gpx_elevation_loss": "Скид висоти",
+    "gpx_max_elevation": "Макс. висота",
+    "gpx_show_on_map": "Показати на карті",
+    "gpx_download": "Скачати GPX",
+    "gpx_weather": "Погода на маршруті"
   },
   "meals": {
     "title": "Розкладки харчування",
