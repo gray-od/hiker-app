@@ -29,10 +29,6 @@ export function calcGroupMax(participants: ParticipantLike[], gpxData?: GpxLike 
   return Math.round(totalBody / participants.length * getTerrainLimitPct(gpxData));
 }
 
-export function calcFoodPerPerson(totalWeightGrams: number, peopleCount: number): number {
-  return peopleCount > 0 ? totalWeightGrams / peopleCount : 0;
-}
-
 export function progressColor(pct: number): string {
   if (pct > 100) return 'bg-red-400';
   if (pct > 75) return 'bg-amber-400';

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
-import { getTerrainLimitPct, calcPerPersonMax, calcGroupMax, progressColor, textColor, bannerColor } from '@/lib/weight-calc';
+import { getTerrainLimitPct, calcPerPersonMax, progressColor, textColor } from '@/lib/weight-calc';
 import { parseGpxFile } from '@/lib/gpx-parser';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
@@ -37,6 +37,9 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [gpxUploading, setGpxUploading] = useState(false);
   const [gpxError, setGpxError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [groupMode, setGroupMode] = useState(false);
+  const [soloWeight, setSoloWeight] = useState(80);
+  const [editingParticipantIdx, setEditingParticipantIdx] = useState(-1);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
   useEffect(() => {
     const supabase = createClient();
@@ -62,6 +65,11 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       }
 
       setList(listData as GearList);
+      if (listData.participants && listData.participants.length > 0) {
+        const isSolo = listData.participants.length === 1 && listData.participants[0].name === '\u042F';
+        setGroupMode(!isSolo);
+        if (isSolo && listData.participants[0].weight_kg) setSoloWeight(listData.participants[0].weight_kg);
+      }
 
       const { data: itemsData } = await supabase
         .from('list_items')
@@ -428,7 +436,12 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       name: participantForm.name.trim(),
       weight_kg: participantForm.weight_kg ? Number(participantForm.weight_kg) : undefined,
     };
-    const updated = [...participants, newParticipant];
+    let updated;
+    if (editingParticipantIdx >= 0) {
+      updated = participants.map((p, i) => i === editingParticipantIdx ? newParticipant : p);
+    } else {
+      updated = [...participants, newParticipant];
+    }
     const { error } = await supabase
       .from('gear_lists')
       .update({ participants: updated })
@@ -436,6 +449,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     if (!error) {
       setList((prev) => prev ? { ...prev, participants: updated } : null);
       setParticipantForm({ name: '', weight_kg: '' });
+      setEditingParticipantIdx(-1);
       setParticipantModalOpen(false);
     }
     setParticipantSaving(false);
@@ -462,6 +476,30 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         }
       }
     }
+  };
+
+  const handleToggleGroupMode = async (enabled: boolean) => {
+    setGroupMode(enabled);
+    if (!enabled) {
+      const supabase = createClient();
+      const { error } = await supabase.from('gear_lists').update({ participants: [] }).eq('id', id);
+      if (!error) setList((prev) => prev ? { ...prev, participants: [] } : null);
+    }
+  };
+
+  const handleSaveSoloWeight = async () => {
+    const supabase = createClient();
+    const participant = [{ name: '\u042F', weight_kg: soloWeight }];
+    const { error } = await supabase.from('gear_lists').update({ participants: participant }).eq('id', id);
+    if (!error) setList((prev) => prev ? { ...prev, participants: participant } : null);
+  };
+
+  const handleEditParticipant = (idx: number) => {
+    const p = list?.participants?.[idx];
+    if (!p) return;
+    setParticipantForm({ name: p.name, weight_kg: p.weight_kg?.toString() || '' });
+    setEditingParticipantIdx(idx);
+    setParticipantModalOpen(true);
   };
 
   const handleAssignItem = async (itemId: string, name: string) => {
@@ -685,34 +723,69 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         )}
 
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {(list?.participants?.length ?? 0) > 0 && (
-              <>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {t('participants')}:
-                </span>
-                {list!.participants!.map((p, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[#75a93a]/10 text-[#75a93a] font-medium">
-                    {p.name}{p.weight_kg ? ` ${p.weight_kg} кг` : ''}
-                    <button
-                      onClick={() => handleRemoveParticipant(idx)}
-                      className="ml-0.5 hover:text-red-500 transition-colors"
-                      aria-label={`Remove ${p.name}`}
-                    >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </span>
-                ))}
-              </>
-            )}
-            <button
-              onClick={() => setParticipantModalOpen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px]"
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              {t('add_participant')}
-            </button>
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={groupMode}
+                onChange={(e) => handleToggleGroupMode(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-300 text-[#75a93a] focus:ring-[#75a93a]"
+              />
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('group_mode')}</span>
+            </label>
           </div>
+
+          {!groupMode ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">{t('participant_weight')}:</span>
+              <input
+                type="number"
+                value={soloWeight}
+                onChange={(e) => setSoloWeight(Number(e.target.value))}
+                onBlur={handleSaveSoloWeight}
+                className="w-20 px-2 py-1 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100"
+                min={30}
+                max={200}
+              />
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">кг</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                {t('participants')}:
+              </span>
+              {list!.participants!.map((p, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[#75a93a]/10 text-[#75a93a] font-medium">
+                  {p.name}{p.weight_kg ? ` ${p.weight_kg} кг` : ''}
+                  <button
+                    onClick={() => handleEditParticipant(idx)}
+                    className="ml-0.5 hover:text-[#75a93a] transition-colors"
+                    aria-label={`Edit ${p.name}`}
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button
+                    onClick={() => handleRemoveParticipant(idx)}
+                    className="ml-0.5 hover:text-red-500 transition-colors"
+                    aria-label={`Remove ${p.name}`}
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={() => {
+                  setParticipantForm({ name: '', weight_kg: '' });
+                  setEditingParticipantIdx(-1);
+                  setParticipantModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px]"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                {t('add_participant')}
+              </button>
+            </div>
+          )}
         </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -757,31 +830,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcTotalWeight())}</div>
         </div>
       </div>
-
-      {(() => {
-        const lp = list?.meal_plan_id ? mealPlans.find(mp => mp.id === list.meal_plan_id) : null;
-        if (!lp) return null;
-        const gearTotal = calcTotalWeight();
-        const foodTotal = lp.total_weight_g;
-        const groupTotal = gearTotal + foodTotal;
-        const limitPct = getTerrainLimitPct(list?.gpx_data);
-        const peopleCount = (list?.participants?.length || 1);
-        const maxPerPersonGrams = calcGroupMax(list?.participants || [], list?.gpx_data);
-        const groupMax = maxPerPersonGrams * peopleCount;
-        const pct = groupMax > 0 ? Math.round((groupTotal / groupMax) * 100) : 0;
-        return (
-          <div className={`mb-4 p-3 rounded-xl border text-sm ${bannerColor(pct)}`}>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span>
-                {t('total_weight')}: {formatWeight(gearTotal)} + {t('food_weight')}: {formatWeight(foodTotal)} = {formatWeight(groupTotal)}
-              </span>
-              <span className="tabular-nums font-medium">
-                ≤ {formatWeight(groupMax)} / {peopleCount} ({pct}%)
-              </span>
-            </div>
-          </div>
-        );
-      })()}
 
       {totalItems > 0 && (
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 mb-6">
@@ -1191,7 +1239,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md">
             <div className="p-6">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                {t('add_participant')}
+                {editingParticipantIdx >= 0 ? t('edit_participant') : t('add_participant')}
               </h2>
               <div className="space-y-4">
                 <div>
@@ -1218,7 +1266,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
               </div>
               <div className="flex items-center justify-end gap-3 mt-6">
                 <button
-                  onClick={() => { setParticipantModalOpen(false); setParticipantForm({ name: '', weight_kg: '' }); }}
+                  onClick={() => { setParticipantModalOpen(false); setParticipantForm({ name: '', weight_kg: '' }); setEditingParticipantIdx(-1); }}
                   className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 min-h-[44px]"
                 >
                   {tCommon('cancel')}
@@ -1228,7 +1276,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   disabled={participantSaving || !participantForm.name.trim()}
                   className="px-4 py-2 text-sm bg-[#75a93a] text-white rounded-lg hover:bg-[#5a8a2a] disabled:opacity-50 transition-colors min-h-[44px]"
                 >
-                  {participantSaving ? tCommon('loading') : tCommon('add')}
+                  {participantSaving ? tCommon('loading') : editingParticipantIdx >= 0 ? tCommon('save') : tCommon('add')}
                 </button>
               </div>
             </div>

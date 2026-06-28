@@ -136,7 +136,9 @@
     "linked_meal_plan": "Розкладка харчування",
     "no_meal_plan": "— не вибрано —",
     "food_weight": "Харчування",
-    "total_with_food": "Разом"
+    "total_with_food": "Разом",
+    "group_mode": "Груповий похід",
+    "edit_participant": "Редагувати учасника"
   },
   "meals": {
     "title": "Розкладки харчування",

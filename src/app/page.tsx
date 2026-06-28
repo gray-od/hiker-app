@@ -44,7 +44,7 @@ export default async function DashboardPage() {
   const [{ data: recentListsRaw }, { data: recentMealsRaw }, { data: profileData }] = await Promise.all([
     supabase
       .from('gear_lists')
-      .select('id, name, season, created_at, list_items(quantity, gear_item:gear_items(weight_g))')
+      .select('id, name, season, created_at, gpx_data, participants, meal_plan_id, list_items(quantity, gear_item:gear_items(weight_g))')
       .order('created_at', { ascending: false }),
     supabase
       .from('meal_plans')
@@ -67,12 +67,16 @@ export default async function DashboardPage() {
     id: list.id,
     name: list.name,
     totalWeight: (list.list_items || []).reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * (li.quantity || 1), 0),
+    gpx_data: (list as any).gpx_data,
+    participants: (list as any).participants,
+    meal_plan_id: (list as any).meal_plan_id,
   }));
 
   const plansWithWeight = (allPlans || []).map(plan => ({
     id: plan.id,
     name: plan.name,
     totalWeight: (plan.meal_days || []).reduce((sum, d) => sum + (d.total_weight_g || 0), 0),
+    people_count: plan.people_count || 1,
   }));
 
   const t = await getTranslations('dashboard');

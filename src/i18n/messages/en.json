@@ -136,7 +136,9 @@
     "linked_meal_plan": "Meal plan",
     "no_meal_plan": "— none —",
     "food_weight": "Food",
-    "total_with_food": "Total"
+    "total_with_food": "Total",
+    "group_mode": "Group hike",
+    "edit_participant": "Edit participant"
   },
   "meals": {
     "title": "Meal Plans",

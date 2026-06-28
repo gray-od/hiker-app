@@ -2,16 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-
-interface WeightItem {
-  id: string;
-  name: string;
-  totalWeight: number;
-}
+import { getTerrainLimitPct, calcGroupMax, bannerColor } from '@/lib/weight-calc';
 
 interface TripWeightCardProps {
-  lists: WeightItem[];
-  plans: WeightItem[];
+  lists: Array<{
+    id: string;
+    name: string;
+    totalWeight: number;
+    gpx_data?: any;
+    participants?: Array<{ name: string; weight_kg?: number }>;
+    meal_plan_id?: string;
+  }>;
+  plans: Array<{
+    id: string;
+    name: string;
+    totalWeight: number;
+    people_count: number;
+  }>;
 }
 
 function formatWeight(grams: number): string {
@@ -85,15 +92,51 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
       </div>
 
       {(selectedListId || selectedPlanId) ? (
-        <div className="flex items-center justify-between text-sm border-t border-zinc-200 dark:border-zinc-800 pt-3">
-          <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-400">
-            {selectedList && <span>{t('gear_weight')}: {formatWeight(gearWeight)}</span>}
-            {selectedPlan && <span>{t('food_weight')}: {formatWeight(foodWeight)}</span>}
+        <>
+          <div className="flex items-center justify-between text-sm border-t border-zinc-200 dark:border-zinc-800 pt-3">
+            <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-400">
+              {selectedList && <span>{t('gear_weight')}: {formatWeight(gearWeight)}</span>}
+              {selectedPlan && <span>{t('food_weight')}: {formatWeight(foodWeight)}</span>}
+            </div>
+            <div className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
+              {t('combined_weight')}: {formatWeight(totalWeight)}
+            </div>
           </div>
-          <div className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-            {t('combined_weight')}: {formatWeight(totalWeight)}
-          </div>
-        </div>
+          {selectedList?.gpx_data && (
+            <div className="flex items-center gap-3 mt-3 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
+              <span>📏 {selectedList.gpx_data.distance_km} км</span>
+              <span>⛰ +{selectedList.gpx_data.elevation_gain_m} м</span>
+              {selectedList.gpx_data.max_elevation_m > 0 && <span>▲ {selectedList.gpx_data.max_elevation_m} м</span>}
+            </div>
+          )}
+          {selectedList && selectedList.participants && selectedList.participants.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
+              {selectedList.participants.map((p: any, i: number) => (
+                <span key={i} className="px-2 py-0.5 rounded-full bg-[#75a93a]/10 text-[#75a93a]">{p.name}{p.weight_kg ? ` ${p.weight_kg}кг` : ''}</span>
+              ))}
+            </div>
+          )}
+          {selectedList && selectedPlan && (
+            (() => {
+              const gearTotal = selectedList.totalWeight || 0;
+              const foodTotal = selectedPlan.totalWeight || 0;
+              const groupTotal = gearTotal + foodTotal;
+              const limitPct = getTerrainLimitPct(selectedList.gpx_data);
+              const peopleCount = selectedList.participants?.length || 1;
+              const maxPerPerson = selectedList.participants?.length
+                ? calcGroupMax(selectedList.participants, selectedList.gpx_data)
+                : 80 * 1000 * limitPct;
+              const groupMax = maxPerPerson * peopleCount;
+              const pct = groupMax > 0 ? Math.round((groupTotal / groupMax) * 100) : 0;
+              return (
+                <div className={`mt-3 p-2 rounded-lg text-xs flex items-center justify-between flex-wrap gap-2 ${bannerColor(pct)}`}>
+                  <span>⚖ {formatWeight(gearTotal)} + {formatWeight(foodTotal)} = {formatWeight(groupTotal)}</span>
+                  <span className="tabular-nums font-medium">≤ {formatWeight(groupMax)} ({pct}%)</span>
+                </div>
+              );
+            })()
+          )}
+        </>
       ) : (
         <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center">{t('select_hint')}</p>
       )}
