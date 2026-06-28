@@ -363,8 +363,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       let maxElev = track.elevation.max;
       let descDistKm: number | null = null;
 
-      const descMatch = text.match(/<desc>[^]*?<\/desc>/);
-      const trackDesc = descMatch ? descMatch[0].replace(/<desc>|<\/desc>/g, '').replace(/&lt;br&gt;|<br>/g, '\n').replace(/&amp;nbsp;|&#160;|&nbsp;/g, ' ') : '';
+      const trackDesc = track.desc || '';
       if (trackDesc) {
         const distMatch = trackDesc.match(/Відстань:\s*([\d.,]+)\s*км|Distance:\s*([\d.,]+)\s*km/);
         if (distMatch) {
