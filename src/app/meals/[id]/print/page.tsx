@@ -106,11 +106,11 @@ export default function MealPlanPrintPage() {
     0,
   );
   const daysCount = days.length || 1;
-  const peopleCount = plan!.people_count || 1;
+  const peopleCount = plan?.people_count ?? 1;
   const avgCalPerPersonDay = Math.round(totalCalories / daysCount / peopleCount);
   const avgWeightPerPersonDay = Math.round(totalWeight / daysCount / peopleCount);
 
-  const planTypeName = planTypeNames[plan!.plan_type]?.[locale] || plan!.plan_type;
+  const planTypeName = planTypeNames[plan?.plan_type ?? 'standard']?.[locale] ?? plan?.plan_type ?? '';
   const today = new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US');
 
   return (
@@ -147,7 +147,7 @@ export default function MealPlanPrintPage() {
         </div>
 
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-black mb-1">{plan!.name}</h1>
+          <h1 className="text-xl font-bold text-black mb-1">{plan?.name ?? ''}</h1>
           <div className="text-sm text-zinc-600">
             {t('plan_type')}: {planTypeName} &nbsp;|&nbsp; {t('people')}: {peopleCount} &nbsp;|&nbsp; {t('days')}: {daysCount}
           </div>

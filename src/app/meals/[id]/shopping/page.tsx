@@ -97,9 +97,9 @@ export default function ShoppingListPage() {
   }
 
   const daysCount = days.length || 1;
-  const peopleCount = plan!.people_count || 1;
+  const peopleCount = plan?.people_count ?? 1;
 
-  const planTypeName = planTypeNames[plan!.plan_type]?.[locale] || plan!.plan_type;
+  const planTypeName = planTypeNames[plan?.plan_type ?? 'standard']?.[locale] ?? plan?.plan_type ?? '';
   const today = new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US');
 
   // Aggregate all meal entries across days, group by normalized name
@@ -152,7 +152,7 @@ export default function ShoppingListPage() {
         </div>
 
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-black mb-1">{t('shopping_list')}: {plan!.name}</h1>
+          <h1 className="text-xl font-bold text-black mb-1">{t('shopping_list')}: {plan?.name ?? ''}</h1>
           <div className="text-sm text-zinc-600">
             {t('plan_type')}: {planTypeName} &nbsp;|&nbsp; {t('people')}: {peopleCount} &nbsp;|&nbsp; {t('days')}: {daysCount}
           </div>

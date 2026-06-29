@@ -310,6 +310,7 @@ export default function SettingsPage() {
                   value={aiModel}
                   onChange={(e) => { setAiModel(e.target.value); setAiTestResult(null); }}
                   placeholder={aiProvider === 'gemini' ? 'gemma-4-26b-a4b-it' : aiProvider === 'openai' ? 'gpt-4o-mini' : aiProvider === 'deepseek' ? 'deepseek-chat' : 'openai/gpt-4o-mini'}
+                  maxLength={200}
                   className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                 />
               </div>
@@ -381,6 +382,7 @@ export default function SettingsPage() {
                   type="text"
                   value={searchCx}
                   onChange={(e) => { setSearchCx(e.target.value); setSearchTestResult(null); }}
+                  maxLength={200}
                   className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                 />
                 </div>
@@ -438,10 +440,12 @@ export default function SettingsPage() {
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
+                    maxLength={200}
                     className="flex-1 px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                   />
                   <button
                     onClick={async () => {
+                      try {
                       setSavingName(true);
                       const supabase = createClient();
                       const { data: { user } } = await supabase.auth.getUser();
@@ -450,6 +454,9 @@ export default function SettingsPage() {
                       }
                       setName(nameInput);
                       setEditingName(false);
+                      } catch (err) {
+                        console.error('Failed to save name:', err);
+                      }
                       setSavingName(false);
                     }}
                     disabled={savingName}

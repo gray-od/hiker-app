@@ -373,17 +373,23 @@ export async function POST(req: Request) {
             totalWeight += dayWeight;
           }
 
-          const { data: insertedDays } = await supabase
+          const { data: insertedDays, error: daysErr } = await supabase
             .from('meal_days')
             .insert(daysToInsert)
             .select('id');
+
+          if (daysErr) return { error: 'Failed to create meal plan days' };
 
           if (insertedDays && template) {
             const allEntries = insertedDays.flatMap((day, i) =>
               entriesByDay[i].map(entry => ({ ...entry, day_id: day.id }))
             );
             if (allEntries.length > 0) {
-              await supabase.from('meal_entries').insert(allEntries);
+              const { error: entriesErr } = await supabase.from('meal_entries').insert(allEntries);
+              if (entriesErr) {
+                console.error('[chat] createMealPlan entries insert failed:', entriesErr);
+                return { success: true, id: plan.id, name: plan.name, warning: 'Some entries could not be added' };
+              }
             }
           }
 
@@ -423,10 +429,12 @@ export async function POST(req: Request) {
             notes: item.notes || null,
           }));
 
-          const { data } = await supabase
+          const { data, error: gearErr } = await supabase
             .from('gear_items')
             .insert(itemsToInsert)
             .select('id, name, weight_g');
+
+          if (gearErr) return { error: 'Failed to add gear items' };
 
           const inserted = (data || []).map(d => ({ id: d.id, name: d.name, weightG: d.weight_g }));
           const totalWeight = inserted.reduce((sum, i) => sum + i.weightG, 0);
@@ -528,10 +536,14 @@ export async function POST(req: Request) {
     maxTokens: 4096,
     onFinish: async () => {
       if (!usingOwnKey) {
-        await supabase.from('ai_usage').upsert(
-          { user_id: session.user.id, date: new Date().toISOString().split('T')[0], message_count: todayCount + 1 },
-          { onConflict: 'user_id,date' }
-        );
+        try {
+          await supabase.from('ai_usage').upsert(
+            { user_id: session.user.id, date: new Date().toISOString().split('T')[0], message_count: todayCount + 1 },
+            { onConflict: 'user_id,date' }
+          );
+        } catch {
+          // Rate limit persistence failed — non-critical, user gets one extra message
+        }
       }
     },
   });

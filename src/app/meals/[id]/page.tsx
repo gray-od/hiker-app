@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-import type { MealPlan, MealDay, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
+import type { MealPlan, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
 import { getAdaptationCoefficient, PLAN_TYPES } from '@/lib/hiking-standards';
@@ -121,39 +121,42 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
   async function recalculateTotals() {
     const supabase = createClient();
-
-    const { data: currentDays } = await supabase
-      .from('meal_days')
-      .select('*, meal_entries(*)')
-      .eq('plan_id', id)
-      .order('day_number');
-
-    if (!currentDays) return;
-
-    const typedDays = currentDays as MealDayWithEntries[];
-
-    for (const day of typedDays) {
-      const entries = day.meal_entries || [];
-      const totalCalories = entries.reduce((sum, e) => sum + e.calories, 0);
-      const totalWeight = entries.reduce((sum, e) => sum + e.weight_g, 0);
-      await supabase
+    try {
+      const { data: currentDays } = await supabase
         .from('meal_days')
-        .update({ total_calories: totalCalories, total_weight_g: totalWeight })
-        .eq('id', day.id);
-      day.total_calories = totalCalories;
-      day.total_weight_g = totalWeight;
+        .select('*, meal_entries(*)')
+        .eq('plan_id', id)
+        .order('day_number');
+
+      if (!currentDays) return;
+
+      const typedDays = currentDays as MealDayWithEntries[];
+
+      for (const day of typedDays) {
+        const entries = day.meal_entries || [];
+        const totalCalories = entries.reduce((sum, e) => sum + e.calories, 0);
+        const totalWeight = entries.reduce((sum, e) => sum + e.weight_g, 0);
+        await supabase
+          .from('meal_days')
+          .update({ total_calories: totalCalories, total_weight_g: totalWeight })
+          .eq('id', day.id);
+        day.total_calories = totalCalories;
+        day.total_weight_g = totalWeight;
+      }
+
+      const planTotalWeight = typedDays.reduce((sum, d) => sum + d.total_weight_g, 0);
+      const planDaysCount = typedDays.length;
+
+      await supabase
+        .from('meal_plans')
+        .update({ total_weight_g: planTotalWeight, days_count: planDaysCount })
+        .eq('id', id);
+
+      setDays(typedDays);
+      setPlan(prev => prev ? { ...prev, total_weight_g: planTotalWeight, days_count: planDaysCount } : null);
+    } catch (err) {
+      console.error('recalculateTotals failed', err);
     }
-
-    const planTotalWeight = typedDays.reduce((sum, d) => sum + d.total_weight_g, 0);
-    const planDaysCount = typedDays.length;
-
-    await supabase
-      .from('meal_plans')
-      .update({ total_weight_g: planTotalWeight, days_count: planDaysCount })
-      .eq('id', id);
-
-    setDays(typedDays);
-    setPlan(prev => prev ? { ...prev, total_weight_g: planTotalWeight, days_count: planDaysCount } : null);
   }
 
   function toggleDay(dayNumber: number) {
@@ -218,6 +221,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   }
 
   async function handleSaveEntry() {
+    try {
     if (!activeDayId) return;
 
     if (entryMode === 'custom' && !entryForm.name.trim()) return;
@@ -302,9 +306,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     setEntryModalOpen(false);
     setSaving(false);
     await recalculateTotals();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleDeleteEntry(entryId: string) {
+    try {
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -318,9 +326,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     }
 
     await recalculateTotals();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleUpdatePlan() {
+    try {
     if (!editForm.name.trim()) return;
 
     const supabase = createClient();
@@ -354,9 +366,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     } : null);
     setSaving(false);
     setEditPlanModalOpen(false);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleDeletePlan() {
+    try {
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -370,9 +386,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     }
 
     router.push('/meals');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleAddDay() {
+    try {
     const supabase = createClient();
     const maxDayNumber = days.reduce((max, d) => Math.max(max, d.day_number), 0);
 
@@ -391,9 +411,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     }
 
     await recalculateTotals();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleRemoveDay() {
+    try {
     if (days.length <= 1) return;
 
     const supabase = createClient();
@@ -410,6 +434,9 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     }
 
     await recalculateTotals();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleApplyTemplate(templateId: string) {
@@ -718,8 +745,8 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           const dayTotalCal = entries.reduce((s, e) => s + e.calories, 0);
           const dayTotalWeight = entries.reduce((s, e) => s + e.weight_g, 0);
           const adaptationCoeff = getAdaptationCoefficient(day.day_number);
-          const calTarget = (plan!.target_calories || 3000) * adaptationCoeff * peopleCount;
-          const weightTarget = (plan!.target_weight_g || 650) * peopleCount;
+          const calTarget = ((plan?.target_calories ?? 3000)) * adaptationCoeff * peopleCount;
+          const weightTarget = ((plan?.target_weight_g ?? 650)) * peopleCount;
           const calRatio = calTarget > 0 ? dayTotalCal / calTarget : 0;
           const weightRatio = weightTarget > 0 ? dayTotalWeight / weightTarget : 0;
 
@@ -966,6 +993,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       placeholder={t('search_product')}
+                      maxLength={200}
                       className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                     />
                   </div>
@@ -1093,6 +1121,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       placeholder={t('search_product')}
+                      maxLength={200}
                       className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                     />
                   </div>
@@ -1205,6 +1234,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                       value={entryForm.name}
                       onChange={(e) => setEntryForm((prev) => ({ ...prev, name: e.target.value }))}
                       required
+                      maxLength={200}
                       className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                     />
                   </div>
@@ -1331,6 +1361,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
                     value={editForm.name}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
                     required
+                    maxLength={200}
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                   />
                 </div>

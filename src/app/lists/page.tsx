@@ -113,6 +113,7 @@ export default function ListsPage() {
   }
 
   async function handleCreate() {
+    try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -146,9 +147,13 @@ export default function ListsPage() {
     setSaving(false);
     setModalOpen(false);
     setFormData(EMPTY_FORM);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleDelete(id: string) {
+    try {
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -164,6 +169,9 @@ export default function ListsPage() {
 
     setLists((prev) => prev.filter((l) => l.id !== id));
     setConfirmDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   function handleFormChange(field: string, value: string) {
@@ -321,6 +329,7 @@ export default function ListsPage() {
                     value={formData.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
                     required
+                    maxLength={200}
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                     placeholder={t('name')}
                   />

@@ -129,7 +129,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
               <input
                 type="number"
                 value={myWeight}
-                onChange={(e) => setMyWeight(Number(e.target.value) || 80)}
+                onChange={(e) => { const v = e.target.value; setMyWeight(v === '' ? 0 : Number(v) || 0); }}
                 className="w-16 px-1.5 py-0.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded text-xs text-zinc-900 dark:text-zinc-100"
                 min={30}
                 max={200}

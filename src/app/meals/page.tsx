@@ -9,7 +9,7 @@ import { getPlanTypeBadgeClass } from '@/lib/badges';
 import { formatWeight } from '@/lib/format';
 import { PLAN_TYPES, getPlanType } from '@/lib/hiking-standards';
 import type { PlanTypeId } from '@/lib/hiking-standards';
-import { FOOD_CATALOG, calculateNutrition, getFoodItem } from '@/lib/food-catalog';
+import { calculateNutrition, getFoodItem } from '@/lib/food-catalog';
 import { MEAL_TEMPLATES, getMealTemplate } from '@/lib/meal-templates';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
@@ -96,6 +96,7 @@ export default function MealsPage() {
   }
 
   async function handleCreate() {
+    try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -223,9 +224,13 @@ export default function MealsPage() {
     setSaving(false);
     setModalOpen(false);
     setFormData(EMPTY_FORM);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   async function handleDelete(id: string) {
+    try {
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -241,6 +246,9 @@ export default function MealsPage() {
 
     setPlans((prev) => prev.filter((p) => p.id !== id));
     setConfirmDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    }
   }
 
   function handleFormChange(field: string, value: string | number) {
@@ -424,6 +432,7 @@ export default function MealsPage() {
                     value={formData.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
                     required
+                    maxLength={200}
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                     placeholder={t('name')}
                   />

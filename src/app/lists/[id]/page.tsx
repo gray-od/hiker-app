@@ -9,6 +9,7 @@ import { getSeasonBadgeClass } from '@/lib/badges';
 import { formatWeight, formatDate } from '@/lib/format';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
 import { parseGpxFile } from '@/lib/gpx-parser';
+import { calcWeight } from '@/lib/weight-calc';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
 
@@ -92,28 +93,19 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   }, [id, router]);
 
   function calcBaseWeight(): number {
-    return listItems.reduce((sum, li) => {
-      if (li.worn || li.consumable) return sum;
-      return sum + (li.gear_item?.weight_g || 0) * li.quantity;
-    }, 0);
+    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, worn: li.worn, consumable: li.consumable })), (li) => !li.worn && !li.consumable);
   }
 
   function calcWornWeight(): number {
-    return listItems.reduce((sum, li) => {
-      if (!li.worn) return sum;
-      return sum + (li.gear_item?.weight_g || 0) * li.quantity;
-    }, 0);
+    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, worn: li.worn })), (li) => li.worn);
   }
 
   function calcConsumableWeight(): number {
-    return listItems.reduce((sum, li) => {
-      if (!li.consumable) return sum;
-      return sum + (li.gear_item?.weight_g || 0) * li.quantity;
-    }, 0);
+    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, consumable: li.consumable })), (li) => li.consumable);
   }
 
   function calcTotalWeight(): number {
-    return listItems.reduce((sum, li) => sum + (li.gear_item?.weight_g || 0) * li.quantity, 0);
+    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g })));
   }
 
   function calcPackedCount(): number {
@@ -131,204 +123,241 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function handleUpdateList() {
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    setSaving(true);
-    setError(null);
+      setSaving(true);
+      setError(null);
 
-    const { error: updateError } = await supabase
-      .from('gear_lists')
-      .update({
-        name: editForm.name,
-        season: editForm.season,
-        trip_date: editForm.trip_date || null,
-      })
-      .eq('id', id);
+      const { error: updateError } = await supabase
+        .from('gear_lists')
+        .update({
+          name: editForm.name,
+          season: editForm.season,
+          trip_date: editForm.trip_date || null,
+        })
+        .eq('id', id);
 
-    if (updateError) {
-      setError(updateError.message);
+      if (updateError) {
+        setError(updateError.message);
+        setSaving(false);
+        return;
+      }
+
+      setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
       setSaving(false);
-      return;
+      setEditModalOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update list');
+      setSaving(false);
     }
-
-    setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
-    setSaving(false);
-    setEditModalOpen(false);
   }
 
   async function handleDeleteList() {
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    const { error: deleteError } = await supabase
-      .from('gear_lists')
-      .delete()
-      .eq('id', id);
+      const { error: deleteError } = await supabase
+        .from('gear_lists')
+        .delete()
+        .eq('id', id);
 
-    if (deleteError) {
-      setError(deleteError.message);
-      return;
+      if (deleteError) {
+        setError(deleteError.message);
+        return;
+      }
+
+      router.push('/lists');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete list');
     }
-
-    router.push('/lists');
   }
 
   async function handleTogglePacked(itemId: string) {
-    const supabase = createClient();
-    const item = listItems.find(li => li.id === itemId);
-    if (!item) return;
+    try {
+      const supabase = createClient();
+      const item = listItems.find(li => li.id === itemId);
+      if (!item) return;
 
-    const newPacked = !item.is_packed;
+      const newPacked = !item.is_packed;
 
-    const { error: updateError } = await supabase
-      .from('list_items')
-      .update({ is_packed: newPacked })
-      .eq('id', itemId);
+      const { error: updateError } = await supabase
+        .from('list_items')
+        .update({ is_packed: newPacked })
+        .eq('id', itemId);
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setListItems(prev => prev.map(li => li.id === itemId ? { ...li, is_packed: newPacked } : li));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle packed');
     }
-
-    setListItems(prev => prev.map(li => li.id === itemId ? { ...li, is_packed: newPacked } : li));
   }
 
   async function handleToggleWorn(itemId: string) {
-    const supabase = createClient();
-    const item = listItems.find(li => li.id === itemId);
-    if (!item) return;
+    try {
+      const supabase = createClient();
+      const item = listItems.find(li => li.id === itemId);
+      if (!item) return;
 
-    const newWorn = !item.worn;
-    const updates: Record<string, boolean> = { worn: newWorn };
-    if (newWorn) {
-      updates.consumable = false;
+      const newWorn = !item.worn;
+      const updates: Record<string, boolean> = { worn: newWorn };
+      if (newWorn) {
+        updates.consumable = false;
+      }
+
+      const { error: updateError } = await supabase
+        .from('list_items')
+        .update(updates)
+        .eq('id', itemId);
+
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle worn');
     }
-
-    const { error: updateError } = await supabase
-      .from('list_items')
-      .update(updates)
-      .eq('id', itemId);
-
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-
-    setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
   }
 
   async function handleToggleConsumable(itemId: string) {
-    const supabase = createClient();
-    const item = listItems.find(li => li.id === itemId);
-    if (!item) return;
+    try {
+      const supabase = createClient();
+      const item = listItems.find(li => li.id === itemId);
+      if (!item) return;
 
-    const newConsumable = !item.consumable;
-    const updates: Record<string, boolean> = { consumable: newConsumable };
-    if (newConsumable) {
-      updates.worn = false;
+      const newConsumable = !item.consumable;
+      const updates: Record<string, boolean> = { consumable: newConsumable };
+      if (newConsumable) {
+        updates.worn = false;
+      }
+
+      const { error: updateError } = await supabase
+        .from('list_items')
+        .update(updates)
+        .eq('id', itemId);
+
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle consumable');
     }
-
-    const { error: updateError } = await supabase
-      .from('list_items')
-      .update(updates)
-      .eq('id', itemId);
-
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-
-    setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
   }
 
   async function handleUpdateQuantity(itemId: string, delta: number) {
-    const supabase = createClient();
-    const item = listItems.find(li => li.id === itemId);
-    if (!item) return;
+    try {
+      const supabase = createClient();
+      const item = listItems.find(li => li.id === itemId);
+      if (!item) return;
 
-    const newQuantity = Math.max(1, item.quantity + delta);
-    if (newQuantity === item.quantity) return;
+      const newQuantity = Math.max(1, item.quantity + delta);
+      if (newQuantity === item.quantity) return;
 
-    const { error: updateError } = await supabase
-      .from('list_items')
-      .update({ quantity: newQuantity })
-      .eq('id', itemId);
+      const { error: updateError } = await supabase
+        .from('list_items')
+        .update({ quantity: newQuantity })
+        .eq('id', itemId);
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: newQuantity } : li));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update quantity');
     }
-
-    setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: newQuantity } : li));
   }
 
   async function handleSetQuantity(itemId: string, newQuantity: number) {
-    const supabase = createClient();
-    const q = Math.max(1, newQuantity);
-    const item = listItems.find(li => li.id === itemId);
-    if (!item || q === item.quantity) return;
+    try {
+      const supabase = createClient();
+      const q = Math.max(1, newQuantity);
+      const item = listItems.find(li => li.id === itemId);
+      if (!item || q === item.quantity) return;
 
-    const { error: updateError } = await supabase
-      .from('list_items')
-      .update({ quantity: q })
-      .eq('id', itemId);
+      const { error: updateError } = await supabase
+        .from('list_items')
+        .update({ quantity: q })
+        .eq('id', itemId);
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: q } : li));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to set quantity');
     }
-
-    setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: q } : li));
   }
 
   async function handleRemoveItem(itemId: string) {
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    const { error: deleteError } = await supabase
-      .from('list_items')
-      .delete()
-      .eq('id', itemId);
+      const { error: deleteError } = await supabase
+        .from('list_items')
+        .delete()
+        .eq('id', itemId);
 
-    if (deleteError) {
-      setError(deleteError.message);
-      return;
+      if (deleteError) {
+        setError(deleteError.message);
+        return;
+      }
+
+      setListItems(prev => prev.filter(li => li.id !== itemId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove item');
     }
-
-    setListItems(prev => prev.filter(li => li.id !== itemId));
   }
 
   async function handleAddItems() {
-    if (selectedGearIds.size === 0) return;
-    const supabase = createClient();
+    try {
+      if (selectedGearIds.size === 0) return;
+      const supabase = createClient();
 
-    const inserts = Array.from(selectedGearIds).map(gearItemId => ({
-      list_id: id,
-      gear_item_id: gearItemId,
-      quantity: 1,
-      is_packed: false,
-      worn: false,
-      consumable: false,
-    }));
+      const inserts = Array.from(selectedGearIds).map(gearItemId => ({
+        list_id: id,
+        gear_item_id: gearItemId,
+        quantity: 1,
+        is_packed: false,
+        worn: false,
+        consumable: false,
+      }));
 
-    const { error: insertError } = await supabase
-      .from('list_items')
-      .insert(inserts);
+      const { error: insertError } = await supabase
+        .from('list_items')
+        .insert(inserts);
 
-    if (insertError) {
-      setError(insertError.message);
-      return;
-    }
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
 
-    setAddItemsModalOpen(false);
-    setSelectedGearIds(new Set());
-    setSearchQuery('');
+      setAddItemsModalOpen(false);
+      setSelectedGearIds(new Set());
+      setSearchQuery('');
 
-    const { data: itemsData } = await supabase
-      .from('list_items')
-      .select('*, gear_item:gear_items(*)')
-      .eq('list_id', id);
+      const { data: itemsData } = await supabase
+        .from('list_items')
+        .select('*, gear_item:gear_items(*)')
+        .eq('list_id', id);
 
-    if (itemsData) {
-      setListItems(itemsData as ListItemWithGear[]);
+      if (itemsData) {
+        setListItems(itemsData as ListItemWithGear[]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add items');
     }
   }
 
@@ -396,17 +425,25 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       a.download = `${list.name || 'track'}.gpx`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch {
+      // GPX download failed — silently ignore (non-critical)
+    }
   };
 
   const handleRemoveGpx = async () => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from('gear_lists')
-      .update({ gpx_data: null })
-      .eq('id', id);
-    if (!error) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('gear_lists')
+        .update({ gpx_data: null })
+        .eq('id', id);
+      if (error) {
+        setError(error.message);
+        return;
+      }
       setList((prev) => prev ? { ...prev, gpx_data: null } as GearList : null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove GPX');
     }
   };
 
@@ -851,6 +888,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     value={editForm.name}
                     onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
                     required
+                    maxLength={200}
                     className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
                   />
                 </div>
@@ -922,6 +960,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('search_gear')}
+                maxLength={200}
                 className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
               />
             </div>

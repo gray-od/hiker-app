@@ -18,3 +18,11 @@ export function bannerColor(pct: number): string {
   if (pct > 75) return 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400';
   return 'bg-[#75a93a]/5 border-[#75a93a]/20 text-[#75a93a]';
 }
+
+export function calcWeight<T extends { quantity: number; weight_g?: number | null }>(
+  items: T[],
+  filter?: (item: T) => boolean
+): number {
+  const filtered = filter ? items.filter(filter) : items;
+  return filtered.reduce((sum, item) => sum + (item.weight_g || 0) * item.quantity, 0);
+}
