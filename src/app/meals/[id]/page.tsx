@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { MealPlan, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
-import { type PlanTypeId } from '@/lib/hiking-standards';
+import { type PlanTypeId, getPlanType } from '@/lib/hiking-standards';
 import { getMealTemplate } from '@/lib/meal-templates';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import StatsCards from './components/StatsCards';
@@ -235,7 +235,12 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   }
 
   function handleEditFieldChange(field: string, value: string | number) {
-    setEditForm(prev => ({ ...prev, [field]: value }));
+    if (field === 'plan_type') {
+      const pt = getPlanType(value as PlanTypeId);
+      setEditForm(prev => ({ ...prev, plan_type: value as string, target_calories: pt.targetCalories.default, target_weight_g: pt.targetWeight.default }));
+    } else {
+      setEditForm(prev => ({ ...prev, [field]: value }));
+    }
   }
 
   async function handleSaveEntry() {
@@ -486,15 +491,20 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       }
 
       const templatePlanType = template.planType;
+      const planTypeConfig = getPlanType(templatePlanType);
       const peopleCount = plan.people_count || 1;
       const daysCount = plan.days_count || 3;
 
       await supabase
         .from('meal_plans')
-        .update({ plan_type: templatePlanType })
+        .update({
+          plan_type: templatePlanType,
+          target_calories: planTypeConfig.targetCalories.default,
+          target_weight_g: planTypeConfig.targetWeight.default,
+        })
         .eq('id', plan.id);
 
-      setPlan(prev => prev ? { ...prev, plan_type: templatePlanType } : null);
+      setPlan(prev => prev ? { ...prev, plan_type: templatePlanType, target_calories: planTypeConfig.targetCalories.default, target_weight_g: planTypeConfig.targetWeight.default } : null);
 
       const loc = (['uk', 'ru', 'en'].includes(locale) ? locale : 'uk') as 'uk' | 'ru' | 'en';
 
