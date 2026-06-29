@@ -381,23 +381,31 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
     const oldType = plan?.plan_type || 'standard';
     const oldPeople = plan?.people_count || 1;
-    const typeChanged = oldType !== editForm.plan_type;
-    const peopleChanged = oldPeople !== editForm.people_count;
 
-    if ((typeChanged || peopleChanged) && days.length > 0) {
-      const oldCfg = getPlanType(oldType as PlanTypeId);
-      const newCfg = getPlanType(editForm.plan_type as PlanTypeId);
-      const wRatio = (newCfg.targetWeight.default * editForm.people_count) / (oldCfg.targetWeight.default * oldPeople);
-      const cRatio = (newCfg.targetCalories.default * editForm.people_count) / (oldCfg.targetCalories.default * oldPeople);
+    if (oldType !== editForm.plan_type && days.length > 0) {
+      const templateId = `${editForm.plan_type}_3day`;
+      setSaving(false);
+      setEditPlanModalOpen(false);
+      await handleApplyTemplate(templateId, editForm.people_count);
+      const supabase2 = createClient();
+      await supabase2.from('meal_plans').update({
+        name: editForm.name.trim(),
+        people_count: editForm.people_count,
+      }).eq('id', id);
+      setPlan(prev => prev ? { ...prev, name: editForm.name.trim(), people_count: editForm.people_count } : null);
+      return;
+    }
 
+    if (oldPeople !== editForm.people_count && days.length > 0) {
+      const pRatio = editForm.people_count / oldPeople;
       for (const day of days) {
         for (const e of (day.meal_entries || [])) {
           await supabase.from('meal_entries').update({
-            weight_g: Math.round(e.weight_g * wRatio),
-            calories: Math.round(e.calories * cRatio),
-            protein_g: Math.round(e.protein_g * cRatio * 10) / 10,
-            fat_g: Math.round(e.fat_g * cRatio * 10) / 10,
-            carbs_g: Math.round(e.carbs_g * cRatio * 10) / 10,
+            weight_g: Math.round(e.weight_g * pRatio),
+            calories: Math.round(e.calories * pRatio),
+            protein_g: Math.round(e.protein_g * pRatio * 10) / 10,
+            fat_g: Math.round(e.fat_g * pRatio * 10) / 10,
+            carbs_g: Math.round(e.carbs_g * pRatio * 10) / 10,
           }).eq('id', e.id);
         }
       }
@@ -499,7 +507,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     setActionError(null);
   }
 
-  async function handleApplyTemplate(templateId: string) {
+  async function handleApplyTemplate(templateId: string, peopleCountOverride?: number) {
     const template = getMealTemplate(templateId);
     if (!template || !plan) return;
 
@@ -517,7 +525,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
       const templatePlanType = template.planType;
       const planTypeConfig = getPlanType(templatePlanType);
-      const peopleCount = plan.people_count || 1;
+      const peopleCount = peopleCountOverride ?? plan.people_count ?? 1;
       const daysCount = plan.days_count || 3;
 
       await supabase
