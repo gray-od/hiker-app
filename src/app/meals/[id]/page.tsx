@@ -395,18 +395,12 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
             fat_g: Math.round(e.fat_g * cRatio * 10) / 10,
             carbs_g: Math.round(e.carbs_g * cRatio * 10) / 10,
           }).eq('id', e.id);
-          e.weight_g = Math.round(e.weight_g * wRatio);
-          e.calories = Math.round(e.calories * cRatio);
-          e.protein_g = Math.round(e.protein_g * cRatio * 10) / 10;
-          e.fat_g = Math.round(e.fat_g * cRatio * 10) / 10;
-          e.carbs_g = Math.round(e.carbs_g * cRatio * 10) / 10;
         }
       }
     }
 
     setSaving(false);
     setEditPlanModalOpen(false);
-    await recalculateTotals();
     setPlan(prev => prev ? {
       ...prev,
       name: editForm.name.trim(),
@@ -415,6 +409,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       target_calories: editForm.target_calories,
       target_weight_g: editForm.target_weight_g,
     } : null);
+    await recalculateTotals();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Operation failed');
     }
