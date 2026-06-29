@@ -496,12 +496,13 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   }
 
   function handleOpenEditPlan() {
+    if (!plan) return;
     setEditForm({
-      name: plan!.name,
-      plan_type: plan!.plan_type || 'standard',
-      people_count: plan!.people_count || 1,
-      target_calories: plan!.target_calories || 3000,
-      target_weight_g: plan!.target_weight_g || 650,
+      name: plan.name,
+      plan_type: plan.plan_type || 'standard',
+      people_count: plan.people_count || 1,
+      target_calories: plan.target_calories || 3000,
+      target_weight_g: plan.target_weight_g || 650,
     });
     setEditPlanModalOpen(true);
     setActionError(null);

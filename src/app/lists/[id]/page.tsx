@@ -589,7 +589,11 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     const newId = e.target.value || null;
                     const supabase = createClient();
                     const { error } = await supabase.from('gear_lists').update({ meal_plan_id: newId }).eq('id', id);
-                    if (!error) setList((prev) => prev ? { ...prev, meal_plan_id: newId as string | null } : null);
+                    if (error) {
+                      setError(error.message);
+                    } else {
+                      setList((prev) => prev ? { ...prev, meal_plan_id: newId as string | null } : null);
+                    }
                   }}
                   className="text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-zinc-600 dark:text-zinc-400"
                 >

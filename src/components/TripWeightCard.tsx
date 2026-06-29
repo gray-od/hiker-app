@@ -25,6 +25,7 @@ interface TripWeightCardProps {
 export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
   const t = useTranslations('dashboard');
   const tLists = useTranslations('lists');
+  const tCommon = useTranslations('common');
 
   const [selectedListId, setSelectedListId] = useState<string>('');
   const [mounted, setMounted] = useState(false);
@@ -37,7 +38,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
       if (saved) {
         const { listId, weight } = JSON.parse(saved);
         if (listId) setSelectedListId(listId);
-        if (weight) setMyWeight(weight);
+        if (weight != null) setMyWeight(weight);
       }
     } catch (e) {
       // localStorage unavailable — use defaults
@@ -72,7 +73,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
         >
           <option value="">{t('select_list')}</option>
           {lists.map(l => (
-            <option key={l.id} value={l.id}>{l.name} ({formatWeight(l.totalWeight)})</option>
+            <option key={l.id} value={l.id}>{l.name} ({formatWeight(l.totalWeight, tCommon)})</option>
           ))}
         </select>
       </div>
@@ -83,7 +84,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
             <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
               <span>{t('food_weight')}:</span>
               <span className="text-[var(--color-brand)]">{linkedPlanDisplay.name}</span>
-              <span>· {formatWeight(linkedPlanDisplay.totalWeight)} {t('per_person', { n: linkedPlanDisplay.people_count })}</span>
+              <span>· {formatWeight(linkedPlanDisplay.totalWeight, tCommon)} {t('per_person', { n: linkedPlanDisplay.people_count })}</span>
             </div>
           ) : (
             <div className="text-xs text-zinc-400 dark:text-zinc-500">
@@ -97,14 +98,14 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
         <>
           <div className="flex items-center justify-between text-sm border-t border-zinc-200 dark:border-zinc-800 pt-3">
             <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-400">
-              <span>{t('gear_weight')}: {formatWeight(gearWeight)}</span>
+              <span>{t('gear_weight')}: {formatWeight(gearWeight, tCommon)}</span>
               {(() => {
                 const lp = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
-                return lp ? <span>{t('food_weight')}: {formatWeight(lp.totalWeight / lp.people_count)}</span> : null;
+                return lp ? <span>{t('food_weight')}: {formatWeight(lp.totalWeight / lp.people_count, tCommon)}</span> : null;
               })()}
             </div>
             <div className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-              {t('combined_weight')}: {formatWeight(totalWeight)}
+              {t('combined_weight')}: {formatWeight(totalWeight, tCommon)}
             </div>
           </div>
           {selectedList?.gpx_data && (
@@ -151,8 +152,8 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
             const pct = maxGrams > 0 ? Math.round((groupTotal / maxGrams) * 100) : 0;
             return (
               <div className={`mt-3 p-2 rounded-lg text-xs flex items-center justify-between flex-wrap gap-2 ${bannerColor(pct)}`}>
-                <span>⚖ {formatWeight(gearTotal)} + {formatWeight(foodTotal)} = {formatWeight(groupTotal)}</span>
-                <span className="tabular-nums font-medium">≤ {formatWeight(maxGrams)} ({pct}%)</span>
+                <span>⚖ {formatWeight(gearTotal, tCommon)} + {formatWeight(foodTotal, tCommon)} = {formatWeight(groupTotal, tCommon)}</span>
+                <span className="tabular-nums font-medium">≤ {formatWeight(maxGrams, tCommon)} ({pct}%)</span>
               </div>
             );
           })()}

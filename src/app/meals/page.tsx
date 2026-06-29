@@ -226,6 +226,7 @@ export default function MealsPage() {
     setModalOpen(false);
     setFormData(EMPTY_FORM);
     } catch (err) {
+      setSaving(false);
       setError(err instanceof Error ? err.message : 'Operation failed');
     }
   }
