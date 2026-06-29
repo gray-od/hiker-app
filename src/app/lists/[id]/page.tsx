@@ -14,6 +14,7 @@ import GpxSection from './components/GpxSection';
 import AddItemsModal from './components/AddItemsModal';
 import EditListModal from './components/EditListModal';
 import DeleteListModal from './components/DeleteListModal';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 
 export default function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -37,6 +38,8 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [weightHint, setWeightHint] = useState<string | null>(null);
   const [gpxUploading, setGpxUploading] = useState(false);
   const [gpxError, setGpxError] = useState<string | null>(null);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState<string | null>(null);
+  const [confirmRemoveGpx, setConfirmRemoveGpx] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
   useEffect(() => {
@@ -530,6 +533,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
             onClick={openEditModal}
             className="p-2 text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors min-h-[44px]"
             title={tCommon('edit')}
+            aria-label={tCommon('edit')}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -539,6 +543,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
             onClick={() => setConfirmDelete(true)}
             className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors min-h-[44px]"
             title={tCommon('delete')}
+            aria-label={tCommon('delete')}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -556,7 +561,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         onGpxUpload={handleGpxUpload}
         onShowOnMap={handleShowOnMap}
         onDownload={handleDownloadGpx}
-        onRemove={handleRemoveGpx}
+        onRemove={() => setConfirmRemoveGpx(true)}
         fileInputRef={fileInputRef}
       />
 
@@ -736,7 +741,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 </button>
 
                 <button
-                  onClick={() => handleRemoveItem(item.id)}
+                  onClick={() => setConfirmRemoveItem(item.id)}
                   className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   title={t('remove_item')}
                 >
@@ -787,6 +792,30 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         onConfirm={handleDeleteList}
         title={t('delete_list')}
         message={t('delete_confirm')}
+      />
+
+      <ConfirmDeleteModal
+        open={confirmRemoveItem !== null}
+        onCancel={() => setConfirmRemoveItem(null)}
+        onConfirm={() => {
+          if (confirmRemoveItem) {
+            handleRemoveItem(confirmRemoveItem);
+            setConfirmRemoveItem(null);
+          }
+        }}
+        title={t('confirm_delete_item')}
+        message={t('confirm_delete_item_desc')}
+      />
+
+      <ConfirmDeleteModal
+        open={confirmRemoveGpx}
+        onCancel={() => setConfirmRemoveGpx(false)}
+        onConfirm={() => {
+          handleRemoveGpx();
+          setConfirmRemoveGpx(false);
+        }}
+        title={t('confirm_remove_gpx')}
+        message={t('confirm_remove_gpx_desc')}
       />
     </div>
   );

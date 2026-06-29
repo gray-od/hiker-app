@@ -131,7 +131,11 @@
     "food_weight": "Food",
     "total_with_food": "Total",
     "gpx_km": "km",
-    "gpx_m": "m"
+    "gpx_m": "m",
+    "confirm_delete_item": "Remove item?",
+    "confirm_delete_item_desc": "The item will be removed from the list. You can undo this by adding it again.",
+    "confirm_remove_gpx": "Remove GPX?",
+    "confirm_remove_gpx_desc": "Route data, distance and weather will be removed from this list. You can upload the GPX again."
   },
   "meals": {
     "title": "Meal Plans",
@@ -196,7 +200,13 @@
     "shopping_list": "Shopping List",
     "shopping_list_subtitle": "Products for the trip — total amount of each",
     "product": "Product",
-    "shopping_list_empty": "No products — add dishes to the plan"
+    "shopping_list_empty": "No products — add dishes to the plan",
+    "confirm_delete_entry": "Delete entry?",
+    "confirm_delete_entry_desc": "This entry will be removed from the plan. Calories and weight will be recalculated automatically.",
+    "confirm_remove_day": "Remove last day?",
+    "confirm_remove_day_desc": "The last day and all its entries will be removed.",
+    "confirm_apply_template": "Apply template?",
+    "confirm_apply_template_desc": "This will replace all current days and entries. Continue?"
   },
   "food": {
     "title": "My Products",

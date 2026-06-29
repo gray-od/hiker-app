@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { Analytics } from '@vercel/analytics/next';
 import AppShell from '@/components/AppShell';
+import Toaster from '@/components/Toaster';
 import { Providers } from '@/components/Providers';
 import './globals.css';
 
@@ -85,6 +86,7 @@ export default async function RootLayout({
       <body className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 antialiased font-sans">
         <Providers>
           <NextIntlClientProvider messages={messages}>
+            <Toaster />
             <AppShell>{children}</AppShell>
           </NextIntlClientProvider>
           <Analytics />

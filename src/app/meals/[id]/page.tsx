@@ -59,6 +59,9 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   const [confirmDeletePlan, setConfirmDeletePlan] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<string | null>(null);
+  const [confirmRemoveDay, setConfirmRemoveDay] = useState(false);
+  const [confirmTemplate, setConfirmTemplate] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
@@ -470,8 +473,6 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     const template = getMealTemplate(templateId);
     if (!template || !plan) return;
 
-    if (!confirm(t('apply_template_confirm'))) return;
-
     setApplyingTemplate(true);
     const supabase = createClient();
 
@@ -621,7 +622,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
             onToggle={toggleDay}
             plan={plan}
             onEditEntry={openEntryModal}
-            onDeleteEntry={handleDeleteEntry}
+            onDeleteEntry={(entryId) => setConfirmDeleteEntry(entryId)}
             onAddEntry={(dayId) => openEntryModal(dayId)}
             t={t}
             tCommon={tCommon}
@@ -640,7 +641,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           {t('add_day')}
         </button>
         <button
-          onClick={handleRemoveDay}
+          onClick={() => setConfirmRemoveDay(true)}
           disabled={days.length <= 1}
           className="min-h-[44px] flex items-center gap-2 px-4 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-red-600 hover:border-red-300 dark:hover:border-red-800 text-sm font-medium rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
@@ -700,13 +701,50 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         message={t('delete_confirm')}
       />
 
+      <ConfirmDeleteModal
+        open={confirmDeleteEntry !== null}
+        onCancel={() => setConfirmDeleteEntry(null)}
+        onConfirm={() => {
+          if (confirmDeleteEntry) {
+            handleDeleteEntry(confirmDeleteEntry);
+            setConfirmDeleteEntry(null);
+          }
+        }}
+        title={t('confirm_delete_entry')}
+        message={t('confirm_delete_entry_desc')}
+      />
+
+      <ConfirmDeleteModal
+        open={confirmRemoveDay}
+        onCancel={() => setConfirmRemoveDay(false)}
+        onConfirm={() => {
+          handleRemoveDay();
+          setConfirmRemoveDay(false);
+        }}
+        title={t('confirm_remove_day')}
+        message={t('confirm_remove_day_desc')}
+      />
+
+      <ConfirmDeleteModal
+        open={confirmTemplate !== null}
+        onCancel={() => setConfirmTemplate(null)}
+        onConfirm={() => {
+          if (confirmTemplate) {
+            handleApplyTemplate(confirmTemplate);
+            setConfirmTemplate(null);
+          }
+        }}
+        title={t('confirm_apply_template')}
+        message={t('confirm_apply_template_desc')}
+      />
+
       <TemplateModal
         open={templateModalOpen}
         planType={plan!.plan_type || 'standard'}
         applyingTemplate={applyingTemplate}
         locale={locale}
         onClose={() => setTemplateModalOpen(false)}
-        onApply={handleApplyTemplate}
+        onApply={(templateId) => setConfirmTemplate(templateId)}
         t={t}
         tCommon={tCommon}
       />

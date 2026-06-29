@@ -212,8 +212,9 @@ export default function Navbar() {
             )}
             <button
               onClick={handleLogout}
-              className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-2.5 -mr-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-2.5 -mr-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               title={tcommon('logout')}
+              aria-label={tcommon('logout')}
             >
               <LogOut className="w-5 h-5" />
             </button>
