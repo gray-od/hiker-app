@@ -28,17 +28,23 @@ The AI isn't a chatbot bolted onto a database. It reads your gear, lists, and me
 
 **Gear Hub** — full inventory of your hiking gear. Weight tracking, 16 categories, season tags. Print your full gear list to PDF.
 
-**Packing Lists** — create trip-specific lists from your gear library. Track packed/worn/consumable items. Progress bar. Weight breakdown with explanations. Print with checkboxes for paper.
+**Packing Lists** — create trip-specific lists from your gear library. Track packed/worn/consumable items. Progress bar. Weight breakdown with explanations. **GPX upload** — distance, elevation, route weather via Open-Meteo, geo: map link, GPX download. **Meal plan linking** — attach a meal plan to any list for combined gear+food weight analysis. Print with checkboxes for paper.
 
 **Meal Plans** — 75 built-in hiking products with calories, protein, fat, carbs. 3 plan types (comfort, standard, ultralight). Cyclic templates. Group calculations. Custom food library. Print detailed nutrition tables. Generate a combined shopping list — identical products across all days are merged and their weights summed, ready to print for the store.
 
 **AI Assistant** — powered by Gemma 4 26B A4B (via Google AI Studio) with Exa web search and Open-Meteo weather. 5 levels of expertise: app navigator, data analyst, gear consultant, route specialist, survival expert. 8 tools: create meal plans, add gear items, create packing lists, add items to lists, search the web, get weather, get packing list details, get meal plan details. Attach text files (CSV/TXT/TSV, up to 100 KB) directly into chat — PDF, photos and Word are not supported; convert them to a text/CSV file first. 15 free messages per day.
 
-**Mobile-first PWA** — 44px touch targets, 17px base font, safe-area support, card layouts on mobile, tables on desktop. Install as app on any device.
+**Trip Weight Dashboard** — select a list, set your body weight, see terrain-based weight limits with color coding. Auto-detected from GPX route difficulty (20%/25% of body weight).
 
 **i18n** — Ukrainian (default), Russian, English. Cookie-based locale, no URL prefixes.
 
 **Dark mode** — Light, Dark, System. Class-based via next-themes.
+
+**BYOK (Bring Your Own Keys)** — optionally provide your own AI key (Gemini/OpenAI/DeepSeek/OpenRouter) and/or search key (Exa/Brave/Tavily/Serper/Firecrawl/Perplexity/Google CSE). Keys stay in your browser (localStorage), never touch the server. Own AI key removes the 15/day limit.
+
+**Accessibility** — ARIA labels on all icon buttons, keyboard navigation (Escape closes modals), 44px minimum touch targets, screen-reader-friendly dialogs with proper roles.
+
+**Mobile-first PWA** — 44px touch targets, 17px base font, safe-area support, card layouts on mobile, tables on desktop. Install as app on any device.
 
 ## Data Transparency
 
@@ -63,7 +69,7 @@ I'm not a programmer. I'm a hiker who needed a tool that didn't exist.
 
 70% of Ukrainian hikers plan trips in Google Sheets. Zero dedicated apps in the Ukrainian market. The international apps (LighterPack, PackWizard) don't do meal planning and don't speak Ukrainian.
 
-So I built one. Every line of code in this project was written by AI — DeepSeek, orchestrated through [OpenCode](https://opencode.ai). 21 rounds of development in 4 days. From zero to a deployed product with AI assistant, three languages, and a mobile-first PWA.
+So I built one. Every line of code in this project was written by AI — DeepSeek, orchestrated through [OpenCode](https://opencode.ai). 44 rounds of development from zero to a deployed product with AI assistant, route processing, three languages, and a mobile-first PWA.
 
 This isn't a limitation — it's the point. In 2026, you don't need to know how to code. You need to see a problem, understand the domain, and have the persistence to iterate until it works.
 
@@ -104,7 +110,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Supabase Setup
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run migrations from `supabase/migrations/` in order (00001 through 00006)
+2. Run migrations from `supabase/migrations/` in order (00001 through 00009)
 3. Enable Google OAuth and/or Email auth in Authentication → Providers
 4. Copy the project URL and anon key to `.env.local`
 
