@@ -26,10 +26,14 @@ export async function GET(request: NextRequest) {
       },
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    try {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      return response;
+      if (!error) {
+        return response;
+      }
+    } catch {
+      return NextResponse.redirect(`${origin}/login?error=auth_failed`);
     }
   }
 

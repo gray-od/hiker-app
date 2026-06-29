@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { fetchMealPlanDetail } from '@/lib/supabase/service';
 import type { MealPlan, MealDayWithEntries } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 
@@ -42,31 +43,22 @@ export default function ShoppingListPage() {
 
       setLoading(true);
 
-      const { data: planData, error: planError } = await supabase
-        .from('meal_plans')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data: mealResult, error: mealError } = await fetchMealPlanDetail(id);
 
-      if (planError || !planData) {
-        setError(planError?.message || 'Plan not found');
+      if (mealError || !mealResult) {
+        setError(mealError?.message || 'Plan not found');
         setLoading(false);
         return;
       }
 
-      setPlan(planData as MealPlan);
-
-      const { data: daysData } = await supabase
-        .from('meal_days')
-        .select('*, meal_entries(*)')
-        .eq('plan_id', id)
-        .order('day_number');
-
-      if (daysData) {
-        setDays(daysData as MealDayWithEntries[]);
-      }
+      setPlan(mealResult.plan);
+      setDays(mealResult.days);
 
       setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to load shopping list:', err);
+      setLoading(false);
+      setError(tCommon('error_loading'));
     });
   }, [id, router]);
 

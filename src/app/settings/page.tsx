@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
+import { fetchUserProfile } from '@/lib/supabase/service';
 import { inputClass, cn } from '@/lib/cn';
+import { toast } from '@/lib/toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const locales = [
   { code: 'uk', label: 'Українська' },
@@ -61,7 +64,7 @@ export default function SettingsPage() {
       setCurrentLocale(cookieLocale);
     }
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) {
         router.push('/login');
         return;
@@ -70,20 +73,14 @@ export default function SettingsPage() {
       setEmail(user.email || '');
       setName(user.user_metadata?.full_name || '');
 
-      supabase
-        .from('profiles')
-        .select('name, lang')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) {
-            if (data.name) setName(data.name);
-            if (!cookieLocale && data.lang) {
-              setCurrentLocale(data.lang);
-            }
-          }
-          setLoading(false);
-        });
+      const { data } = await fetchUserProfile(user.id);
+      if (data) {
+        if (data.name) setName(data.name);
+        if (!cookieLocale && data.lang) {
+          setCurrentLocale(data.lang);
+        }
+      }
+      setLoading(false);
     });
   }, [router]);
 
@@ -131,7 +128,9 @@ export default function SettingsPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        setDeleteError(err.error || t('delete_error'));
+        const errorMsg = err.error || t('delete_error');
+        setDeleteError(errorMsg);
+        toast.error(errorMsg);
         setDeleting(false);
         return;
       }
@@ -139,7 +138,9 @@ export default function SettingsPage() {
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch {
-      setDeleteError(t('delete_error'));
+      const errorMsg = t('delete_error');
+      setDeleteError(errorMsg);
+      toast.error(errorMsg);
       setDeleting(false);
     }
   };
@@ -286,8 +287,9 @@ export default function SettingsPage() {
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
+                <label htmlFor="byok-ai-provider" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
                 <select
+                  id="byok-ai-provider"
                   value={aiProvider}
                   onChange={(e) => { setAiProvider(e.target.value); setAiTestResult(null); }}
                   className={inputClass}
@@ -299,8 +301,9 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('api_key')}</label>
+                <label htmlFor="byok-ai-key" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('api_key')}</label>
                 <input
+                  id="byok-ai-key"
                   type="password"
                   value={aiKey}
                   onChange={(e) => { setAiKey(e.target.value); setAiTestResult(null); }}
@@ -308,8 +311,9 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('model_id')}</label>
+                <label htmlFor="byok-ai-model" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('model_id')}</label>
                 <input
+                  id="byok-ai-model"
                   type="text"
                   value={aiModel}
                   onChange={(e) => { setAiModel(e.target.value); setAiTestResult(null); }}
@@ -355,8 +359,9 @@ export default function SettingsPage() {
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
+                <label htmlFor="byok-search-provider" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('provider')}</label>
                 <select
+                  id="byok-search-provider"
                   value={searchProvider}
                   onChange={(e) => { setSearchProvider(e.target.value); setSearchTestResult(null); }}
                   className={inputClass}
@@ -371,8 +376,9 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('api_key')}</label>
+                <label htmlFor="byok-search-key" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('api_key')}</label>
                 <input
+                  id="byok-search-key"
                   type="password"
                   value={searchKey}
                   onChange={(e) => { setSearchKey(e.target.value); setSearchTestResult(null); }}
@@ -381,8 +387,9 @@ export default function SettingsPage() {
               </div>
               {searchProvider === 'google_cse' && (
                 <div>
-                  <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('cx')}</label>
+                  <label htmlFor="byok-search-cx" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{t('cx')}</label>
                 <input
+                  id="byok-search-cx"
                   type="text"
                   value={searchCx}
                   onChange={(e) => { setSearchCx(e.target.value); setSearchTestResult(null); }}
@@ -457,16 +464,17 @@ export default function SettingsPage() {
                         await supabase.from('profiles').update({ name: nameInput }).eq('id', user.id);
                       }
                       setName(nameInput);
+                      toast.success(t('name_saved'));
                       setEditingName(false);
                       } catch (err) {
-                        console.error('Failed to save name:', err);
+                        toast.error(t('error_saving'));
                       }
                       setSavingName(false);
                     }}
                     disabled={savingName}
                     className="px-3 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                   >
-                    {savingName ? '...' : tCommon('save')}
+                    {savingName ? <LoadingSpinner size="sm" /> : tCommon('save')}
                   </button>
                   <button
                     onClick={() => setEditingName(false)}

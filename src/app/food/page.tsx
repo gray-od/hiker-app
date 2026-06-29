@@ -7,6 +7,9 @@ import { createClient } from '@/lib/supabase/client';
 import type { UserFoodItem } from '@/lib/types';
 import { formatKbju } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
+import { fetchUserFoodItems } from '@/lib/supabase/service';
+import { toast } from '@/lib/toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const CATEGORIES = [
   'cereals', 'pasta', 'meat', 'dairy', 'nuts', 'dried_fruits',
@@ -35,6 +38,7 @@ export default function FoodPage() {
   const [editingItem, setEditingItem] = useState<UserFoodItem | null>(null);
   const [formData, setFormData] = useState<Omit<UserFoodItem, 'id' | 'user_id' | 'created_at'>>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,17 +52,15 @@ export default function FoodPage() {
 
       setLoading(true);
 
-      supabase
-        .from('user_food_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .then(({ data, error }) => {
-          if (!error && data) {
-            setItems(data as UserFoodItem[]);
-          }
-          setLoading(false);
-        });
+      fetchUserFoodItems(user.id).then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to load food items:', error);
+          setError(tCommon('error_loading'));
+        } else if (data) {
+          setItems(data);
+        }
+        setLoading(false);
+      });
     });
   }, [router]);
 
@@ -109,11 +111,13 @@ export default function FoodPage() {
         .eq('id', editingItem.id);
 
       if (updateError) {
+        toast.error(updateError.message || tCommon('error_occurred'));
         setError(updateError.message);
         setSaving(false);
         return;
       }
 
+      toast.success(tFood('updated'));
       setItems(prev =>
         prev.map(i =>
           i.id === editingItem.id
@@ -132,11 +136,13 @@ export default function FoodPage() {
         .single();
 
       if (insertError) {
+        toast.error(insertError.message || tCommon('error_occurred'));
         setError(insertError.message);
         setSaving(false);
         return;
       }
 
+      toast.success(tFood('created'));
       if (data) {
         setItems(prev => [data as UserFoodItem, ...prev]);
       }
@@ -145,12 +151,15 @@ export default function FoodPage() {
     setSaving(false);
     setModalOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      toast.error(msg || tCommon('error_occurred'));
+      setError(msg);
     }
   }
 
   async function handleDelete(id: string) {
     try {
+    setDeleting(true);
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -159,15 +168,22 @@ export default function FoodPage() {
       .eq('id', id);
 
     if (deleteError) {
+      toast.error(deleteError.message || tCommon('error_occurred'));
       setError(deleteError.message);
       setConfirmDelete(null);
+      setDeleting(false);
       return;
     }
 
+    toast.success(tFood('deleted'));
     setItems(prev => prev.filter(i => i.id !== id));
     setConfirmDelete(null);
+    setDeleting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      toast.error(msg || tCommon('error_occurred'));
+      setError(msg);
+      setDeleting(false);
     }
   }
 
@@ -249,9 +265,9 @@ export default function FoodPage() {
               d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
             />
           </svg>
-          <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <h2 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
             {tFood('empty')}
-          </h3>
+          </h2>
         </div>
       )}
 
@@ -513,14 +529,14 @@ export default function FoodPage() {
               <div className="flex items-center justify-end gap-3 mt-6">
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                  className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
                 >
                   {tCommon('cancel')}
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving || !formData.name.trim()}
-                  className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+                  className="min-h-[44px] px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {saving ? tCommon('loading') : tCommon('save')}
                 </button>
@@ -543,15 +559,21 @@ export default function FoodPage() {
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
               >
                 {tCommon('cancel')}
               </button>
               <button
                 onClick={() => handleDelete(confirmDelete)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+                disabled={deleting}
+                className="min-h-[44px] px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {tCommon('delete')}
+                {deleting ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    Deleting...
+                  </>
+                ) : tCommon('delete')}
               </button>
             </div>
           </div>

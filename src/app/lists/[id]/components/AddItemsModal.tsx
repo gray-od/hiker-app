@@ -1,9 +1,12 @@
 'use client';
 
+import { useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import type { GearItem, ListItemWithGear } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
 import Modal from '@/components/Modal';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface AddItemsModalProps {
   open: boolean;
@@ -15,6 +18,7 @@ interface AddItemsModalProps {
   onToggleGearSelection: (id: string) => void;
   onSearchChange: (q: string) => void;
   onAdd: () => void;
+  saving?: boolean;
   t: (key: string) => string;
   tCommon: (key: string) => string;
   tGear: (key: string) => string;
@@ -30,15 +34,18 @@ export default function AddItemsModal({
   onToggleGearSelection,
   onSearchChange,
   onAdd,
+  saving = false,
   t,
   tCommon,
   tGear,
 }: AddItemsModalProps) {
-  const listItemGearIds = new Set(listItems.map(li => li.gear_item_id));
-  const filteredGear = allGear.filter(g =>
-    g.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const availableGear = filteredGear.filter(g => !listItemGearIds.has(g.id));
+  const debouncedQuery = useDebounce(searchQuery, 200);
+
+  const listItemGearIds = useMemo(() => new Set(listItems.map(li => li.gear_item_id)), [listItems]);
+  const filteredGear = useMemo(() => allGear.filter(g =>
+    g.name.toLowerCase().includes(debouncedQuery.toLowerCase())
+  ), [allGear, debouncedQuery]);
+  const availableGear = useMemo(() => filteredGear.filter(g => !listItemGearIds.has(g.id)), [filteredGear, listItemGearIds]);
 
   return (
     <Modal open={open} onClose={onClose} title={t('select_items')} maxWidth="max-w-md">
@@ -115,9 +122,10 @@ export default function AddItemsModal({
           </button>
           <button
             onClick={onAdd}
-            disabled={selectedGearIds.size === 0}
-            className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+            disabled={saving || selectedGearIds.size === 0}
+            className="min-h-[44px] px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed inline-flex items-center gap-2"
           >
+            {saving && <LoadingSpinner size="sm" />}
             {tCommon('add')}
           </button>
         </div>

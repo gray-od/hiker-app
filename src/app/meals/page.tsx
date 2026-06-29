@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { MealPlan } from '@/lib/types';
+import { fetchUserMealPlans } from '@/lib/supabase/service';
 import { getPlanTypeBadgeClass } from '@/lib/badges';
 import { formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
@@ -12,6 +13,8 @@ import { PLAN_TYPES, getPlanType } from '@/lib/hiking-standards';
 import type { PlanTypeId } from '@/lib/hiking-standards';
 import { calculateNutrition, getFoodItem } from '@/lib/food-catalog';
 import { MEAL_TEMPLATES, getMealTemplate } from '@/lib/meal-templates';
+import { toast } from '@/lib/toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
@@ -40,6 +43,7 @@ export default function MealsPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locale] = useState(() => {
     if (typeof document === 'undefined') return 'uk';
@@ -58,17 +62,15 @@ export default function MealsPage() {
 
       setLoading(true);
 
-      supabase
-        .from('meal_plans')
-        .select('*, meal_days(total_calories, total_weight_g)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .then(({ data, error: fetchError }) => {
-          if (!fetchError && data) {
-            setPlans(data as unknown as MealPlanWithDays[]);
-          }
-          setLoading(false);
-        });
+      fetchUserMealPlans(user.id).then(({ data, error: fetchError }) => {
+        if (fetchError) {
+          console.error('Failed to load meals:', fetchError);
+          setError(tCommon('error_loading'));
+        } else if (data) {
+          setPlans(data);
+        }
+        setLoading(false);
+      });
     });
   }, [router]);
 
@@ -85,14 +87,9 @@ export default function MealsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error: fetchError } = await supabase
-      .from('meal_plans')
-      .select('*, meal_days(total_calories, total_weight_g)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
+    const { data, error: fetchError } = await fetchUserMealPlans(user.id);
     if (!fetchError && data) {
-      setPlans(data as unknown as MealPlanWithDays[]);
+      setPlans(data);
     }
   }
 
@@ -121,6 +118,7 @@ export default function MealsPage() {
       .single();
 
     if (insertError) {
+      toast.error(insertError.message || tCommon('error_occurred'));
       setError(insertError.message);
       setSaving(false);
       return;
@@ -139,6 +137,7 @@ export default function MealsPage() {
         .order('day_number', { ascending: true });
 
       if (daysError || !createdDays) {
+        toast.error(daysError?.message || tCommon('error_occurred'));
         setError(daysError?.message ?? 'Failed to create days');
         setSaving(false);
         return;
@@ -195,6 +194,7 @@ export default function MealsPage() {
               .insert(entries);
 
             if (entriesError) {
+              toast.error(entriesError.message || tCommon('error_occurred'));
               setError(entriesError.message);
               setSaving(false);
               return;
@@ -222,17 +222,21 @@ export default function MealsPage() {
       await fetchPlans();
     }
 
+    toast.success(t('created'));
     setSaving(false);
     setModalOpen(false);
     setFormData(EMPTY_FORM);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      toast.error(msg || tCommon('error_occurred'));
       setSaving(false);
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      setError(msg);
     }
   }
 
   async function handleDelete(id: string) {
     try {
+    setDeleting(true);
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -241,15 +245,22 @@ export default function MealsPage() {
       .eq('id', id);
 
     if (deleteError) {
+      toast.error(deleteError.message || tCommon('error_occurred'));
       setError(deleteError.message);
       setConfirmDelete(null);
+      setDeleting(false);
       return;
     }
 
+    toast.success(t('deleted'));
     setPlans((prev) => prev.filter((p) => p.id !== id));
     setConfirmDelete(null);
+    setDeleting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      toast.error(msg || tCommon('error_occurred'));
+      setError(msg);
+      setDeleting(false);
     }
   }
 
@@ -337,9 +348,9 @@ export default function MealsPage() {
               d="M9 9h10.5M9 12h10.5M9 15h10.5M9 18h10.5M3 9h.008v.008H3V9zm0 3h.008v.008H3V12zm0 3h.008v.008H3V15zm0 3h.008v.008H3V18zm12-10.5V3m0 0l-3 3m3-3l3 3"
             />
           </svg>
-          <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <h2 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
             {t('empty')}
-          </h3>
+          </h2>
         </div>
       )}
 
@@ -596,14 +607,14 @@ export default function MealsPage() {
               <div className="flex items-center justify-end gap-3 mt-6">
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                  className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
                 >
                   {tCommon('cancel')}
                 </button>
                 <button
                   onClick={handleCreate}
                   disabled={saving || !formData.name.trim()}
-                  className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+                  className="min-h-[44px] px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {saving ? tCommon('loading') : tCommon('save')}
                 </button>
@@ -625,15 +636,21 @@ export default function MealsPage() {
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
               >
                 {tCommon('cancel')}
               </button>
               <button
                 onClick={() => handleDelete(confirmDelete)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+                disabled={deleting}
+                className="min-h-[44px] px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {tCommon('delete')}
+                {deleting ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    Deleting...
+                  </>
+                ) : tCommon('delete')}
               </button>
             </div>
           </div>

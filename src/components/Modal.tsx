@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useId } from 'react';
 
 interface ModalProps {
   open: boolean;
@@ -19,15 +19,74 @@ export default function Modal({
   maxWidth = 'max-w-md',
   showCloseButton = true,
 }: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<Element | null>(null);
+  const titleId = useId();
+
+  const FOCUSABLE_SELECTOR =
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
   useEffect(() => {
     if (!open) return;
 
+    // Save the element that had focus before opening the modal
+    previousActiveElement.current = document.activeElement;
+
+    // Focus the first focusable element inside the modal
+    const modal = modalRef.current;
+    if (modal) {
+      const firstFocusable = modal.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (firstFocusable) {
+        firstFocusable.focus();
+      } else {
+        // Fallback: focus the container itself
+        modal.focus();
+      }
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      // Trap Tab / Shift+Tab cycling inside the modal
+      if (e.key === 'Tab') {
+        const modal = modalRef.current;
+        if (!modal) return;
+
+        const focusableElements = modal.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        if (focusableElements.length === 0) {
+          e.preventDefault();
+          return;
+        }
+
+        const first = focusableElements[0];
+        const last = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      // Restore focus to the element that triggered the modal
+      if (previousActiveElement.current instanceof HTMLElement) {
+        previousActiveElement.current.focus();
+      }
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -38,15 +97,18 @@ export default function Modal({
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         className={`bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 w-full ${maxWidth} max-h-[90vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between px-5 pt-5 pb-0">
             {title && (
-              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+              <h2 id={titleId} className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                 {title}
               </h2>
             )}

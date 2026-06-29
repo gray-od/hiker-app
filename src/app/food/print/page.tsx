@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { fetchUserFoodItems } from '@/lib/supabase/service';
 import type { UserFoodItem } from '@/lib/types';
 
 export default function PrintFoodPage() {
@@ -26,12 +27,7 @@ export default function PrintFoodPage() {
 
       setLoading(true);
 
-      const { data, error: fetchError } = await supabase
-        .from('user_food_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('category')
-        .order('name');
+      const { data, error: fetchError } = await fetchUserFoodItems(user.id);
 
       if (fetchError) {
         setError(fetchError.message);
@@ -40,10 +36,14 @@ export default function PrintFoodPage() {
       }
 
       if (data) {
-        setItems(data as UserFoodItem[]);
+        setItems(data);
       }
 
       setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to load food print:', err);
+      setLoading(false);
+      setError(tCommon('error_loading'));
     });
   }, [router]);
 

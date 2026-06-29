@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { fetchListItems, fetchUserListDetail } from '@/lib/supabase/service';
 import type { GearList, ListItemWithGear } from '@/lib/types';
 import { formatWeight, formatDate } from '@/lib/format';
 
@@ -30,11 +31,7 @@ export default function PrintListPage({ params }: { params: Promise<{ id: string
 
       setLoading(true);
 
-      const { data: listData, error: listError } = await supabase
-        .from('gear_lists')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data: listData, error: listError } = await fetchUserListDetail(id);
 
       if (listError || !listData) {
         setError(listError?.message || 'List not found');
@@ -42,18 +39,21 @@ export default function PrintListPage({ params }: { params: Promise<{ id: string
         return;
       }
 
-      setList(listData as GearList);
+      setList(listData);
 
-      const { data: itemsData } = await supabase
-        .from('list_items')
-        .select('*, gear_item:gear_items(*)')
-        .eq('list_id', id);
+      const { data: itemsData, error: itemsError } = await fetchListItems(id);
 
-      if (itemsData) {
-        setListItems(itemsData as ListItemWithGear[]);
+      if (itemsError) {
+        console.error('Failed to load list items:', itemsError.message);
+      } else if (itemsData) {
+        setListItems(itemsData);
       }
 
       setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to load list print data:', err);
+      setLoading(false);
+      setError(tCommon('error_loading'));
     });
   }, [id, router]);
 

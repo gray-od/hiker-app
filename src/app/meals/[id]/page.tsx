@@ -4,12 +4,14 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { fetchMealPlanDetail, fetchUserFoodItems } from '@/lib/supabase/service';
 import type { MealPlan, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
 import { type PlanTypeId, getPlanType } from '@/lib/hiking-standards';
 import { getMealTemplate } from '@/lib/meal-templates';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import { toast } from '@/lib/toast';
 import StatsCards from './components/StatsCards';
 import PlanHeader from './components/PlanHeader';
 import DayCard from './components/DayCard';
@@ -60,7 +62,9 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<string | null>(null);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [confirmRemoveDay, setConfirmRemoveDay] = useState(false);
+  const [removingDay, setRemovingDay] = useState(false);
   const [confirmTemplate, setConfirmTemplate] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -89,11 +93,12 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
       setLoading(true);
 
-      const { data: planData, error: planError } = await supabase
-        .from('meal_plans')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const [planResult, foodResult] = await Promise.all([
+        fetchMealPlanDetail(id),
+        fetchUserFoodItems(user.id),
+      ]);
+      const { data: planData, error: planError } = planResult;
+      const { data: userFoodData, error: foodError } = foodResult;
 
       if (planError || !planData) {
         setError(planError?.message || 'Plan not found');
@@ -101,21 +106,20 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         return;
       }
 
-      setPlan(planData as MealPlan);
+      setPlan(planData.plan);
+      setDays(planData.days);
 
-      const { data: daysData } = await supabase
-        .from('meal_days')
-        .select('*, meal_entries(*)')
-        .eq('plan_id', id)
-        .order('day_number');
-
-      if (daysData) {
-        setDays(daysData as MealDayWithEntries[]);
-        const { data: userFoodData } = await supabase.from('user_food_items').select('*').eq('user_id', user!.id).order('name');
-        if (userFoodData) setUserFoodItems(userFoodData as UserFoodItem[]);
+      if (foodError) {
+        console.error('Failed to load food items:', foodError);
+      } else if (userFoodData) {
+        setUserFoodItems(userFoodData);
       }
 
       setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to load meal plan:', err);
+      setLoading(false);
+      setError(tCommon('error_loading'));
     });
   }, [id, router]);
 
@@ -302,6 +306,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
       if (updateError) {
         setActionError(updateError.message);
+        toast.error(updateError.message);
         setSaving(false);
         return;
       }
@@ -321,6 +326,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
       if (insertError) {
         setActionError(insertError.message);
+        toast.error(insertError.message);
         setSaving(false);
         return;
       }
@@ -329,12 +335,16 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     setEntryModalOpen(false);
     setSaving(false);
     await recalculateTotals();
+    toast.success(editEntryId ? t('updated') : t('added'));
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      setActionError(msg);
+      toast.error(msg);
     }
   }
 
   async function handleDeleteEntry(entryId: string) {
+    setDeletingEntryId(entryId);
     try {
     const supabase = createClient();
 
@@ -345,12 +355,19 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
     if (deleteError) {
       setError(deleteError.message);
+      toast.error(deleteError.message);
       return;
     }
 
+    toast.success(t('entry_deleted'));
     await recalculateTotals();
+    setConfirmDeleteEntry(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setDeletingEntryId(null);
     }
   }
 
@@ -375,6 +392,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
     if (updateError) {
       setActionError(updateError.message);
+      toast.error(updateError.message);
       setSaving(false);
       return;
     }
@@ -422,8 +440,11 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       target_weight_g: editForm.target_weight_g,
     } : null);
     await recalculateTotals();
+    toast.success(t('plan_updated'));
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      setActionError(msg);
+      toast.error(msg);
     }
   }
 
@@ -473,6 +494,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   }
 
   async function handleRemoveDay() {
+    setRemovingDay(true);
     try {
     if (days.length <= 1) return;
 
@@ -486,12 +508,19 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
 
     if (deleteError) {
       setError(deleteError.message);
+      toast.error(deleteError.message);
       return;
     }
 
+    toast.success(t('day_deleted'));
     await recalculateTotals();
+    setConfirmRemoveDay(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setRemovingDay(false);
     }
   }
 
@@ -586,9 +615,12 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           .eq('id', dayData.id);
       }
 
+      setConfirmTemplate(null);
       setTemplateModalOpen(false);
       await recalculateTotals();
+      toast.success(t('template_applied'));
     } catch (err) {
+      setConfirmTemplate(null);
       setError(tCommon('template_apply_error'));
     } finally {
       setApplyingTemplate(false);
@@ -644,7 +676,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       <PlanHeader
-        planName={plan!.name}
+        planName={plan?.name ?? ''}
         planId={id}
         onEdit={handleOpenEditPlan}
         onTemplate={() => setTemplateModalOpen(true)}
@@ -653,7 +685,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         tCommon={tCommon}
       />
 
-      <StatsCards days={days} plan={plan!} t={t} tCommon={tCommon} />
+      {plan && <StatsCards days={days} plan={plan} t={t} tCommon={tCommon} />}
 
       {days.length === 0 && (
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center mb-6">
@@ -758,11 +790,11 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         onConfirm={() => {
           if (confirmDeleteEntry) {
             handleDeleteEntry(confirmDeleteEntry);
-            setConfirmDeleteEntry(null);
           }
         }}
         title={t('confirm_delete_entry')}
         message={t('confirm_delete_entry_desc')}
+        loading={deletingEntryId !== null}
       />
 
       <ConfirmDeleteModal
@@ -770,10 +802,10 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         onCancel={() => setConfirmRemoveDay(false)}
         onConfirm={() => {
           handleRemoveDay();
-          setConfirmRemoveDay(false);
         }}
         title={t('confirm_remove_day')}
         message={t('confirm_remove_day_desc')}
+        loading={removingDay}
       />
 
       <ConfirmDeleteModal
@@ -782,16 +814,16 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         onConfirm={() => {
           if (confirmTemplate) {
             handleApplyTemplate(confirmTemplate);
-            setConfirmTemplate(null);
           }
         }}
         title={t('confirm_apply_template')}
         message={t('confirm_apply_template_desc')}
+        loading={applyingTemplate}
       />
 
       <TemplateModal
         open={templateModalOpen}
-        planType={plan!.plan_type || 'standard'}
+        planType={plan?.plan_type ?? 'standard'}
         applyingTemplate={applyingTemplate}
         locale={locale}
         onClose={() => setTemplateModalOpen(false)}

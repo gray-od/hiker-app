@@ -2,7 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import ChatWidget from '@/components/ChatWidget';
+import dynamic from 'next/dynamic';
+
+const ChatWidget = dynamic(() => import('@/components/ChatWidget'), {
+  ssr: false,
+  loading: () => null,
+});
 import SWRegister from '@/components/SWRegister';
 
 const PUBLIC_ROUTES = ['/login', '/privacy'];

@@ -8,6 +8,7 @@ interface DeleteListModalProps {
   onConfirm: () => void;
   title: string;
   message: string;
+  loading?: boolean;
 }
 
 export default function DeleteListModal({
@@ -16,6 +17,7 @@ export default function DeleteListModal({
   onConfirm,
   title,
   message,
+  loading = false,
 }: DeleteListModalProps) {
   return (
     <ConfirmDeleteModal
@@ -24,6 +26,7 @@ export default function DeleteListModal({
       onConfirm={onConfirm}
       title={title}
       message={message}
+      loading={loading}
     />
   );
 }

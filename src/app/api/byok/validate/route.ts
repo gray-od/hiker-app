@@ -2,8 +2,15 @@ import { validateAiKey } from '@/lib/ai-providers';
 import { validateSearchKey } from '@/lib/search-providers';
 
 export async function POST(req: Request) {
+  let body: { kind?: string; config?: Record<string, unknown> };
   try {
-    const { kind, config } = await req.json();
+    body = await req.json();
+  } catch {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  try {
+    const { kind, config } = body;
 
     let result: { ok: boolean; error?: string };
 

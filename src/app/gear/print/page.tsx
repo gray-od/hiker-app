@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { fetchUserGear } from '@/lib/supabase/service';
 import type { GearItem } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 
@@ -27,12 +28,7 @@ export default function PrintGearPage() {
 
       setLoading(true);
 
-      const { data, error: fetchError } = await supabase
-        .from('gear_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('category')
-        .order('name');
+      const { data, error: fetchError } = await fetchUserGear(user.id);
 
       if (fetchError) {
         setError(fetchError.message);
@@ -41,10 +37,14 @@ export default function PrintGearPage() {
       }
 
       if (data) {
-        setItems(data as GearItem[]);
+        setItems(data);
       }
 
       setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to load gear print:', err);
+      setLoading(false);
+      setError(tCommon('error_loading'));
     });
   }, [router]);
 

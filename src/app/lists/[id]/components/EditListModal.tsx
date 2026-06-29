@@ -1,6 +1,7 @@
 'use client';
 
 import Modal from '@/components/Modal';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { inputClass, cn } from '@/lib/cn';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
@@ -85,9 +86,10 @@ export default function EditListModal({
         <button
           onClick={onSave}
           disabled={saving || !editForm.name.trim()}
-          className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+          className="min-h-[44px] px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed inline-flex items-center gap-2"
         >
-          {saving ? tCommon('loading') : tCommon('save')}
+          {saving && <LoadingSpinner size="sm" />}
+          {tCommon('save')}
         </button>
       </div>
     </Modal>

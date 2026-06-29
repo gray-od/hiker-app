@@ -1,6 +1,7 @@
 'use client';
 
 import { MEAL_TEMPLATES } from '@/lib/meal-templates';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface TemplateModalProps {
   open: boolean;
@@ -38,13 +39,16 @@ export default function TemplateModal({
               key={tmpl.id}
               onClick={() => onApply(tmpl.id)}
               disabled={applyingTemplate}
-              className="w-full text-left p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand)]/5 transition-colors"
+              className="w-full text-left p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand)]/5 transition-colors inline-flex items-center gap-2"
             >
-              <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
-                {tmpl.name[loc]}
-              </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                {tmpl.description[loc]}
+              {applyingTemplate && <LoadingSpinner size="sm" />}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
+                  {tmpl.name[loc]}
+                </div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  {tmpl.description[loc]}
+                </div>
               </div>
             </button>
           ))}

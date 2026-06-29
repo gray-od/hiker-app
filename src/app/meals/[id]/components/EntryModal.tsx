@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import type { MealEntry, UserFoodItem } from '@/lib/types';
 import {
   FOOD_CATALOG,
@@ -77,26 +79,28 @@ export default function EntryModal({
 }: EntryModalProps) {
   if (!open) return null;
 
-  const filteredProducts = FOOD_CATALOG.filter(p => {
+  const debouncedSearch = useDebounce(productSearch, 200);
+
+  const filteredProducts = useMemo(() => FOOD_CATALOG.filter(p => {
     if (categoryFilter && p.category !== categoryFilter) return false;
-    if (productSearch) {
-      const search = productSearch.toLowerCase();
+    if (debouncedSearch) {
+      const search = debouncedSearch.toLowerCase();
       const name = p.name[locale as 'uk' | 'ru' | 'en'].toLowerCase();
       if (!name.includes(search)) return false;
     }
     return true;
-  });
+  }), [categoryFilter, debouncedSearch, locale]);
 
   const catalogNutrition = selectedProduct ? calculateNutrition(selectedProduct, portionG) : null;
 
-  const filteredUserProducts = userFoodItems.filter(p => {
+  const filteredUserProducts = useMemo(() => userFoodItems.filter(p => {
     if (categoryFilter && p.category !== categoryFilter) return false;
-    if (productSearch) {
-      const search = productSearch.toLowerCase();
+    if (debouncedSearch) {
+      const search = debouncedSearch.toLowerCase();
       if (!p.name.toLowerCase().includes(search)) return false;
     }
     return true;
-  });
+  }), [categoryFilter, debouncedSearch, userFoodItems]);
 
   const userProductNutrition = selectedUserProduct ? {
     calories: Math.round(selectedUserProduct.calories_per100g * portionG / 100),
@@ -110,6 +114,19 @@ export default function EntryModal({
     (entryMode === 'catalog' && !editEntryId && (!selectedProduct || portionG <= 0)) ||
     (entryMode === 'my_products' && !editEntryId && (!selectedUserProduct || portionG <= 0)) ||
     (entryMode === 'custom' && !entryForm.name.trim());
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.visualViewport) {
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (activeEl && activeEl.tagName === 'INPUT') {
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    };
+    window.visualViewport?.addEventListener('resize', onResize);
+    return () => window.visualViewport?.removeEventListener('resize', onResize);
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -462,7 +479,7 @@ export default function EntryModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('protein')}
@@ -509,14 +526,14 @@ export default function EntryModal({
           <div className="flex items-center justify-end gap-3 mt-6">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+              className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
             >
               {tCommon('cancel')}
             </button>
             <button
               onClick={onSave}
               disabled={isDisabled}
-              className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+              className="min-h-[44px] px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
             >
               {saving ? tCommon('loading') : tCommon('save')}
             </button>

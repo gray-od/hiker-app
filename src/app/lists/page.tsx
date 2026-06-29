@@ -4,22 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-import type { GearList } from '@/lib/types';
 import { formatDate, formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
+import { fetchUserLists, fetchUserMealPlansLight } from '@/lib/supabase/service';
+import type { GearListWithTotalWeight } from '@/lib/supabase/service';
+import { toast } from '@/lib/toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
-
-type ListItemRaw = {
-  id: string;
-  quantity: number;
-  is_packed: boolean;
-  worn: boolean;
-  consumable: boolean;
-  gear_item: { weight_g: number } | null;
-};
-
-type GearListWithItems = GearList & { list_items: ListItemRaw[] };
 
 const EMPTY_FORM = {
   name: '',
@@ -40,12 +32,13 @@ export default function ListsPage() {
   const tCommon = useTranslations('common');
   const tGear = useTranslations('gear');
 
-  const [lists, setLists] = useState<GearListWithItems[]>([]);
+  const [lists, setLists] = useState<GearListWithTotalWeight[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
 
@@ -60,38 +53,31 @@ export default function ListsPage() {
 
       setLoading(true);
 
-      supabase
-        .from('gear_lists')
-        .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .then(({ data, error }) => {
-          if (!error && data) {
-            setLists(data as unknown as GearListWithItems[]);
-          }
-          setLoading(false);
-        });
+      fetchUserLists(user.id).then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to load lists:', error);
+          setError(tCommon('error_loading'));
+        } else if (data) {
+          setLists(data);
+        }
+        setLoading(false);
+      });
 
-      supabase
-        .from('meal_plans')
-        .select('id, name, people_count, total_weight_g')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .then(({ data }) => {
-          if (data) setMealPlans(data);
-        });
+      fetchUserMealPlansLight(user.id).then(({ data }) => {
+        if (data) setMealPlans(data);
+      });
     });
   }, [router]);
 
-  function getItemsCount(list: GearListWithItems): number {
+  function getItemsCount(list: GearListWithTotalWeight): number {
     return list.list_items?.length ?? 0;
   }
 
-  function getPackedCount(list: GearListWithItems): number {
+  function getPackedCount(list: GearListWithTotalWeight): number {
     return (list.list_items ?? []).filter((li) => li.is_packed).length;
   }
 
-  function getPackingProgress(list: GearListWithItems): number {
+  function getPackingProgress(list: GearListWithTotalWeight): number {
     const total = getItemsCount(list);
     if (total === 0) return 0;
     return Math.round((getPackedCount(list) / total) * 100);
@@ -102,14 +88,9 @@ export default function ListsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('gear_lists')
-      .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
+    const { data, error } = await fetchUserLists(user.id);
     if (!error && data) {
-      setLists(data as unknown as GearListWithItems[]);
+      setLists(data);
     }
   }
 
@@ -136,25 +117,30 @@ export default function ListsPage() {
       .single();
 
     if (insertError) {
+      toast.error(insertError.message || tCommon('error_occurred'));
       setError(insertError.message);
       setSaving(false);
       return;
     }
 
+    toast.success(t('created'));
     if (data) {
-      setLists((prev) => [data as unknown as GearListWithItems, ...prev]);
+      setLists((prev) => [data as unknown as GearListWithTotalWeight, ...prev]);
     }
 
     setSaving(false);
     setModalOpen(false);
     setFormData(EMPTY_FORM);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      toast.error(msg || tCommon('error_occurred'));
+      setError(msg);
     }
   }
 
   async function handleDelete(id: string) {
     try {
+    setDeleting(true);
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -163,15 +149,22 @@ export default function ListsPage() {
       .eq('id', id);
 
     if (deleteError) {
+      toast.error(deleteError.message || tCommon('error_occurred'));
       setError(deleteError.message);
       setConfirmDelete(null);
+      setDeleting(false);
       return;
     }
 
+    toast.success(t('deleted'));
     setLists((prev) => prev.filter((l) => l.id !== id));
     setConfirmDelete(null);
+    setDeleting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Operation failed');
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      toast.error(msg || tCommon('error_occurred'));
+      setError(msg);
+      setDeleting(false);
     }
   }
 
@@ -241,16 +234,16 @@ export default function ListsPage() {
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
             />
           </svg>
-          <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <h2 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
             {t('empty')}
-          </h3>
+          </h2>
         </div>
       )}
 
       {!loading && lists.length > 0 && (
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {lists.map((list) => {
-            const totalWeight = (list.list_items ?? []).reduce((sum, li) => sum + (li.gear_item?.weight_g ?? 0) * li.quantity, 0);
+            const totalWeight = list.totalWeight;
             const itemsCount = getItemsCount(list);
             const progress = getPackingProgress(list);
 
@@ -421,9 +414,15 @@ export default function ListsPage() {
               </button>
               <button
                 onClick={() => handleDelete(confirmDelete)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+                disabled={deleting}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {tCommon('delete')}
+                {deleting ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    Deleting...
+                  </>
+                ) : tCommon('delete')}
               </button>
             </div>
           </div>

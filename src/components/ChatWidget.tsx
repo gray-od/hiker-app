@@ -49,6 +49,19 @@ export default function ChatWidget() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    const onResize = () => {
+      if (window.visualViewport) {
+        const textarea = document.querySelector('#chat-input') as HTMLTextAreaElement | null;
+        if (textarea && document.activeElement === textarea) {
+          textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    };
+    window.visualViewport?.addEventListener('resize', onResize);
+    return () => window.visualViewport?.removeEventListener('resize', onResize);
+  }, []);
+
   const adjustTextareaHeight = useCallback(() => {
     const el = textareaRef.current;
     if (el) {
@@ -308,10 +321,12 @@ export default function ChatWidget() {
               </button>
               <textarea
                 ref={textareaRef}
+                id="chat-input"
                 value={input}
                 onChange={(e) => { handleInputChange(e); adjustTextareaHeight(); }}
                 onKeyDown={onKeyDown}
                 placeholder={t('placeholder')}
+                aria-label={t('placeholder')}
                 rows={1}
                 className="flex-1 px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 border-0 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] resize-none leading-normal"
                 disabled={isLoading}

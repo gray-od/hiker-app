@@ -1,20 +1,23 @@
 'use client';
 
-import { useEffect, useState, use, useRef } from 'react';
+import { useEffect, useState, use, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { fetchUserListDetail, fetchListItems, fetchUserGear, fetchUserMealPlansLight } from '@/lib/supabase/service';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
 import { parseGpxFile } from '@/lib/gpx-parser';
 import { calcWeight } from '@/lib/weight-calc';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import WeightStatCard from './components/WeightStatCard';
 import GpxSection from './components/GpxSection';
 import AddItemsModal from './components/AddItemsModal';
 import EditListModal from './components/EditListModal';
 import DeleteListModal from './components/DeleteListModal';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import { toast } from '@/lib/toast';
 
 export default function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -40,6 +43,10 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   const [gpxError, setGpxError] = useState<string | null>(null);
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<string | null>(null);
   const [confirmRemoveGpx, setConfirmRemoveGpx] = useState(false);
+  const [togglingItems, setTogglingItems] = useState<Set<string>>(new Set());
+  const [deletingList, setDeletingList] = useState(false);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  const [removingGpx, setRemovingGpx] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
   useEffect(() => {
@@ -53,11 +60,17 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       setLoading(true);
 
-      const { data: listData, error: listError } = await supabase
-        .from('gear_lists')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const [listResult, itemsResult, gearResult, plansResult] = await Promise.all([
+        fetchUserListDetail(id),
+        fetchListItems(id),
+        fetchUserGear(user.id),
+        fetchUserMealPlansLight(user.id),
+      ]);
+
+      const { data: listData, error: listError } = listResult;
+      const { data: itemsData, error: itemsError } = itemsResult;
+      const { data: gearData, error: gearError } = gearResult;
+      const { data: plansData, error: plansError } = plansResult;
 
       if (listError || !listData) {
         setError(listError?.message || 'List not found');
@@ -65,57 +78,53 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         return;
       }
 
-      setList(listData as GearList);
+      setList(listData);
 
-      const { data: itemsData } = await supabase
-        .from('list_items')
-        .select('*, gear_item:gear_items(*)')
-        .eq('list_id', id);
-
-      if (itemsData) {
-        setListItems(itemsData as ListItemWithGear[]);
+      if (itemsError) {
+        console.error('Failed to load items:', itemsError);
+      } else if (itemsData) {
+        setListItems(itemsData);
       }
 
-      const { data: gearData } = await supabase
-        .from('gear_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (gearData) {
-        setAllGear(gearData as GearItem[]);
+      if (gearError) {
+        console.error('Failed to load gear:', gearError);
+      } else if (gearData) {
+        setAllGear(gearData);
       }
 
-      const { data: plansData } = await supabase
-        .from('meal_plans')
-        .select('id, name, people_count, total_weight_g')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (plansData) setMealPlans(plansData);
+      if (plansError) {
+        console.error('Failed to load meal plans:', plansError);
+      } else if (plansData) {
+        setMealPlans(plansData);
+      }
 
       setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to load list data:', err);
+      setLoading(false);
+      setError(tCommon('error_loading'));
     });
   }, [id, router]);
 
-  function calcBaseWeight(): number {
-    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, worn: li.worn, consumable: li.consumable })), (li) => !li.worn && !li.consumable);
-  }
+  const baseWeight = useMemo(() =>
+    calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, worn: li.worn, consumable: li.consumable })), (li) => !li.worn && !li.consumable),
+  [listItems]);
 
-  function calcWornWeight(): number {
-    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, worn: li.worn })), (li) => li.worn);
-  }
+  const wornWeight = useMemo(() =>
+    calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, worn: li.worn })), (li) => li.worn),
+  [listItems]);
 
-  function calcConsumableWeight(): number {
-    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, consumable: li.consumable })), (li) => li.consumable);
-  }
+  const consumableWeight = useMemo(() =>
+    calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, consumable: li.consumable })), (li) => li.consumable),
+  [listItems]);
 
-  function calcTotalWeight(): number {
-    return calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g })));
-  }
+  const totalWeight = useMemo(() =>
+    calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g }))),
+  [listItems]);
 
-  function calcPackedCount(): number {
-    return listItems.filter(li => li.is_packed).length;
-  }
+  const packedCount = useMemo(() =>
+    listItems.filter(li => li.is_packed).length,
+  [listItems]);
 
   function openEditModal() {
     if (!list) return;
@@ -145,25 +154,30 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (updateError) {
         setError(updateError.message);
+        toast.error(updateError.message);
         setSaving(false);
         return;
       }
 
+      toast.success(t('updated'));
       setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
       if (editForm.trip_date && list?.gpx_data?.points?.length && editForm.trip_date !== list.trip_date) {
         fetchRouteWeather(list.gpx_data.points[0][0], list.gpx_data.points[0][1], editForm.trip_date).then(weather => {
           if (weather) setList(prev => prev ? { ...prev, gpx_data: { ...prev.gpx_data, weather } as GearList['gpx_data'] } : null);
-        }).catch(() => {});
+        }).catch(() => setError('Failed to load weather'));
       }
       setSaving(false);
       setEditModalOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update list');
+      const msg = err instanceof Error ? err.message : 'Failed to update list';
+      setError(msg);
+      toast.error(msg);
       setSaving(false);
     }
   }
 
   async function handleDeleteList() {
+    setDeletingList(true);
     try {
       const supabase = createClient();
 
@@ -174,16 +188,19 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (deleteError) {
         setError(deleteError.message);
+        setDeletingList(false);
         return;
       }
 
       router.push('/lists');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete list');
+      setDeletingList(false);
     }
   }
 
   async function handleTogglePacked(itemId: string) {
+    setTogglingItems(prev => new Set(prev).add(itemId));
     try {
       const supabase = createClient();
       const item = listItems.find(li => li.id === itemId);
@@ -198,16 +215,22 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (updateError) {
         setError(updateError.message);
+        toast.error(updateError.message);
         return;
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, is_packed: newPacked } : li));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle packed');
+      const msg = err instanceof Error ? err.message : 'Failed to toggle packed';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setTogglingItems(prev => { const next = new Set(prev); next.delete(itemId); return next });
     }
   }
 
   async function handleToggleWorn(itemId: string) {
+    setTogglingItems(prev => new Set(prev).add(itemId));
     try {
       const supabase = createClient();
       const item = listItems.find(li => li.id === itemId);
@@ -226,16 +249,22 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (updateError) {
         setError(updateError.message);
+        toast.error(updateError.message);
         return;
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle worn');
+      const msg = err instanceof Error ? err.message : 'Failed to toggle worn';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setTogglingItems(prev => { const next = new Set(prev); next.delete(itemId); return next });
     }
   }
 
   async function handleToggleConsumable(itemId: string) {
+    setTogglingItems(prev => new Set(prev).add(itemId));
     try {
       const supabase = createClient();
       const item = listItems.find(li => li.id === itemId);
@@ -254,12 +283,17 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (updateError) {
         setError(updateError.message);
+        toast.error(updateError.message);
         return;
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle consumable');
+      const msg = err instanceof Error ? err.message : 'Failed to toggle consumable';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setTogglingItems(prev => { const next = new Set(prev); next.delete(itemId); return next });
     }
   }
 
@@ -279,12 +313,15 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (updateError) {
         setError(updateError.message);
+        toast.error(updateError.message);
         return;
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: newQuantity } : li));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update quantity');
+      const msg = err instanceof Error ? err.message : 'Failed to update quantity';
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -302,16 +339,20 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (updateError) {
         setError(updateError.message);
+        toast.error(updateError.message);
         return;
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: q } : li));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set quantity');
+      const msg = err instanceof Error ? err.message : 'Failed to set quantity';
+      setError(msg);
+      toast.error(msg);
     }
   }
 
   async function handleRemoveItem(itemId: string) {
+    setRemovingItemId(itemId);
     try {
       const supabase = createClient();
 
@@ -322,16 +363,24 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       if (deleteError) {
         setError(deleteError.message);
+        toast.error(deleteError.message);
         return;
       }
 
+      toast.success(t('removed'));
       setListItems(prev => prev.filter(li => li.id !== itemId));
+      setConfirmRemoveItem(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove item');
+      const msg = err instanceof Error ? err.message : 'Failed to remove item';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setRemovingItemId(null);
     }
   }
 
   async function handleAddItems() {
+    setSaving(true);
     try {
       if (selectedGearIds.size === 0) return;
       const supabase = createClient();
@@ -367,7 +416,10 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         setListItems(itemsData as ListItemWithGear[]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add items');
+      const msg = err instanceof Error ? err.message : 'Failed to add items';
+      setError(msg);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -394,7 +446,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       };
 
       if (result.points.length > 0) {
-        const weather = await fetchRouteWeather(result.points[0][0], result.points[0][1], list!.trip_date || undefined);
+        const weather = await fetchRouteWeather(result.points[0][0], result.points[0][1], list?.trip_date || undefined);
         gpxData.weather = weather;
       }
 
@@ -441,6 +493,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleRemoveGpx = async () => {
+    setRemovingGpx(true);
     try {
       const supabase = createClient();
       const { error } = await supabase
@@ -449,11 +502,18 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         .eq('id', id);
       if (error) {
         setError(error.message);
+        toast.error(error.message);
         return;
       }
+      toast.success(t('gpx_removed'));
       setList((prev) => prev ? { ...prev, gpx_data: null } as GearList : null);
+      setConfirmRemoveGpx(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove GPX');
+      const msg = err instanceof Error ? err.message : 'Failed to remove GPX';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setRemovingGpx(false);
     }
   };
 
@@ -495,7 +555,6 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  const packedCount = calcPackedCount();
   const totalItems = listItems.length;
 
   return (
@@ -520,7 +579,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-          {list!.name}
+          {list?.name ?? ''}
         </h1>
         <div className="flex items-center gap-1">
           <a
@@ -571,10 +630,10 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       />
 
       <WeightStatCard
-        baseWeight={calcBaseWeight()}
-        wornWeight={calcWornWeight()}
-        consumableWeight={calcConsumableWeight()}
-        totalWeight={calcTotalWeight()}
+        baseWeight={baseWeight}
+        wornWeight={wornWeight}
+        consumableWeight={consumableWeight}
+        totalWeight={totalWeight}
         weightHint={weightHint}
         onHintChange={setWeightHint}
         t={t}
@@ -592,11 +651,15 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   value={list?.meal_plan_id || ''}
                   onChange={async (e) => {
                     const newId = e.target.value || null;
+                    const prevId = list?.meal_plan_id || '';
                     const supabase = createClient();
                     const { error } = await supabase.from('gear_lists').update({ meal_plan_id: newId }).eq('id', id);
                     if (error) {
                       setError(error.message);
+                      toast.error(error.message);
+                      e.target.value = prevId;
                     } else {
+                      toast.success(t('linked'));
                       setList((prev) => prev ? { ...prev, meal_plan_id: newId as string | null } : null);
                     }
                   }}
@@ -654,9 +717,9 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           <svg className="w-12 h-12 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
           </svg>
-          <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <h2 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
             {t('no_items')}
-          </h3>
+          </h2>
         </div>
       )}
 
@@ -672,17 +735,20 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   <button
                     onClick={() => handleTogglePacked(item.id)}
                     aria-label={t('packed')}
+                    disabled={togglingItems.has(item.id)}
                     className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
                       item.is_packed
                         ? 'bg-[var(--color-brand)] border-[var(--color-brand)] text-white'
                         : 'border-zinc-300 dark:border-zinc-600'
-                    }`}
+                    } ${togglingItems.has(item.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {item.is_packed && (
+                    {togglingItems.has(item.id) ? (
+                      <LoadingSpinner size="sm" />
+                    ) : item.is_packed ? (
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
-                    )}
+                    ) : null}
                   </button>
                 </div>
 
@@ -729,24 +795,26 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
                 <button
                   onClick={() => handleToggleWorn(item.id)}
+                  disabled={togglingItems.has(item.id)}
                   className={`text-xs font-medium px-3 py-2 min-h-[44px] rounded-lg transition-colors ${
                     item.worn
                       ? 'bg-[#6db3ff]/20 text-[#2563eb] dark:bg-[#6db3ff]/10 dark:text-[#6db3ff]'
                       : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                  }`}
+                  } ${togglingItems.has(item.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {t('worn')}
+                  {togglingItems.has(item.id) ? <LoadingSpinner size="sm" /> : t('worn')}
                 </button>
 
                 <button
                   onClick={() => handleToggleConsumable(item.id)}
+                  disabled={togglingItems.has(item.id)}
                   className={`text-xs font-medium px-3 py-2 min-h-[44px] rounded-lg transition-colors ${
                     item.consumable
                       ? 'bg-[#f5a623]/20 text-[#c2841a] dark:bg-[#f5a623]/10 dark:text-[#f5a623]'
                       : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                  }`}
+                  } ${togglingItems.has(item.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {t('consumable')}
+                  {togglingItems.has(item.id) ? <LoadingSpinner size="sm" /> : t('consumable')}
                 </button>
 
                 <button
@@ -790,6 +858,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         onToggleGearSelection={toggleGearSelection}
         onSearchChange={setSearchQuery}
         onAdd={handleAddItems}
+        saving={saving}
         t={t}
         tCommon={tCommon}
         tGear={tGear}
@@ -801,6 +870,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         onConfirm={handleDeleteList}
         title={t('delete_list')}
         message={t('delete_confirm')}
+        loading={deletingList}
       />
 
       <ConfirmDeleteModal
@@ -809,11 +879,11 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         onConfirm={() => {
           if (confirmRemoveItem) {
             handleRemoveItem(confirmRemoveItem);
-            setConfirmRemoveItem(null);
           }
         }}
         title={t('confirm_delete_item')}
         message={t('confirm_delete_item_desc')}
+        loading={removingItemId !== null}
       />
 
       <ConfirmDeleteModal
@@ -821,10 +891,10 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         onCancel={() => setConfirmRemoveGpx(false)}
         onConfirm={() => {
           handleRemoveGpx();
-          setConfirmRemoveGpx(false);
         }}
         title={t('confirm_remove_gpx')}
         message={t('confirm_remove_gpx_desc')}
+        loading={removingGpx}
       />
     </div>
   );

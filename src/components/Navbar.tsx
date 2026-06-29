@@ -165,7 +165,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors min-w-0 ${
+                className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] ${
                   active ? 'text-[var(--color-brand)]' : 'text-zinc-500 dark:text-zinc-400'
                 }`}
               >

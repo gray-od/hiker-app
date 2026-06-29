@@ -9,6 +9,7 @@
     "back": "Back",
     "search": "Search",
     "loading": "Loading…",
+    "error_loading": "Failed to load data",
     "empty": "No data",
     "confirm": "Confirm",
     "share": "Share",
@@ -34,7 +35,8 @@
     "have_account": "Already have an account?",
     "privacy_policy": "Privacy Policy",
     "source_code": "GitHub",
-    "template_apply_error": "Failed to apply template"
+    "template_apply_error": "Failed to apply template",
+    "error_occurred": "An error occurred"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -80,7 +82,10 @@
       "winter": "Winter",
       "demi": "Demi-Season",
       "all": "All Seasons"
-    }
+    },
+    "created": "Created",
+    "deleted": "Deleted",
+    "updated": "Updated"
   },
   "lists": {
     "title": "Packing Lists",
@@ -135,7 +140,13 @@
     "confirm_delete_item": "Remove item?",
     "confirm_delete_item_desc": "The item will be removed from the list. You can undo this by adding it again.",
     "confirm_remove_gpx": "Remove GPX?",
-    "confirm_remove_gpx_desc": "Route data, distance and weather will be removed from this list. You can upload the GPX again."
+    "confirm_remove_gpx_desc": "Route data, distance and weather will be removed from this list. You can upload the GPX again.",
+    "created": "List created",
+    "deleted": "List deleted",
+    "gpx_removed": "GPX removed",
+    "linked": "Meal plan linked",
+    "removed": "Item removed",
+    "updated": "Updated"
   },
   "meals": {
     "title": "Meal Plans",
@@ -206,7 +217,14 @@
     "confirm_remove_day": "Remove last day?",
     "confirm_remove_day_desc": "The last day and all its entries will be removed.",
     "confirm_apply_template": "Apply template?",
-    "confirm_apply_template_desc": "This will replace all current days and entries. Continue?"
+    "confirm_apply_template_desc": "This will replace all current days and entries. Continue?",
+    "added": "Added",
+    "created": "Plan created",
+    "day_deleted": "Day deleted",
+    "deleted": "Plan deleted",
+    "entry_deleted": "Meal entry deleted",
+    "plan_updated": "Plan updated",
+    "updated": "Updated"
   },
   "food": {
     "title": "My Products",
@@ -243,7 +261,10 @@
       "soups": "Soups & Porridge",
       "sublimated": "Freeze-dried",
       "other": "Other"
-    }
+    },
+    "created": "Created",
+    "deleted": "Deleted",
+    "updated": "Updated"
   },
   "dashboard": {
     "title": "My Hikes",
@@ -302,7 +323,9 @@
     "byok_testing": "Checking key…",
     "byok_valid": "Key valid",
     "byok_invalid": "Key invalid",
-    "clear": "Clear"
+    "clear": "Clear",
+    "error_saving": "Error saving",
+    "name_saved": "Name saved"
   },
   "chat": {
     "title": "AI Assistant",
