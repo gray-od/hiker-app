@@ -485,9 +485,16 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         await supabase.from('meal_days').delete().eq('plan_id', plan.id);
       }
 
-      const planType = (plan.plan_type || 'standard') as PlanTypeId;
+      const templatePlanType = template.planType;
       const peopleCount = plan.people_count || 1;
       const daysCount = plan.days_count || 3;
+
+      await supabase
+        .from('meal_plans')
+        .update({ plan_type: templatePlanType })
+        .eq('id', plan.id);
+
+      setPlan(prev => prev ? { ...prev, plan_type: templatePlanType } : null);
 
       const loc = (['uk', 'ru', 'en'].includes(locale) ? locale : 'uk') as 'uk' | 'ru' | 'en';
 
@@ -511,7 +518,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           if (!foodItem) continue;
 
           const portionMultiplier = entry.portionMultiplier || 1;
-          const portionG = Math.round(foodItem.defaultPortion[planType] * portionMultiplier * peopleCount);
+          const portionG = Math.round(foodItem.defaultPortion[templatePlanType] * portionMultiplier * peopleCount);
           const nutrition = calculateNutrition(foodItem, portionG);
 
           await supabase.from('meal_entries').insert({
@@ -744,7 +751,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
         applyingTemplate={applyingTemplate}
         locale={locale}
         onClose={() => setTemplateModalOpen(false)}
-        onApply={(templateId) => setConfirmTemplate(templateId)}
+        onApply={(templateId) => { setTemplateModalOpen(false); setConfirmTemplate(templateId); }}
         t={t}
         tCommon={tCommon}
       />

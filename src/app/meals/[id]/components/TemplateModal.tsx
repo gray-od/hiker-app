@@ -26,7 +26,7 @@ export default function TemplateModal({
   if (!open) return null;
 
   const loc = (['uk', 'ru', 'en'].includes(locale) ? locale : 'uk') as 'uk' | 'ru' | 'en';
-  const matchingTemplates = MEAL_TEMPLATES.filter(tmpl => tmpl.planType === planType);
+  const matchingTemplates = MEAL_TEMPLATES;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
