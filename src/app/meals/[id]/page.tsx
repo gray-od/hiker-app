@@ -389,6 +389,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     } : null);
     setSaving(false);
     setEditPlanModalOpen(false);
+    await recalculateTotals();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Operation failed');
     }
