@@ -69,7 +69,7 @@ I'm not a programmer. I'm a hiker who needed a tool that didn't exist.
 
 70% of Ukrainian hikers plan trips in Google Sheets. Zero dedicated apps in the Ukrainian market. The international apps (LighterPack, PackWizard) don't do meal planning and don't speak Ukrainian.
 
-So I built one. Every line of code in this project was written by AI — DeepSeek, orchestrated through [OpenCode](https://opencode.ai). 44 rounds of development from zero to a deployed product with AI assistant, route processing, three languages, and a mobile-first PWA.
+So I built one. Every line of code in this project was written by AI — DeepSeek, orchestrated through [OpenCode](https://opencode.ai). 45 rounds of development from zero to a deployed product with AI assistant, route processing, three languages, and a mobile-first PWA.
 
 This isn't a limitation — it's the point. In 2026, you don't need to know how to code. You need to see a problem, understand the domain, and have the persistence to iterate until it works.
 
