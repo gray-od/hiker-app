@@ -129,7 +129,9 @@
     "linked_meal_plan": "Meal plan",
     "no_meal_plan": "— none —",
     "food_weight": "Food",
-    "total_with_food": "Total"
+    "total_with_food": "Total",
+    "gpx_km": "km",
+    "gpx_m": "m"
   },
   "meals": {
     "title": "Meal Plans",
@@ -249,7 +251,9 @@
     "gear_weight": "Gear",
     "food_weight": "Food",
     "combined_weight": "Total",
-    "select_hint": "Select a list and meal plan to calculate"
+    "select_hint": "Select a list and meal plan to calculate",
+    "kg": "kg",
+    "per_person": "for {n} people"
   },
   "errors": {
     "not_found": "Page not found",

@@ -129,7 +129,9 @@
     "linked_meal_plan": "Розкладка харчування",
     "no_meal_plan": "— не вибрано —",
     "food_weight": "Харчування",
-    "total_with_food": "Разом"
+    "total_with_food": "Разом",
+    "gpx_km": "км",
+    "gpx_m": "м"
   },
   "meals": {
     "title": "Розкладки харчування",
@@ -249,7 +251,9 @@
     "gear_weight": "Спорядження",
     "food_weight": "Харчування",
     "combined_weight": "Разом",
-    "select_hint": "Оберіть список та розкладку для підрахунку"
+    "select_hint": "Оберіть список та розкладку для підрахунку",
+    "kg": "кг",
+    "per_person": "на {n} осіб"
   },
   "errors": {
     "not_found": "Сторінку не знайдено",

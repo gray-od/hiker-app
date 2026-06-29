@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearItem } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
+import { inputClass, cn } from '@/lib/cn';
 
 const CATEGORIES = [
   'backpack', 'shelter', 'sleep_system', 'cooking', 'water',
@@ -186,7 +187,7 @@ export default function GearPage() {
             href="/gear/print"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-zinc-500 hover:text-[#75a93a] text-sm font-medium rounded-xl transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-zinc-500 hover:text-[var(--color-brand)] text-sm font-medium rounded-xl transition-colors"
             title={tCommon('print')}
           >
             <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -196,7 +197,7 @@ export default function GearPage() {
           </a>
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
           >
             <svg
               className="w-4 h-4"
@@ -225,7 +226,7 @@ export default function GearPage() {
       {/* Loading state */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
         </div>
       )}
 
@@ -279,7 +280,7 @@ export default function GearPage() {
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => openEditModal(item)}
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors"
                       title={tCommon('edit')}
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -343,7 +344,7 @@ export default function GearPage() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => openEditModal(item)}
-                            className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+                            className="p-2 text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors"
                             title={tCommon('edit')}
                           >
                             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -390,7 +391,7 @@ export default function GearPage() {
                     onChange={(e) => handleFormChange('name', e.target.value)}
                     required
                     maxLength={200}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={cn(inputClass, 'placeholder-zinc-400')}
                     placeholder={tGear('name')}
                   />
                 </div>
@@ -402,7 +403,7 @@ export default function GearPage() {
                   <select
                     value={formData.category}
                     onChange={(e) => handleFormChange('category', e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
@@ -423,7 +424,7 @@ export default function GearPage() {
                     onChange={(e) => { const v = e.target.value; handleFormChange('weight_g', v === '' ? 0 : parseFloat(v)); }}
                     min={0}
                     step={1}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
 
@@ -434,7 +435,7 @@ export default function GearPage() {
                   <select
                     value={formData.season}
                     onChange={(e) => handleFormChange('season', e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   >
                     {SEASONS.map((s) => (
                       <option key={s} value={s}>
@@ -452,7 +453,7 @@ export default function GearPage() {
                     value={formData.notes}
                     onChange={(e) => handleFormChange('notes', e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent resize-none"
+                    className={cn(inputClass, 'placeholder-zinc-400 resize-none')}
                     placeholder={tGear('notes')}
                   />
                 </div>
@@ -468,7 +469,7 @@ export default function GearPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving || !formData.name.trim()}
-                  className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {saving ? tCommon('loading') : tCommon('save')}
                 </button>

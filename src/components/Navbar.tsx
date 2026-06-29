@@ -72,10 +72,10 @@ export default function Navbar() {
       <aside className="hidden md:flex md:flex-col md:w-64 md:h-screen md:fixed md:left-0 md:top-0 md:bg-white md:dark:bg-zinc-900 md:border-r md:border-zinc-200 md:dark:border-zinc-800 md:z-40 print:!hidden">
         {/* App name */}
         <div className="px-6 py-6 border-b border-zinc-200 dark:border-zinc-800">
-          <Link href="/" className="flex items-center gap-3 text-xl font-bold text-[#75a93a] tracking-tight">
+          <Link href="/" className="flex items-center gap-3 text-xl font-bold text-[var(--color-brand)] tracking-tight">
             <img src="/logo-circle.png" alt="" className="w-8 h-8 rounded-full" />
             ProHikes
-            <span className="text-[10px] font-medium bg-[#75a93a]/15 text-[#75a93a] px-1.5 py-0.5 rounded-md">beta</span>
+            <span className="text-[10px] font-medium bg-[var(--color-brand)]/15 text-[var(--color-brand)] px-1.5 py-0.5 rounded-md">beta</span>
           </Link>
         </div>
 
@@ -90,7 +90,7 @@ export default function Navbar() {
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   active
-                    ? 'bg-[#75a93a]/10 text-[#75a93a] dark:bg-[#75a93a]/20'
+                    ? 'bg-[var(--color-brand)]/10 text-[var(--color-brand)] dark:bg-[var(--color-brand)]/20'
                     : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
                 }`}
               >
@@ -166,7 +166,7 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors min-w-0 ${
-                  active ? 'text-[#75a93a]' : 'text-zinc-500 dark:text-zinc-400'
+                  active ? 'text-[var(--color-brand)]' : 'text-zinc-500 dark:text-zinc-400'
                 }`}
               >
                 <Icon className="w-6 h-6" />
@@ -182,10 +182,10 @@ export default function Navbar() {
       {/* ── Mobile top header ── */}
       <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-40 safe-area-top print:!hidden">
         <div className="flex items-center justify-between px-4 h-14">
-          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-[#75a93a] tracking-tight">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-[var(--color-brand)] tracking-tight">
             <img src="/logo-circle.png" alt="" className="w-7 h-7 rounded-full" />
             ProHikes
-            <span className="text-[9px] font-medium bg-[#75a93a]/15 text-[#75a93a] px-1.5 py-0.5 rounded-md">beta</span>
+            <span className="text-[9px] font-medium bg-[var(--color-brand)]/15 text-[var(--color-brand)] px-1.5 py-0.5 rounded-md">beta</span>
           </Link>
           <div className="flex items-center gap-1">
             <Link
@@ -193,7 +193,7 @@ export default function Navbar() {
               aria-label={tnav('settings')}
               className={`p-2.5 rounded-lg transition-colors ${
                 isActive('/settings')
-                  ? 'text-[#75a93a]'
+                  ? 'text-[var(--color-brand)]'
                   : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             >

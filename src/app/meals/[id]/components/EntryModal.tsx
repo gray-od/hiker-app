@@ -8,6 +8,7 @@ import {
   type FoodItem,
   type FoodCategory,
 } from '@/lib/food-catalog';
+import { inputClass, cn } from '@/lib/cn';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
@@ -128,19 +129,19 @@ export default function EntryModal({
             <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-4">
               <button
                 onClick={() => onEntryModeChange('catalog')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'catalog' ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'catalog' ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
               >
                 {t('from_catalog')}
               </button>
               <button
                 onClick={() => onEntryModeChange('my_products')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'my_products' ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'my_products' ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
               >
                 {t('my_products')}
               </button>
               <button
                 onClick={() => onEntryModeChange('custom')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'custom' ? 'border-[#75a93a] text-[#75a93a]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${entryMode === 'custom' ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
               >
                 {t('custom_entry')}
               </button>
@@ -158,7 +159,7 @@ export default function EntryModal({
                   onChange={(e) =>
                     onEntryFormChange('meal_type', e.target.value)
                   }
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 >
                   {MEAL_TYPES.map((mt) => (
                     <option key={mt} value={mt}>
@@ -175,7 +176,7 @@ export default function EntryModal({
                 <select
                   value={categoryFilter}
                   onChange={(e) => onCategoryFilterChange(e.target.value as FoodCategory | '')}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 >
                   <option value="">{t('all_categories')}</option>
                   {foodCategories.map((cat) => (
@@ -193,7 +194,7 @@ export default function EntryModal({
                   onChange={(e) => onProductSearchChange(e.target.value)}
                   placeholder={t('search_product')}
                   maxLength={200}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={cn(inputClass, 'placeholder-zinc-400')}
                 />
               </div>
 
@@ -209,7 +210,7 @@ export default function EntryModal({
                     onClick={() => onSelectProduct(product)}
                     className={`w-full text-left px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800 ${
                       selectedProduct?.id === product.id
-                        ? 'bg-[#75a93a]/10 border-l-2 border-[#75a93a]'
+                        ? 'bg-[var(--color-brand)]/10 border-l-2 border-[var(--color-brand)]'
                         : ''
                     }`}
                   >
@@ -238,7 +239,7 @@ export default function EntryModal({
                       onChange={(e) => onPortionChange(Number(e.target.value))}
                       min="0"
                       step="1"
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                      className={inputClass}
                     />
                   </div>
                   {catalogNutrition && (
@@ -283,7 +284,7 @@ export default function EntryModal({
                   onChange={(e) =>
                     onEntryFormChange('meal_type', e.target.value)
                   }
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 >
                   {MEAL_TYPES.map((mt) => (
                     <option key={mt} value={mt}>
@@ -300,7 +301,7 @@ export default function EntryModal({
                 <select
                   value={categoryFilter}
                   onChange={(e) => onCategoryFilterChange(e.target.value as FoodCategory | '')}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 >
                   <option value="">{t('all_categories')}</option>
                   {foodCategories.map((cat) => (
@@ -318,7 +319,7 @@ export default function EntryModal({
                   onChange={(e) => onProductSearchChange(e.target.value)}
                   placeholder={t('search_product')}
                   maxLength={200}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={cn(inputClass, 'placeholder-zinc-400')}
                 />
               </div>
 
@@ -334,7 +335,7 @@ export default function EntryModal({
                     onClick={() => onSelectUserProduct(product)}
                     className={`w-full text-left px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800 ${
                       selectedUserProduct?.id === product.id
-                        ? 'bg-[#75a93a]/10 border-l-2 border-[#75a93a]'
+                        ? 'bg-[var(--color-brand)]/10 border-l-2 border-[var(--color-brand)]'
                         : ''
                     }`}
                   >
@@ -363,7 +364,7 @@ export default function EntryModal({
                       onChange={(e) => onPortionChange(Number(e.target.value))}
                       min="0"
                       step="1"
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                      className={inputClass}
                     />
                   </div>
                   {userProductNutrition && (
@@ -408,7 +409,7 @@ export default function EntryModal({
                   onChange={(e) =>
                     onEntryFormChange('meal_type', e.target.value)
                   }
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 >
                   {MEAL_TYPES.map((mt) => (
                     <option key={mt} value={mt}>
@@ -428,7 +429,7 @@ export default function EntryModal({
                   onChange={(e) => onEntryFormChange('name', e.target.value)}
                   required
                   maxLength={200}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={cn(inputClass, 'placeholder-zinc-400')}
                 />
               </div>
 
@@ -443,7 +444,7 @@ export default function EntryModal({
                     onChange={(e) => onEntryFormChange('weight_g', Number(e.target.value))}
                     min="0"
                     step="1"
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
                 <div>
@@ -456,7 +457,7 @@ export default function EntryModal({
                     onChange={(e) => onEntryFormChange('calories', Number(e.target.value))}
                     min="0"
                     step="1"
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
               </div>
@@ -472,7 +473,7 @@ export default function EntryModal({
                     onChange={(e) => onEntryFormChange('protein_g', Number(e.target.value))}
                     min="0"
                     step="0.1"
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
                 <div>
@@ -485,7 +486,7 @@ export default function EntryModal({
                     onChange={(e) => onEntryFormChange('fat_g', Number(e.target.value))}
                     min="0"
                     step="0.1"
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
                 <div>
@@ -498,7 +499,7 @@ export default function EntryModal({
                     onChange={(e) => onEntryFormChange('carbs_g', Number(e.target.value))}
                     min="0"
                     step="0.1"
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
               </div>
@@ -515,7 +516,7 @@ export default function EntryModal({
             <button
               onClick={onSave}
               disabled={isDisabled}
-              className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
             >
               {saving ? tCommon('loading') : tCommon('save')}
             </button>

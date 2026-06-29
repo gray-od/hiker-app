@@ -57,7 +57,7 @@ export default async function PrivacyPage() {
             <p>{p('deletion_self_service')}</p>
             <p className="mt-2">
               {p('deletion_text')}{' '}
-              <a href="https://github.com/gray-od/hiker-app/issues" target="_blank" rel="noopener noreferrer" className="text-[#75a93a] hover:underline">
+              <a href="https://github.com/gray-od/hiker-app/issues" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
                 GitHub Issues
               </a>.{' '}
               {p('deletion_period')}
@@ -82,7 +82,7 @@ export default async function PrivacyPage() {
         <div className="mt-10 text-center">
           <a
             href="/login"
-            className="text-sm text-[#75a93a] hover:underline font-medium focus:ring-2 focus:ring-[#75a93a] rounded"
+            className="text-sm text-[var(--color-brand)] hover:underline font-medium focus:ring-2 focus:ring-[var(--color-brand)] rounded"
           >
             ← ProHikes
           </a>

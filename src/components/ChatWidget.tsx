@@ -112,7 +112,7 @@ export default function ChatWidget() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-12 h-12 bg-[#75a93a] hover:bg-[#5d8a2e] text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-12 h-12 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
           title={t('title')}
         >
           <Sparkles className="w-5 h-5" />
@@ -123,7 +123,7 @@ export default function ChatWidget() {
         <div className={`fixed inset-0 md:inset-auto md:bottom-6 md:right-6 ${expanded ? 'md:w-[700px]' : 'md:w-[480px]'} md:h-[600px] md:max-h-[80vh] z-50 flex flex-col bg-white dark:bg-zinc-900 md:rounded-2xl md:shadow-2xl md:border md:border-zinc-200 md:dark:border-zinc-800 transition-[width] duration-200`}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#75a93a]" />
+              <Sparkles className="w-5 h-5 text-[var(--color-brand)]" />
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t('title')}</h3>
             </div>
             <div className="flex items-center">
@@ -147,7 +147,7 @@ export default function ChatWidget() {
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-4">
             {messages.length === 0 && (
               <div className="text-center py-8">
-                <Sparkles className="w-10 h-10 mx-auto text-[#75a93a]/40 mb-3" />
+                <Sparkles className="w-10 h-10 mx-auto text-[var(--color-brand)]/40 mb-3" />
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-[250px] mx-auto">
                   {t('welcome')}
                 </p>
@@ -163,7 +163,7 @@ export default function ChatWidget() {
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'user' ? (
-                    <div className="max-w-[85%] min-w-0 px-3 py-2 rounded-2xl text-sm leading-relaxed break-words overflow-hidden bg-[#75a93a] text-white rounded-br-md whitespace-pre-wrap">
+                    <div className="max-w-[85%] min-w-0 px-3 py-2 rounded-2xl text-sm leading-relaxed break-words overflow-hidden bg-[var(--color-brand)] text-white rounded-br-md whitespace-pre-wrap">
                       {msg.content}
                     </div>
                   ) : (
@@ -180,7 +180,7 @@ export default function ChatWidget() {
                             h1: ({ children }) => <p className="font-bold text-base mb-1">{children}</p>,
                             h2: ({ children }) => <p className="font-bold mb-1">{children}</p>,
                             h3: ({ children }) => <p className="font-semibold mb-1">{children}</p>,
-                            a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#75a93a] underline hover:text-[#5d8a2e] break-all">{children}</a>,
+                            a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] underline hover:text-[var(--color-brand-hover)] break-all">{children}</a>,
                             code: ({ children }) => <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded text-xs break-all">{children}</code>,
                             pre: ({ children }) => <pre className="overflow-x-auto mb-2 text-xs">{children}</pre>,
                             table: ({ children }) => <div className="overflow-x-auto mb-2"><table className="text-xs border-collapse">{children}</table></div>,
@@ -225,7 +225,7 @@ export default function ChatWidget() {
                       href={process.env.NEXT_PUBLIC_DONATE_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       {t('donate')}
                     </a>
@@ -313,7 +313,7 @@ export default function ChatWidget() {
                 onKeyDown={onKeyDown}
                 placeholder={t('placeholder')}
                 rows={1}
-                className="flex-1 px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 border-0 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] resize-none leading-normal"
+                className="flex-1 px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 border-0 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] resize-none leading-normal"
                 disabled={isLoading}
                 style={{ maxHeight: '120px' }}
               />
@@ -321,7 +321,7 @@ export default function ChatWidget() {
                 type="submit"
                 disabled={isLoading || (!input.trim() && !attachedFile)}
                 aria-label={t('send')}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white rounded-xl transition-colors shrink-0"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white rounded-xl transition-colors shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>

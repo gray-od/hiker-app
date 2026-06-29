@@ -53,16 +53,16 @@ export default function GpxSection({
             <>
               <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_distance')}>
                 <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="2.5" cy="8" r="1.5"/><line x1="4" y1="8" x2="12" y2="8"/><circle cx="13.5" cy="8" r="1.5"/></svg>
-                {list!.gpx_data.distance_km} км
+                {list!.gpx_data.distance_km} {t('gpx_km')}
               </span>
               <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_elevation_gain')}>
                 <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3,11 8,5 8,5"/><polyline points="5,7 8,5 11,7"/><line x1="8" y1="5" x2="8" y2="14"/></svg>
-                +{list!.gpx_data.elevation_gain_m} м
+                +{list!.gpx_data.elevation_gain_m} {t('gpx_m')}
               </span>
               {list!.gpx_data.max_elevation_m != null && list!.gpx_data.max_elevation_m > 0 && (
                 <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_max_elevation')}>
                   <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"><polygon points="8,2 14,12 2,12"/></svg>
-                  {list!.gpx_data.max_elevation_m} м
+                  {list!.gpx_data.max_elevation_m} {t('gpx_m')}
                 </span>
               )}
             </>
@@ -72,7 +72,7 @@ export default function GpxSection({
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={gpxUploading}
-            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
+            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[var(--color-brand)]/10 hover:text-[var(--color-brand)] transition-colors min-h-[44px] flex items-center gap-1.5"
             aria-label={t('upload_gpx')}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,7 +101,7 @@ export default function GpxSection({
           {typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && (
             <button
               onClick={onShowOnMap}
-              className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[var(--color-brand)]/10 hover:text-[var(--color-brand)] transition-colors min-h-[44px] flex items-center gap-1.5"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -112,7 +112,7 @@ export default function GpxSection({
           )}
           <button
             onClick={onDownload}
-            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
+            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[var(--color-brand)]/10 hover:text-[var(--color-brand)] transition-colors min-h-[44px] flex items-center gap-1.5"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

@@ -1,6 +1,7 @@
 'use client';
 
 import Modal from '@/components/Modal';
+import { inputClass, cn } from '@/lib/cn';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
 
@@ -40,7 +41,7 @@ export default function EditListModal({
             onChange={(e) => onFieldChange('name', e.target.value)}
             required
             maxLength={200}
-            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+            className={cn(inputClass, 'placeholder-zinc-400')}
           />
         </div>
 
@@ -51,7 +52,7 @@ export default function EditListModal({
           <select
             value={editForm.season}
             onChange={(e) => onFieldChange('season', e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+            className={inputClass}
           >
             {SEASONS.map((s) => (
               <option key={s} value={s}>
@@ -69,7 +70,7 @@ export default function EditListModal({
             type="date"
             value={editForm.trip_date}
             onChange={(e) => onFieldChange('trip_date', e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+            className={inputClass}
           />
         </div>
       </div>
@@ -84,7 +85,7 @@ export default function EditListModal({
         <button
           onClick={onSave}
           disabled={saving || !editForm.name.trim()}
-          className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
         >
           {saving ? tCommon('loading') : tCommon('save')}
         </button>

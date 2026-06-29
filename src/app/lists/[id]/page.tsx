@@ -464,7 +464,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
   if (loading) {
     return (
       <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
       </div>
     );
   }
@@ -478,7 +478,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </h3>
           <button
             onClick={() => router.push('/lists')}
-            className="mt-4 text-sm text-[#75a93a] hover:text-[#5d8a2e] font-medium"
+            className="mt-4 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
           >
             {t('back_to_lists')}
           </button>
@@ -501,7 +501,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex items-center mb-2">
         <button
           onClick={() => router.push('/lists')}
-          className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400 hover:text-[#75a93a] transition-colors mr-3"
+          className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400 hover:text-[var(--color-brand)] transition-colors mr-3"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -519,7 +519,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
             href={`/lists/${id}/print`}
             target="_blank"
             rel="noopener noreferrer"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors"
             title={tCommon('print')}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -528,7 +528,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </a>
           <button
             onClick={openEditModal}
-            className="p-2 text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors min-h-[44px]"
+            className="p-2 text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors min-h-[44px]"
             title={tCommon('edit')}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -594,7 +594,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   ))}
                 </select>
                 {linkedPlan && (
-                  <span className="text-xs text-[#75a93a]">
+                  <span className="text-xs text-[var(--color-brand)]">
                     · {formatWeight(linkedPlan.total_weight_g / linkedPlan.people_count, tCommon)} на особу · всього {formatWeight(linkedPlan.total_weight_g, tCommon)}
                   </span>
                 )}
@@ -616,7 +616,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
           </div>
           <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
             <div
-              className="bg-[#75a93a] h-full rounded-full transition-all duration-300"
+              className="bg-[var(--color-brand)] h-full rounded-full transition-all duration-300"
               style={{ width: totalItems > 0 ? `${(packedCount / totalItems) * 100}%` : '0%' }}
             />
           </div>
@@ -626,7 +626,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       <div className="mb-4">
         <button
           onClick={() => setAddItemsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -660,7 +660,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     aria-label={t('packed')}
                     className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
                       item.is_packed
-                        ? 'bg-[#75a93a] border-[#75a93a] text-white'
+                        ? 'bg-[var(--color-brand)] border-[var(--color-brand)] text-white'
                         : 'border-zinc-300 dark:border-zinc-600'
                     }`}
                   >

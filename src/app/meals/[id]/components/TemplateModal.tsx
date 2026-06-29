@@ -38,7 +38,7 @@ export default function TemplateModal({
               key={tmpl.id}
               onClick={() => onApply(tmpl.id)}
               disabled={applyingTemplate}
-              className="w-full text-left p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-[#75a93a] hover:bg-[#75a93a]/5 transition-colors"
+              className="w-full text-left p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand)]/5 transition-colors"
             >
               <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
                 {tmpl.name[loc]}

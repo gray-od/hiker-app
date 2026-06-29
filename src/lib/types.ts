@@ -1,3 +1,12 @@
+export interface Profile {
+  id: string;
+  email?: string;
+  name?: string;
+  lang?: string;
+  is_premium?: boolean;
+  created_at?: string;
+}
+
 export interface GearItem {
   id: string;
   user_id: string;

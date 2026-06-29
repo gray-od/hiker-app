@@ -546,7 +546,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
   if (loading) {
     return (
       <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
       </div>
     );
   }
@@ -560,7 +560,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
           </h3>
           <button
             onClick={() => router.push('/meals')}
-            className="mt-4 text-sm text-[#75a93a] hover:text-[#5d8a2e] font-medium"
+            className="mt-4 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
           >
             {t('back_to_plans')}
           </button>
@@ -582,7 +582,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       <div className="flex items-center mb-2">
         <button
           onClick={() => router.push('/meals')}
-          className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400 hover:text-[#75a93a] transition-colors mr-3"
+          className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400 hover:text-[var(--color-brand)] transition-colors mr-3"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -632,7 +632,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       <div className="flex items-center gap-3">
         <button
           onClick={handleAddDay}
-          className="min-h-[44px] flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          className="min-h-[44px] flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

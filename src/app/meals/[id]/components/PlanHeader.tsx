@@ -29,7 +29,7 @@ export default function PlanHeader({
           href={`/meals/${planId}/shopping`}
           target="_blank"
           rel="noopener noreferrer"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors"
           title={t('shopping_list')}
         >
           <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -40,7 +40,7 @@ export default function PlanHeader({
           href={`/meals/${planId}/print`}
           target="_blank"
           rel="noopener noreferrer"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors"
           title={tCommon('print')}
         >
           <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -49,7 +49,7 @@ export default function PlanHeader({
         </a>
         <button
           onClick={onEdit}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors"
           title={tCommon('edit')}
         >
           <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -58,7 +58,7 @@ export default function PlanHeader({
         </button>
         <button
           onClick={onTemplate}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[#75a93a] hover:bg-[#75a93a]/10 rounded-lg transition-colors"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10 rounded-lg transition-colors"
           title={t('apply_template')}
         >
           <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

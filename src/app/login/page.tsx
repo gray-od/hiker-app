@@ -123,7 +123,7 @@ export default function LoginPage() {
               {i > 0 && <span className="text-zinc-300 dark:text-zinc-700 mx-1">·</span>}
               <button
                 onClick={() => switchLocale(loc)}
-                className={`px-1.5 py-1 text-sm font-medium rounded transition-colors ${locale === loc ? 'text-[#75a93a]' : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+                className={`px-1.5 py-1 text-sm font-medium rounded transition-colors ${locale === loc ? 'text-[var(--color-brand)]' : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
               >
                 {loc === 'uk' ? 'UA' : loc.toUpperCase()}
               </button>
@@ -137,7 +137,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-2">
             ProHikes
-            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#75a93a] text-white align-middle">
+            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--color-brand)] text-white align-middle">
               beta
             </span>
           </h1>
@@ -156,7 +156,7 @@ export default function LoginPage() {
               key={f.key}
               className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex gap-4 items-start"
             >
-              <div className="text-[#75a93a] shrink-0 mt-1">{f.icon}</div>
+              <div className="text-[var(--color-brand)] shrink-0 mt-1">{f.icon}</div>
               <div>
                 <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
                   {lt(`feature_${f.key}_title` as any)}
@@ -191,7 +191,7 @@ export default function LoginPage() {
           <button
             onClick={handleSignInWithGoogle}
             disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-[#75a93a] min-h-[44px]"
+            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-[var(--color-brand)] min-h-[44px]"
           >
             {googleLoading ? (
               <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -225,7 +225,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-[#75a93a] focus:border-transparent outline-none text-base"
+                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none text-base"
                 placeholder="you@example.com"
               />
             </div>
@@ -240,14 +240,14 @@ export default function LoginPage() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-[#75a93a] focus:border-transparent outline-none text-base"
+                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none text-base"
                 placeholder="••••••"
               />
             </div>
             <button
               type="submit"
               disabled={emailLoading}
-              className="w-full px-6 py-3 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-zinc-900 font-medium rounded-xl transition-colors focus:ring-2 focus:ring-[#75a93a] min-h-[44px]"
+              className="w-full px-6 py-3 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-zinc-900 font-medium rounded-xl transition-colors focus:ring-2 focus:ring-[var(--color-brand)] min-h-[44px]"
             >
               {emailLoading ? (
                 <span className="inline-block w-5 h-5 border-2 border-white dark:border-zinc-900 border-t-transparent rounded-full animate-spin" />
@@ -267,7 +267,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setAuthMode('signup'); setError(null); setSignUpSuccess(false); }}
-                  className="text-[#75a93a] hover:underline font-medium focus:ring-2 focus:ring-[#75a93a] rounded"
+                  className="text-[var(--color-brand)] hover:underline font-medium focus:ring-2 focus:ring-[var(--color-brand)] rounded"
                 >
                   {t('sign_up_with_email')}
                 </button>
@@ -278,7 +278,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setAuthMode('signin'); setError(null); setSignUpSuccess(false); }}
-                  className="text-[#75a93a] hover:underline font-medium focus:ring-2 focus:ring-[#75a93a] rounded"
+                  className="text-[var(--color-brand)] hover:underline font-medium focus:ring-2 focus:ring-[var(--color-brand)] rounded"
                 >
                   {t('sign_in_with_email')}
                 </button>
@@ -291,7 +291,7 @@ export default function LoginPage() {
         <div className="text-center mt-10 space-y-2">
           <a
             href="/privacy"
-            className="text-sm text-zinc-400 dark:text-zinc-500 hover:text-[#75a93a] transition-colors focus:ring-2 focus:ring-[#75a93a] rounded"
+            className="text-sm text-zinc-400 dark:text-zinc-500 hover:text-[var(--color-brand)] transition-colors focus:ring-2 focus:ring-[var(--color-brand)] rounded"
           >
             {t('privacy_policy')}
           </a>
@@ -300,7 +300,7 @@ export default function LoginPage() {
             href="https://github.com/gray-od/hiker-app"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-zinc-400 dark:text-zinc-500 hover:text-[#75a93a] transition-colors focus:ring-2 focus:ring-[#75a93a] rounded"
+            className="text-sm text-zinc-400 dark:text-zinc-500 hover:text-[var(--color-brand)] transition-colors focus:ring-2 focus:ring-[var(--color-brand)] rounded"
           >
             <svg className="inline-block w-3.5 h-3.5 mr-1" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
             {t('source_code')}

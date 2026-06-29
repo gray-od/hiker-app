@@ -7,5 +7,5 @@ export function getSeasonBadgeClass(season: string): string {
 export function getPlanTypeBadgeClass(planType: string): string {
   if (planType === 'comfort') return 'bg-[#ffec6d]/20 text-[#b8960f] dark:bg-[#ffec6d]/10 dark:text-[#ffec6d]';
   if (planType === 'ultralight') return 'bg-[#6db3ff]/20 text-[#2563eb] dark:bg-[#6db3ff]/10 dark:text-[#6db3ff]';
-  return 'bg-[#75a93a]/20 text-[#75a93a] dark:bg-[#75a93a]/10 dark:text-[#75a93a]';
+  return 'bg-[var(--color-brand)]/20 text-[var(--color-brand)] dark:bg-[var(--color-brand)]/10 dark:text-[var(--color-brand)]';
 }

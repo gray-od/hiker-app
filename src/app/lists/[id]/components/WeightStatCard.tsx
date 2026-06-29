@@ -28,7 +28,7 @@ function HintButton({
     <button
       onClick={() => onHintChange(currentHint === hint ? null : hint)}
       aria-label={label}
-      className="text-zinc-400 hover:text-[#75a93a] transition-colors"
+      className="text-zinc-400 hover:text-[var(--color-brand)] transition-colors"
     >
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="12" cy="12" r="10" />

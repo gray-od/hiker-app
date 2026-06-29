@@ -7,7 +7,7 @@ import { formatWeight } from '@/lib/format';
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
 function getProgressColor(ratio: number): string {
-  if (ratio >= 0.8 && ratio <= 1.1) return '#75a93a';
+  if (ratio >= 0.8 && ratio <= 1.1) return 'var(--color-brand)';
   if (ratio >= 0.5 && ratio < 0.8) return '#f5a623';
   return '#ef4444';
 }
@@ -157,7 +157,7 @@ export default function DayCard({
                     </div>
                     <button
                       onClick={() => onEditEntry(day.id, entry)}
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-[#75a93a] hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex-shrink-0"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-[var(--color-brand)] hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex-shrink-0"
                       title={t('edit_entry')}
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -181,7 +181,7 @@ export default function DayCard({
 
           <button
             onClick={() => onAddEntry(day.id)}
-            className="min-h-[44px] inline-flex items-center gap-1.5 text-sm font-medium text-[#75a93a] hover:text-[#5d8a2e] transition-colors mt-2"
+            className="min-h-[44px] inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] transition-colors mt-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

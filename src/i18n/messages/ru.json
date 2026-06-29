@@ -129,7 +129,9 @@
     "linked_meal_plan": "Раскладка питания",
     "no_meal_plan": "— не выбрано —",
     "food_weight": "Питание",
-    "total_with_food": "Итого"
+    "total_with_food": "Итого",
+    "gpx_km": "км",
+    "gpx_m": "м"
   },
   "meals": {
     "title": "Раскладки питания",
@@ -249,7 +251,9 @@
     "gear_weight": "Снаряжение",
     "food_weight": "Питание",
     "combined_weight": "Итого",
-    "select_hint": "Выберите список и раскладку для подсчёта"
+    "select_hint": "Выберите список и раскладку для подсчёта",
+    "kg": "кг",
+    "per_person": "на {n} чел."
   },
   "errors": {
     "not_found": "Страница не найдена",

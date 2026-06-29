@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { MealPlan } from '@/lib/types';
 import { getPlanTypeBadgeClass } from '@/lib/badges';
 import { formatWeight } from '@/lib/format';
+import { inputClass, cn } from '@/lib/cn';
 import { PLAN_TYPES, getPlanType } from '@/lib/hiking-standards';
 import type { PlanTypeId } from '@/lib/hiking-standards';
 import { calculateNutrition, getFoodItem } from '@/lib/food-catalog';
@@ -289,7 +290,7 @@ export default function MealsPage() {
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
         >
           <svg
             className="w-4 h-4"
@@ -316,7 +317,7 @@ export default function MealsPage() {
 
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
         </div>
       )}
 
@@ -353,7 +354,7 @@ export default function MealsPage() {
               <div
                 key={plan.id}
                 onClick={() => router.push(`/meals/${plan.id}`)}
-                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-[#75a93a]/50 transition-colors cursor-pointer"
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-[var(--color-brand)]/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
@@ -433,7 +434,7 @@ export default function MealsPage() {
                     onChange={(e) => handleFormChange('name', e.target.value)}
                     required
                     maxLength={200}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={cn(inputClass, 'placeholder-zinc-400')}
                     placeholder={t('name')}
                   />
                 </div>
@@ -448,7 +449,7 @@ export default function MealsPage() {
                     max={30}
                     value={formData.days_count}
                     onChange={(e) => handleFormChange('days_count', parseInt(e.target.value) || 1)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
 
@@ -487,7 +488,7 @@ export default function MealsPage() {
                             value={pt.id}
                             checked={isSelected}
                             onChange={(e) => handleFormChange('plan_type', e.target.value)}
-                            className="mt-0.5 h-4 w-4 text-[#75a93a] focus:ring-[#75a93a]"
+                            className="mt-0.5 h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)]"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
@@ -513,7 +514,7 @@ export default function MealsPage() {
                     max={50}
                     value={formData.people_count}
                     onChange={(e) => handleFormChange('people_count', parseInt(e.target.value) || 1)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
 
@@ -529,7 +530,7 @@ export default function MealsPage() {
                       step={50}
                       value={formData.target_calories}
                       onChange={(e) => handleFormChange('target_calories', parseInt(e.target.value) || planTypeConfig.targetCalories.default)}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                      className={inputClass}
                     />
                   </div>
                   <div>
@@ -543,14 +544,14 @@ export default function MealsPage() {
                       step={10}
                       value={formData.target_weight_g}
                       onChange={(e) => handleFormChange('target_weight_g', parseInt(e.target.value) || planTypeConfig.targetWeight.default)}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                      className={inputClass}
                     />
                   </div>
                 </div>
 
                 <div>
                   {templatesForPlanType.length > 0 && (
-                    <div className="flex items-center gap-1.5 mb-2 text-xs text-[#75a93a] font-medium">
+                    <div className="flex items-center gap-1.5 mb-2 text-xs text-[var(--color-brand)] font-medium">
                       <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                       </svg>
@@ -563,7 +564,7 @@ export default function MealsPage() {
                   <select
                     value={formData.template_id}
                     onChange={(e) => handleFormChange('template_id', e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   >
                     <option value="">{t('no_template')}</option>
                     {templatesForPlanType.map((tmpl) => {
@@ -600,7 +601,7 @@ export default function MealsPage() {
                 <button
                   onClick={handleCreate}
                   disabled={saving || !formData.name.trim()}
-                  className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {saving ? tCommon('loading') : tCommon('save')}
                 </button>

@@ -74,7 +74,7 @@ export default function MealPlanPrintPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="w-8 h-8 border-4 border-zinc-200 border-t-[#75a93a] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-zinc-200 border-t-[var(--color-brand)] rounded-full animate-spin" />
       </div>
     );
   }
@@ -88,7 +88,7 @@ export default function MealPlanPrintPage() {
           </h3>
           <button
             onClick={() => router.push('/meals')}
-            className="mt-4 text-sm text-[#75a93a] hover:text-[#5d8a2e] font-medium"
+            className="mt-4 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
           >
             {t('back_to_plans')}
           </button>
@@ -128,7 +128,7 @@ export default function MealPlanPrintPage() {
         <div className="no-print flex items-center gap-3 mb-6">
           <button
             onClick={() => router.push(`/meals/${id}`)}
-            className="flex items-center gap-1 text-sm text-zinc-600 hover:text-[#75a93a] transition-colors"
+            className="flex items-center gap-1 text-sm text-zinc-600 hover:text-[var(--color-brand)] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -137,7 +137,7 @@ export default function MealPlanPrintPage() {
           </button>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />

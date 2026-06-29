@@ -14,7 +14,7 @@ const sizeMap = {
 export default function LoadingSpinner({ fullPage = false, size = 'md' }: LoadingSpinnerProps) {
   const spinner = (
     <div
-      className={`${sizeMap[size]} border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin`}
+      className={`${sizeMap[size]} border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin`}
     />
   );
 

@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList } from '@/lib/types';
 import { formatDate, formatWeight } from '@/lib/format';
+import { inputClass, cn } from '@/lib/cn';
 
 const SEASONS = ['summer', 'winter', 'demi'] as const;
 
@@ -194,7 +195,7 @@ export default function ListsPage() {
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
         >
           <svg
             className="w-4 h-4"
@@ -221,7 +222,7 @@ export default function ListsPage() {
 
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
         </div>
       )}
 
@@ -257,7 +258,7 @@ export default function ListsPage() {
               <div
                 key={list.id}
                 onClick={() => router.push(`/lists/${list.id}`)}
-                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-[#75a93a]/50 transition-colors cursor-pointer"
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-[var(--color-brand)]/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-medium text-zinc-900 dark:text-zinc-100 pr-2">
@@ -301,7 +302,7 @@ export default function ListsPage() {
 
                 <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
                   <div
-                    className="bg-[#75a93a] h-full rounded-full transition-all"
+                    className="bg-[var(--color-brand)] h-full rounded-full transition-all"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -330,7 +331,7 @@ export default function ListsPage() {
                     onChange={(e) => handleFormChange('name', e.target.value)}
                     required
                     maxLength={200}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={cn(inputClass, 'placeholder-zinc-400')}
                     placeholder={t('name')}
                   />
                 </div>
@@ -342,7 +343,7 @@ export default function ListsPage() {
                   <select
                     value={formData.season}
                     onChange={(e) => handleFormChange('season', e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   >
                     {SEASONS.map((s) => (
                       <option key={s} value={s}>
@@ -360,7 +361,7 @@ export default function ListsPage() {
                     type="date"
                     value={formData.trip_date}
                     onChange={(e) => handleFormChange('trip_date', e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
 
@@ -371,7 +372,7 @@ export default function ListsPage() {
                   <select
                     value={formData.meal_plan_id || ''}
                     onChange={(e) => handleFormChange('meal_plan_id', e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className={inputClass}
                   >
                     <option value="">{t('no_meal_plan')}</option>
                     {mealPlans.map((mp) => (
@@ -391,7 +392,7 @@ export default function ListsPage() {
                 <button
                   onClick={handleCreate}
                   disabled={saving || !formData.name.trim()}
-                  className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
                 >
                   {saving ? tCommon('loading') : tCommon('save')}
                 </button>

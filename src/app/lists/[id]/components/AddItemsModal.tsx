@@ -2,6 +2,7 @@
 
 import type { GearItem, ListItemWithGear } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
+import { inputClass, cn } from '@/lib/cn';
 import Modal from '@/components/Modal';
 
 interface AddItemsModalProps {
@@ -48,7 +49,7 @@ export default function AddItemsModal({
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t('search_gear')}
           maxLength={200}
-          className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+          className={cn(inputClass, 'placeholder-zinc-400')}
         />
       </div>
 
@@ -80,7 +81,7 @@ export default function AddItemsModal({
               type="checkbox"
               checked={selectedGearIds.has(gear.id)}
               onChange={() => onToggleGearSelection(gear.id)}
-              className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-[#75a93a] focus:ring-[#75a93a]"
+              className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-[var(--color-brand)] focus:ring-[var(--color-brand)]"
             />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
@@ -115,7 +116,7 @@ export default function AddItemsModal({
           <button
             onClick={onAdd}
             disabled={selectedGearIds.size === 0}
-            className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
           >
             {tCommon('add')}
           </button>

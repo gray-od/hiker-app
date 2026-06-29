@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
+import { inputClass, cn } from '@/lib/cn';
 
 const locales = [
   { code: 'uk', label: 'Українська' },
@@ -214,7 +215,7 @@ export default function SettingsPage() {
     return (
       <div className="flex-1 p-4 md:p-8 max-w-2xl mx-auto w-full">
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[#75a93a] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -238,7 +239,7 @@ export default function SettingsPage() {
                 onClick={() => switchLocale(loc.code)}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   currentLocale === loc.code
-                    ? 'bg-[#75a93a] text-white'
+                    ? 'bg-[var(--color-brand)] text-white'
                     : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                 }`}
               >
@@ -260,7 +261,7 @@ export default function SettingsPage() {
                   onClick={() => setTheme(th)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                     theme === th
-                      ? 'bg-[#75a93a] text-white'
+                      ? 'bg-[var(--color-brand)] text-white'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                   }`}
                 >
@@ -286,7 +287,7 @@ export default function SettingsPage() {
                 <select
                   value={aiProvider}
                   onChange={(e) => { setAiProvider(e.target.value); setAiTestResult(null); }}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 >
                   <option value="gemini">Gemini</option>
                   <option value="openai">OpenAI</option>
@@ -300,7 +301,7 @@ export default function SettingsPage() {
                   type="password"
                   value={aiKey}
                   onChange={(e) => { setAiKey(e.target.value); setAiTestResult(null); }}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 />
               </div>
               <div>
@@ -311,7 +312,7 @@ export default function SettingsPage() {
                   onChange={(e) => { setAiModel(e.target.value); setAiTestResult(null); }}
                   placeholder={aiProvider === 'gemini' ? 'gemma-4-26b-a4b-it' : aiProvider === 'openai' ? 'gpt-4o-mini' : aiProvider === 'deepseek' ? 'deepseek-chat' : 'openai/gpt-4o-mini'}
                   maxLength={200}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 />
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('byok_ai_hint')}</p>
@@ -319,7 +320,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSaveAi}
                   disabled={!aiKey.trim() || aiTesting}
-                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[#75a93a] hover:bg-[#5d8a2e] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   {aiTesting ? t('byok_testing') : tCommon('save')}
                 </button>
@@ -333,13 +334,13 @@ export default function SettingsPage() {
                   <span className="text-sm text-zinc-500 dark:text-zinc-400 self-center">{t('byok_testing')}</span>
                 )}
                 {aiTestResult === 'valid' && (
-                  <span className="text-sm text-[#75a93a] self-center">&#x2713; {t('byok_valid')}</span>
+                  <span className="text-sm text-[var(--color-brand)] self-center">&#x2713; {t('byok_valid')}</span>
                 )}
                 {aiTestResult === 'invalid' && (
                   <span className="text-sm text-red-500 self-center">&#x2717; {t('byok_invalid')}</span>
                 )}
                 {aiSavedMessage && (
-                  <span className="text-sm text-[#75a93a] self-center">{aiSavedMessage}</span>
+                  <span className="text-sm text-[var(--color-brand)] self-center">{aiSavedMessage}</span>
                 )}
               </div>
             </div>
@@ -355,7 +356,7 @@ export default function SettingsPage() {
                 <select
                   value={searchProvider}
                   onChange={(e) => { setSearchProvider(e.target.value); setSearchTestResult(null); }}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 >
                   <option value="exa">Exa</option>
                   <option value="brave">Brave</option>
@@ -372,7 +373,7 @@ export default function SettingsPage() {
                   type="password"
                   value={searchKey}
                   onChange={(e) => { setSearchKey(e.target.value); setSearchTestResult(null); }}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 />
               </div>
               {searchProvider === 'google_cse' && (
@@ -383,7 +384,7 @@ export default function SettingsPage() {
                   value={searchCx}
                   onChange={(e) => { setSearchCx(e.target.value); setSearchTestResult(null); }}
                   maxLength={200}
-                  className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                  className={inputClass}
                 />
                 </div>
               )}
@@ -392,7 +393,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSaveSearch}
                   disabled={!searchKey.trim() || searchTesting}
-                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[#75a93a] hover:bg-[#5d8a2e] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   {searchTesting ? t('byok_testing') : tCommon('save')}
                 </button>
@@ -406,13 +407,13 @@ export default function SettingsPage() {
                   <span className="text-sm text-zinc-500 dark:text-zinc-400 self-center">{t('byok_testing')}</span>
                 )}
                 {searchTestResult === 'valid' && (
-                  <span className="text-sm text-[#75a93a] self-center">&#x2713; {t('byok_valid')}</span>
+                  <span className="text-sm text-[var(--color-brand)] self-center">&#x2713; {t('byok_valid')}</span>
                 )}
                 {searchTestResult === 'invalid' && (
                   <span className="text-sm text-red-500 self-center">&#x2717; {t('byok_invalid')}</span>
                 )}
                 {searchSavedMessage && (
-                  <span className="text-sm text-[#75a93a] self-center">{searchSavedMessage}</span>
+                  <span className="text-sm text-[var(--color-brand)] self-center">{searchSavedMessage}</span>
                 )}
               </div>
             </div>
@@ -441,7 +442,7 @@ export default function SettingsPage() {
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
                     maxLength={200}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
                   />
                   <button
                     onClick={async () => {
@@ -460,7 +461,7 @@ export default function SettingsPage() {
                       setSavingName(false);
                     }}
                     disabled={savingName}
-                    className="px-3 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    className="px-3 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                   >
                     {savingName ? '...' : tCommon('save')}
                   </button>
@@ -476,7 +477,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-zinc-900 dark:text-zinc-100">{name || '—'}</p>
                   <button
                     onClick={() => { setNameInput(name); setEditingName(true); }}
-                    className="text-sm text-[#75a93a] hover:text-[#5d8a2e] font-medium"
+                    className="text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
                   >
                     {tCommon('edit')}
                   </button>

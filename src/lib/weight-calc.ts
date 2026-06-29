@@ -16,7 +16,7 @@ export function getTerrainLimitPct(gpxData?: GpxLike | null): number {
 export function bannerColor(pct: number): string {
   if (pct > 100) return 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400';
   if (pct > 75) return 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400';
-  return 'bg-[#75a93a]/5 border-[#75a93a]/20 text-[#75a93a]';
+  return 'bg-[var(--color-brand)]/5 border-[var(--color-brand)]/20 text-[var(--color-brand)]';
 }
 
 export function calcWeight<T extends { quantity: number; weight_g?: number | null }>(

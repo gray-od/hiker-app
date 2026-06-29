@@ -112,11 +112,11 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link
             href="/lists"
-            className="flex items-center gap-4 p-5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-[#75a93a] dark:hover:border-[#75a93a] transition-colors group"
+            className="flex items-center gap-4 p-5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-[var(--color-brand)] dark:hover:border-[var(--color-brand)] transition-colors group"
           >
-            <div className="w-12 h-12 bg-[#75a93a]/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#75a93a]/20 transition-colors">
+            <div className="w-12 h-12 bg-[var(--color-brand)]/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[var(--color-brand)]/20 transition-colors">
               <svg
-                className="w-6 h-6 text-[#75a93a]"
+                className="w-6 h-6 text-[var(--color-brand)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -141,11 +141,11 @@ export default async function DashboardPage() {
 
           <Link
             href="/meals"
-            className="flex items-center gap-4 p-5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-[#75a93a] dark:hover:border-[#75a93a] transition-colors group"
+            className="flex items-center gap-4 p-5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-[var(--color-brand)] dark:hover:border-[var(--color-brand)] transition-colors group"
           >
-            <div className="w-12 h-12 bg-[#75a93a]/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#75a93a]/20 transition-colors">
+            <div className="w-12 h-12 bg-[var(--color-brand)]/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[var(--color-brand)]/20 transition-colors">
               <svg
-                className="w-6 h-6 text-[#75a93a]"
+                className="w-6 h-6 text-[var(--color-brand)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
               <Link
                 key={list.id}
                 href={`/lists/${list.id}`}
-                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-[#75a93a]/50 transition-colors cursor-pointer"
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-[var(--color-brand)]/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <span
@@ -239,7 +239,7 @@ export default async function DashboardPage() {
                 <Link
                   key={plan.id}
                   href={`/meals/${plan.id}`}
-                  className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-[#75a93a]/50 transition-colors cursor-pointer"
+                  className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-[var(--color-brand)]/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span
