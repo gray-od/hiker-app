@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
-import { getSeasonBadgeClass } from '@/lib/badges';
-import { formatWeight, formatDate } from '@/lib/format';
+import { formatWeight } from '@/lib/format';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
 import { parseGpxFile } from '@/lib/gpx-parser';
 import { calcWeight } from '@/lib/weight-calc';
-
-const SEASONS = ['summer', 'winter', 'demi'] as const;
+import WeightStatCard from './components/WeightStatCard';
+import GpxSection from './components/GpxSection';
+import AddItemsModal from './components/AddItemsModal';
+import EditListModal from './components/EditListModal';
+import DeleteListModal from './components/DeleteListModal';
 
 export default function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -545,151 +547,29 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".gpx"
-        onChange={handleGpxUpload}
-        className="hidden"
+      <GpxSection
+        list={list}
+        gpxUploading={gpxUploading}
+        gpxError={gpxError}
+        t={t}
+        tGear={tGear}
+        onGpxUpload={handleGpxUpload}
+        onShowOnMap={handleShowOnMap}
+        onDownload={handleDownloadGpx}
+        onRemove={handleRemoveGpx}
+        fileInputRef={fileInputRef}
       />
 
-      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getSeasonBadgeClass(list!.season)}`}>
-          {tGear(`season.${list!.season}`)}
-        </span>
-        {list!.trip_date && (
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">
-            {formatDate(list!.trip_date)}
-          </span>
-        )}
-          {list!.gpx_data && (
-            <>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_distance')}>
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="2.5" cy="8" r="1.5"/><line x1="4" y1="8" x2="12" y2="8"/><circle cx="13.5" cy="8" r="1.5"/></svg>
-                {list!.gpx_data.distance_km} км
-              </span>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_elevation_gain')}>
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3,11 8,5 8,5"/><polyline points="5,7 8,5 11,7"/><line x1="8" y1="5" x2="8" y2="14"/></svg>
-                +{list!.gpx_data.elevation_gain_m} м
-              </span>
-              {list!.gpx_data.max_elevation_m != null && list!.gpx_data.max_elevation_m > 0 && (
-                <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_max_elevation')}>
-                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"><polygon points="8,2 14,12 2,12"/></svg>
-                  {list!.gpx_data.max_elevation_m} м
-                </span>
-              )}
-            </>
-          )}
-        </div>
-        {!list!.gpx_data && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={gpxUploading}
-            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
-            aria-label={t('upload_gpx')}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17,8 12,3 7,8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            {gpxUploading ? t('gpx_loading') : t('upload_gpx')}
-          </button>
-        )}
-        {gpxError && (
-          <div className="text-xs text-red-500 w-full">{gpxError}</div>
-        )}
-      </div>
-
-        {list?.gpx_data?.weather && (
-          <div className="flex items-center gap-2 mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-            </svg>
-            <span>{t('gpx_weather')}: {list.gpx_data.weather}</span>
-          </div>
-        )}
-        {list?.gpx_data && (
-          <div className="flex items-center gap-2 mb-4">
-            {typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && (
-              <button
-                onClick={handleShowOnMap}
-                className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
-                </svg>
-                {t('gpx_show_on_map')}
-              </button>
-            )}
-            <button
-              onClick={handleDownloadGpx}
-              className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-[#75a93a]/10 hover:text-[#75a93a] transition-colors min-h-[44px] flex items-center gap-1.5"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              {t('gpx_download')}
-            </button>
-            <button
-              onClick={handleRemoveGpx}
-              className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors min-h-[44px] flex items-center gap-1.5"
-              title={t('gpx_remove')}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-              {t('gpx_remove')}
-            </button>
-          </div>
-        )}
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
-            {t('base_weight')}
-            <button onClick={() => setWeightHint(weightHint === 'base' ? null : 'base')} aria-label={t('base_weight')} className="text-zinc-400 hover:text-[#75a93a] transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            </button>
-          </div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcBaseWeight(), tCommon)}</div>
-          {weightHint === 'base' && (
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('base_weight_hint')}</div>
-          )}
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
-            {t('worn_weight')}
-            <button onClick={() => setWeightHint(weightHint === 'worn' ? null : 'worn')} aria-label={t('worn_weight')} className="text-zinc-400 hover:text-[#75a93a] transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            </button>
-          </div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcWornWeight(), tCommon)}</div>
-          {weightHint === 'worn' && (
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('worn_weight_hint')}</div>
-          )}
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
-            {t('consumable_weight')}
-            <button onClick={() => setWeightHint(weightHint === 'consumable' ? null : 'consumable')} aria-label={t('consumable_weight')} className="text-zinc-400 hover:text-[#75a93a] transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            </button>
-          </div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcConsumableWeight(), tCommon)}</div>
-          {weightHint === 'consumable' && (
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">{t('consumable_weight_hint')}</div>
-          )}
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>
-          <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatWeight(calcTotalWeight(), tCommon)}</div>
-        </div>
-      </div>
+      <WeightStatCard
+        baseWeight={calcBaseWeight()}
+        wornWeight={calcWornWeight()}
+        consumableWeight={calcConsumableWeight()}
+        totalWeight={calcTotalWeight()}
+        weightHint={weightHint}
+        onHintChange={setWeightHint}
+        t={t}
+        tGear={tCommon}
+      />
 
       <div className="mb-4">
         <div className="flex items-center gap-2">
@@ -870,216 +750,44 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       )}
 
-      {editModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                {t('edit_list')}
-              </h2>
+      <EditListModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        editForm={editForm}
+        saving={saving}
+        onSave={handleUpdateList}
+        onFieldChange={(field, value) => setEditForm(prev => ({ ...prev, [field]: value }))}
+        t={t}
+        tCommon={tCommon}
+        tGear={tGear}
+      />
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t('name')}
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                    maxLength={200}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-                  />
-                </div>
+      <AddItemsModal
+        open={addItemsModalOpen}
+        onClose={() => {
+          setAddItemsModalOpen(false);
+          setSelectedGearIds(new Set());
+          setSearchQuery('');
+        }}
+        allGear={allGear}
+        listItems={listItems}
+        searchQuery={searchQuery}
+        selectedGearIds={selectedGearIds}
+        onToggleGearSelection={toggleGearSelection}
+        onSearchChange={setSearchQuery}
+        onAdd={handleAddItems}
+        t={t}
+        tCommon={tCommon}
+        tGear={tGear}
+      />
 
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t('season')}
-                  </label>
-                  <select
-                    value={editForm.season}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, season: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-                  >
-                    {SEASONS.map((s) => (
-                      <option key={s} value={s}>
-                        {tGear(`season.${s}`)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t('trip_date')}
-                  </label>
-                  <input
-                    type="date"
-                    value={editForm.trip_date}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, trip_date: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-                  />
-                </div>
-
-
-              </div>
-
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setEditModalOpen(false)}
-                  className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-                >
-                  {tCommon('cancel')}
-                </button>
-                <button
-                  onClick={handleUpdateList}
-                  disabled={saving || !editForm.name.trim()}
-                  className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
-                >
-                  {saving ? tCommon('loading') : tCommon('save')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {addItemsModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
-            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('select_items')}
-              </h2>
-            </div>
-
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('search_gear')}
-                maxLength={200}
-                className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#75a93a] focus:border-transparent"
-              />
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {allGear.length === 0 && (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">
-                  {t('no_gear_hint')}
-                </p>
-              )}
-
-              {allGear.length > 0 && (() => {
-                const listItemGearIds = new Set(listItems.map(li => li.gear_item_id));
-                const filteredGear = allGear.filter(g =>
-                  g.name.toLowerCase().includes(searchQuery.toLowerCase())
-                );
-                const availableGear = filteredGear.filter(g => !listItemGearIds.has(g.id));
-
-                if (filteredGear.length === 0) {
-                  return (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">
-                      {tCommon('empty')}
-                    </p>
-                  );
-                }
-
-                if (availableGear.length === 0 && filteredGear.length > 0) {
-                  return (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">
-                      {t('all_added')}
-                    </p>
-                  );
-                }
-
-                return availableGear.map((gear) => (
-                  <label
-                    key={gear.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedGearIds.has(gear.id)}
-                      onChange={() => toggleGearSelection(gear.id)}
-                      className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-[#75a93a] focus:ring-[#75a93a]"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                        {gear.name}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {tGear(`categories.${gear.category}`)}
-                        </span>
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                          {formatWeight(gear.weight_g, tCommon)}
-                        </span>
-                      </div>
-                    </div>
-                  </label>
-                ));
-              })()}
-            </div>
-
-            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                {selectedGearIds.size > 0
-                  ? `${tCommon('add')}: ${selectedGearIds.size}`
-                  : ''}
-              </span>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    setAddItemsModalOpen(false);
-                    setSelectedGearIds(new Set());
-                    setSearchQuery('');
-                  }}
-                  className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-                >
-                  {tCommon('cancel')}
-                </button>
-                <button
-                  onClick={handleAddItems}
-                  disabled={selectedGearIds.size === 0}
-                  className="px-4 py-2 bg-[#75a93a] hover:bg-[#5d8a2e] disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:cursor-not-allowed"
-                >
-                  {tCommon('add')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {confirmDelete && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              {t('delete_list')}
-            </h3>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-              {t('delete_confirm')}
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-              >
-                {tCommon('cancel')}
-              </button>
-              <button
-                onClick={handleDeleteList}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
-              >
-                {tCommon('delete')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteListModal
+        open={confirmDelete}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={handleDeleteList}
+        title={t('delete_list')}
+        message={t('delete_confirm')}
+      />
     </div>
   );
 }
