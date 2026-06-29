@@ -150,6 +150,11 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
       }
 
       setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
+      if (editForm.trip_date && list?.gpx_data?.points?.length && editForm.trip_date !== list.trip_date) {
+        fetchRouteWeather(list.gpx_data.points[0][0], list.gpx_data.points[0][1], editForm.trip_date).then(weather => {
+          if (weather) setList(prev => prev ? { ...prev, gpx_data: { ...prev.gpx_data, weather } as GearList['gpx_data'] } : null);
+        }).catch(() => {});
+      }
       setSaving(false);
       setEditModalOpen(false);
     } catch (err) {

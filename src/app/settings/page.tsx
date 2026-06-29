@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const [aiTestResult, setAiTestResult] = useState<'valid' | 'invalid' | null>(null);
   const [searchTesting, setSearchTesting] = useState(false);
   const [searchTestResult, setSearchTestResult] = useState<'valid' | 'invalid' | null>(null);
+  const saveMsgTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -158,7 +159,8 @@ export default function SettingsPage() {
         localStorage.setItem('prohikes.ai', JSON.stringify({ provider: aiProvider, apiKey: aiKey, model: aiModel }));
         setAiTestResult('valid');
         setAiSavedMessage(t('saved'));
-        setTimeout(() => setAiSavedMessage(''), 2000);
+        if (saveMsgTimer.current) clearTimeout(saveMsgTimer.current);
+        saveMsgTimer.current = setTimeout(() => setAiSavedMessage(''), 2000);
       } else {
         setAiTestResult('invalid');
       }
@@ -193,7 +195,8 @@ export default function SettingsPage() {
         localStorage.setItem('prohikes.search', JSON.stringify(payload));
         setSearchTestResult('valid');
         setSearchSavedMessage(t('saved'));
-        setTimeout(() => setSearchSavedMessage(''), 2000);
+        if (saveMsgTimer.current) clearTimeout(saveMsgTimer.current);
+        saveMsgTimer.current = setTimeout(() => setSearchSavedMessage(''), 2000);
       } else {
         setSearchTestResult('invalid');
       }
