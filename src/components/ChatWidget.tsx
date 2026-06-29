@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Sparkles, X, Send, Loader2, Maximize2, Minimize2, Copy, Check, Paperclip } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { createClient } from '@/lib/supabase/client';
 
 function stripThoughts(text: string): string {
   return text
@@ -39,6 +40,8 @@ export default function ChatWidget() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
+  const [todayUsage, setTodayUsage] = useState<number | null>(null);
+  const [byokActive, setByokActive] = useState(false);
 
   const { messages, input, handleInputChange, handleSubmit, append, setInput, isLoading, error } = useChat({
     api: '/api/chat',
@@ -61,6 +64,35 @@ export default function ChatWidget() {
     window.visualViewport?.addEventListener('resize', onResize);
     return () => window.visualViewport?.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const stored = readByok();
+      if (stored.ai?.apiKey) {
+        setByokActive(true);
+        setTodayUsage(null);
+        return;
+      }
+      setByokActive(false);
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('ai_usage')
+        .select('message_count')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single();
+      setTodayUsage(data?.message_count ?? 0);
+    });
+  }, [open]);
+
+  useEffect(() => {
+    if (error && !byokActive) {
+      setTodayUsage(prev => (prev === null ? null : Math.max(0, prev - 1)));
+    }
+  }, [error, byokActive]);
 
   const adjustTextareaHeight = useCallback(() => {
     const el = textareaRef.current;
@@ -92,6 +124,10 @@ export default function ChatWidget() {
     if (!input.trim() && !attachedFile) return;
     if (isLoading) return;
 
+    if (!byokActive && todayUsage !== null) {
+      setTodayUsage(todayUsage + 1);
+    }
+
     if (attachedFile) {
       const fullContent = `[Файл: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
       append({ role: 'user', content: fullContent }, { body: readByok() });
@@ -107,6 +143,10 @@ export default function ChatWidget() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if ((!input.trim() && !attachedFile) || isLoading) return;
+
+      if (!byokActive && todayUsage !== null) {
+        setTodayUsage(todayUsage + 1);
+      }
 
       if (attachedFile) {
         const fullContent = `[Файл: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
@@ -138,6 +178,11 @@ export default function ChatWidget() {
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[var(--color-brand)]" />
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t('title')}</h3>
+              {!byokActive && todayUsage !== null && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${todayUsage >= 13 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : todayUsage >= 10 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'}`}>
+                  {todayUsage}/15
+                </span>
+              )}
             </div>
             <div className="flex items-center">
               <button
