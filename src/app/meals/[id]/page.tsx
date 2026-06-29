@@ -379,6 +379,9 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       return;
     }
 
+    setSaving(false);
+    setEditPlanModalOpen(false);
+    await recalculateTotals();
     setPlan(prev => prev ? {
       ...prev,
       name: editForm.name.trim(),
@@ -387,9 +390,6 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       target_calories: editForm.target_calories,
       target_weight_g: editForm.target_weight_g,
     } : null);
-    setSaving(false);
-    setEditPlanModalOpen(false);
-    await recalculateTotals();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Operation failed');
     }
