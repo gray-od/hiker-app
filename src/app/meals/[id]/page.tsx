@@ -379,6 +379,31 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       return;
     }
 
+    const oldType = plan?.plan_type || 'standard';
+    if (oldType !== editForm.plan_type && days.length > 0) {
+      const oldCfg = getPlanType(oldType as PlanTypeId);
+      const newCfg = getPlanType(editForm.plan_type as PlanTypeId);
+      const wRatio = newCfg.targetWeight.default / oldCfg.targetWeight.default;
+      const cRatio = newCfg.targetCalories.default / oldCfg.targetCalories.default;
+
+      for (const day of days) {
+        for (const e of (day.meal_entries || [])) {
+          await supabase.from('meal_entries').update({
+            weight_g: Math.round(e.weight_g * wRatio),
+            calories: Math.round(e.calories * cRatio),
+            protein_g: Math.round(e.protein_g * cRatio * 10) / 10,
+            fat_g: Math.round(e.fat_g * cRatio * 10) / 10,
+            carbs_g: Math.round(e.carbs_g * cRatio * 10) / 10,
+          }).eq('id', e.id);
+          e.weight_g = Math.round(e.weight_g * wRatio);
+          e.calories = Math.round(e.calories * cRatio);
+          e.protein_g = Math.round(e.protein_g * cRatio * 10) / 10;
+          e.fat_g = Math.round(e.fat_g * cRatio * 10) / 10;
+          e.carbs_g = Math.round(e.carbs_g * cRatio * 10) / 10;
+        }
+      }
+    }
+
     setSaving(false);
     setEditPlanModalOpen(false);
     await recalculateTotals();
