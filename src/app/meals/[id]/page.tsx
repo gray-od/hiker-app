@@ -380,11 +380,15 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     }
 
     const oldType = plan?.plan_type || 'standard';
-    if (oldType !== editForm.plan_type && days.length > 0) {
+    const oldPeople = plan?.people_count || 1;
+    const typeChanged = oldType !== editForm.plan_type;
+    const peopleChanged = oldPeople !== editForm.people_count;
+
+    if ((typeChanged || peopleChanged) && days.length > 0) {
       const oldCfg = getPlanType(oldType as PlanTypeId);
       const newCfg = getPlanType(editForm.plan_type as PlanTypeId);
-      const wRatio = newCfg.targetWeight.default / oldCfg.targetWeight.default;
-      const cRatio = newCfg.targetCalories.default / oldCfg.targetCalories.default;
+      const wRatio = (newCfg.targetWeight.default * editForm.people_count) / (oldCfg.targetWeight.default * oldPeople);
+      const cRatio = (newCfg.targetCalories.default * editForm.people_count) / (oldCfg.targetCalories.default * oldPeople);
 
       for (const day of days) {
         for (const e of (day.meal_entries || [])) {
