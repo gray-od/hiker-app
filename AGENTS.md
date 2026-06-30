@@ -40,6 +40,7 @@ supabase/         — 9 migrations
 |---|---|---|---|
 | R1 | 2026-06-29 | Scaffold + shared files copy | 40+ files copied from hiker-app |
 | R2 | 2026-06-30 | Pages Router foundation | 11 files: _app, _document, middleware, globals.css, next.config, sw, cache, OfflineBanner + hook fixes |
+| R3 | 2026-06-30 | Core pages + API routes | 9 files: auth callback, login, dashboard, chat API, error, 404, locales fix |
 
 ## What's Done So Far
 
@@ -52,9 +53,13 @@ supabase/         — 9 migrations
 - [x] SW file created (`src/sw.ts`)
 - [x] IndexedDB cache layer (`src/lib/cache.ts`)
 - [x] OfflineBanner component
-- [ ] Auth callback adapted (`pages/api/auth/callback.ts`)
-- [ ] All 16 pages adapted from App Router to Pages Router
-- [ ] 4 API routes adapted
+- [x] Auth callback adapted (`pages/api/auth/callback.ts`)
+- [x] Chat API adapted (`pages/api/chat.ts`) — AI SDK v7
+- [x] Login page adapted (`pages/login.tsx`)
+- [x] Dashboard adapted (`pages/index.tsx`)
+- [x] Error + 404 pages (`_error.tsx`, `404.tsx`)
+- [ ] Remaining 13 pages (gear, food, lists, meals + sub-pages)
+- [ ] 2 API routes (account/delete, byok/validate)
 - [ ] Deploy to Vercel + Google Cloud redirect URI
 
 ## Page Migration Map

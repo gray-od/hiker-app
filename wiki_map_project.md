@@ -28,15 +28,15 @@ Pages Router делает SPA-переходы на клиенте (через `
 
 ## Current State
 
-**Round 2 — Фундамент Pages Router:** готовы все базовые файлы:
-- `_app.tsx` — Providers (next-themes + next-intl + AppShell + Analytics)
-- `_document.tsx` — PWA meta, theme-color, manifest, Plausible
-- `middleware.ts` — цепочка Supabase auth + next-intl i18n
-- `next.config.ts` — Serwist + webpack + Supabase images + PWA headers
-- `src/sw.ts` — Serwist service worker
-- `src/lib/cache.ts` — IndexedDB (idb v8) cache-first wrapper для 9 функций service.ts
-- `src/components/OfflineBanner.tsx` — индикатор офлайн-режима
-- Компоненты AppShell, Navbar, useAuth — адаптированы под Pages Router (next/router)
-- `tsc --noEmit`: ошибок на новых файлах нет (2 предсуществующих в ChatWidget.tsx)
+**Round 2 — Фундамент Pages Router:** готовы все базовые файлы.
+**Round 3 — Core pages + API:** адаптированы auth callback, login, dashboard, chat API (AI SDK v7), error/404.
 
-**Осталось:** адаптировать 16 страниц + 4 API routes + auth callback.
+**Готово (R3):**
+- `pages/api/auth/callback.ts` — Supabase OAuth callback (cookie-based)
+- `pages/api/chat.ts` — AI chat API (все 8 tools, rate limit, BYOK, streaming v7)
+- `pages/login.tsx` — Google OAuth + email/password auth
+- `pages/index.tsx` — Dashboard (useEffect + IndexedDB-ready)
+- `pages/_error.tsx` + `pages/404.tsx` — error handling
+- `error_with_status` добавлен в uk/ru/en locale JSON
+
+**Осталось:** 13 страниц (gear, food, lists/meals + sub-pages) + 2 API routes (account/delete, byok/validate).
