@@ -297,7 +297,8 @@
     "not_found": "Page not found",
     "something_went_wrong": "Something went wrong",
     "try_again": "Try again",
-    "go_home": "Go home"
+    "go_home": "Go home",
+    "error_with_status": "Error {status}"
   },
   "settings": {
     "title": "Settings",

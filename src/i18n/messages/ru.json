@@ -297,7 +297,8 @@
     "not_found": "Страница не найдена",
     "something_went_wrong": "Что-то пошло не так",
     "try_again": "Попробовать ещё",
-    "go_home": "На главную"
+    "go_home": "На главную",
+    "error_with_status": "Ошибка {status}"
   },
   "settings": {
     "title": "Настройки",
