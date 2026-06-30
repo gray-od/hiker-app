@@ -38,7 +38,8 @@
     "template_apply_error": "Не удалось применить шаблон",
     "error_occurred": "Произошла ошибка",
     "locale_uk": "Украинский",
-    "locale_ru": "Русский"
+    "locale_ru": "Русский",
+    "offline_banner": "Вы офлайн. Данные из кеша."
   },
   "nav": {
     "dashboard": "Главная",

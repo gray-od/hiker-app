@@ -7,6 +7,7 @@ import AppShell from '@/components/AppShell';
 import Toaster from '@/components/Toaster';
 import { Providers } from '@/components/Providers';
 import './globals.css';
+import { SerwistProvider } from '@serwist/next/react';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -85,10 +86,12 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 antialiased font-sans">
         <Providers>
-          <NextIntlClientProvider messages={messages}>
-            <Toaster />
-            <AppShell>{children}</AppShell>
-          </NextIntlClientProvider>
+            <NextIntlClientProvider messages={messages}>
+              <SerwistProvider swUrl="/sw.js">
+                <Toaster />
+                <AppShell>{children}</AppShell>
+              </SerwistProvider>
+            </NextIntlClientProvider>
           <Analytics />
         </Providers>
       </body>

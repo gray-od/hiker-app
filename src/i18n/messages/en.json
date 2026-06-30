@@ -38,7 +38,8 @@
     "template_apply_error": "Failed to apply template",
     "error_occurred": "An error occurred",
     "locale_uk": "Ukrainian",
-    "locale_ru": "Russian"
+    "locale_ru": "Russian",
+    "offline_banner": "You are offline. Cached data shown."
   },
   "nav": {
     "dashboard": "Dashboard",
