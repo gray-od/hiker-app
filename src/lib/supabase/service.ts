@@ -41,7 +41,7 @@ export async function fetchUserProfile(
   userId: string,
 ): Promise<{ data: Profile | null; error: Error | null }> {
   const cacheKey = `profile:${userId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<Profile>(cacheKey) : null;
+  const cached = await getCached<Profile>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -61,7 +61,7 @@ export async function fetchUserGear(
   userId: string,
 ): Promise<{ data: GearItem[] | null; error: Error | null }> {
   const cacheKey = `gear:${userId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<GearItem[]>(cacheKey) : null;
+  const cached = await getCached<GearItem[]>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -81,7 +81,7 @@ export async function fetchUserFoodItems(
   userId: string,
 ): Promise<{ data: UserFoodItem[] | null; error: Error | null }> {
   const cacheKey = `food:${userId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<UserFoodItem[]>(cacheKey) : null;
+  const cached = await getCached<UserFoodItem[]>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -101,7 +101,7 @@ export async function fetchUserLists(
   userId: string,
 ): Promise<{ data: GearListWithTotalWeight[] | null; error: Error | null }> {
   const cacheKey = `lists:${userId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<GearListWithTotalWeight[]>(cacheKey) : null;
+  const cached = await getCached<GearListWithTotalWeight[]>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -131,7 +131,7 @@ export async function fetchUserListDetail(
   listId: string,
 ): Promise<{ data: GearList | null; error: Error | null }> {
   const cacheKey = `list:${listId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<GearList>(cacheKey) : null;
+  const cached = await getCached<GearList>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -151,7 +151,7 @@ export async function fetchListItems(
   listId: string,
 ): Promise<{ data: ListItemWithGear[] | null; error: Error | null }> {
   const cacheKey = `listItems:${listId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<ListItemWithGear[]>(cacheKey) : null;
+  const cached = await getCached<ListItemWithGear[]>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -170,7 +170,7 @@ export async function fetchUserMealPlans(
   userId: string,
 ): Promise<{ data: MealPlanWithDays[] | null; error: Error | null }> {
   const cacheKey = `meals:${userId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<MealPlanWithDays[]>(cacheKey) : null;
+  const cached = await getCached<MealPlanWithDays[]>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -190,7 +190,7 @@ export async function fetchMealPlanDetail(
   planId: string,
 ): Promise<{ data: { plan: MealPlan; days: MealDayWithEntries[] } | null; error: Error | null }> {
   const cacheKey = `meal:${planId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<{ plan: MealPlan; days: MealDayWithEntries[] }>(cacheKey) : null;
+  const cached = await getCached<{ plan: MealPlan; days: MealDayWithEntries[] }>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
@@ -226,7 +226,7 @@ export async function fetchUserMealPlansLight(
   userId: string,
 ): Promise<{ data: MealPlanLight[] | null; error: Error | null }> {
   const cacheKey = `mealsLight:${userId}`;
-  const cached = typeof window !== 'undefined' ? await getCached<MealPlanLight[]>(cacheKey) : null;
+  const cached = await getCached<MealPlanLight[]>(cacheKey);
   if (cached && !navigator.onLine) return { data: cached, error: null };
 
   const supabase = createClient();
