@@ -4,6 +4,8 @@
 
 Migrated from `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) to Pages Router.
 
+**GitHub:** https://github.com/gray-od/prohikes (private, branch `main`)
+
 **Source context:** `D:\Projects\hiker-app\AGENTS.md` + `D:\Projects\hiker-app\wiki_map_project.md`
 
 ## Why Pages Router
