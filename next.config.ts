@@ -4,13 +4,6 @@ import { withSerwist } from "@serwist/turbopack";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-const nextConfig: NextConfig = {
-  experimental: {
-    staleTimes: {
-      dynamic: 1800,
-      static: 3600,
-    },
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default withSerwist(withNextIntl(nextConfig));
