@@ -1,0 +1,117 @@
+# AGENTS.md — ProHikes (Pages Router Migration)
+
+## Origin
+
+Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → Pages Router.
+
+**Reason:** App Router (RSC client-side navigation) is architecturally incompatible with offline page transitions. 3 attempts failed (R19, R51, R52 in original project). Pages Router does SPA-style client navigation — offline-compatible.
+
+**Source context:** `D:\Projects\hiker-app\AGENTS.md` + `D:\Projects\hiker-app\wiki_map_project.md`
+
+## Stack
+
+- **Frontend:** Next.js 16 Pages Router + TypeScript + Tailwind v4
+- **Backend:** Supabase (PostgreSQL, Auth, RLS) — same project as hiker-app
+- **i18n:** next-intl v4 (uk/ru/en)
+- **Theme:** next-themes (class-based dark mode)
+- **AI:** Google Gemma 4 26B A4B (free via AI Studio) + Exa (web search) + Open-Meteo (weather)
+- **AI SDK:** Vercel AI SDK v4 (`ai@4.3.19`, `@ai-sdk/google@1`)
+- **SW:** `@serwist/next` + webpack (`next build --webpack`)
+- **Offline data:** IndexedDB (`idb`) cache-first in `src/lib/supabase/service.ts`
+- **BYOK:** опц. свой ключ AI/поиска через `localStorage` (`prohikes.ai`/`prohikes.search`)
+- **Hosting:** Vercel (new project `prohikes`, same env vars)
+
+## Current State — Files Copied (unchanged from hiker-app)
+
+```
+src/components/   — 11 files (AppShell, ChatWidget, Modal, Navbar, etc.)*
+src/lib/          — 18 files (types, format, service, AI providers, etc.)
+src/hooks/        — 3 files (useDebounce, useAuth, useForm)*
+src/i18n/         — messages/ + request.ts
+public/           — icons, manifest, images
+supabase/         — 9 migrations
+.env.local        — same env vars
+```
+*AppShell, Navbar, useAuth adapted for Pages Router (next/router) in R2.
+
+## Round History
+
+| Round | Date | What | Files |
+|---|---|---|---|
+| R1 | 2026-06-29 | Scaffold + shared files copy | 40+ files copied from hiker-app |
+| R2 | 2026-06-30 | Pages Router foundation | 11 files: _app, _document, middleware, globals.css, next.config, sw, cache, OfflineBanner + hook fixes |
+
+## What's Done So Far
+
+- [x] Next.js Pages Router scaffold (`create-next-app --no-app`)
+- [x] All dependencies installed (mirror of hiker-app + `@serwist/next` + `idb`)
+- [x] All shared files copied (components, lib, hooks, i18n, public, supabase, .env.local)
+- [x] Pages Router foundation (_app.tsx, _document.tsx, middleware.ts)
+- [x] Globals CSS copied from hiker-app
+- [x] next.config.ts (withSerwistInit + webpack build)
+- [x] SW file created (`src/sw.ts`)
+- [x] IndexedDB cache layer (`src/lib/cache.ts`)
+- [x] OfflineBanner component
+- [ ] Auth callback adapted (`pages/api/auth/callback.ts`)
+- [ ] All 16 pages adapted from App Router to Pages Router
+- [ ] 4 API routes adapted
+- [ ] Deploy to Vercel + Google Cloud redirect URI
+
+## Page Migration Map
+
+| App Router (source) | Pages Router (target) |
+|---|---|
+| `src/app/layout.tsx` | `src/pages/_app.tsx` + `_document.tsx` |
+| `src/app/page.tsx` (dashboard) | `src/pages/index.tsx` |
+| `src/app/gear/page.tsx` | `src/pages/gear.tsx` |
+| `src/app/food/page.tsx` | `src/pages/food.tsx` |
+| `src/app/lists/page.tsx` | `src/pages/lists.tsx` |
+| `src/app/lists/[id]/page.tsx` | `src/pages/lists/[id].tsx` |
+| `src/app/lists/[id]/print/page.tsx` | `src/pages/lists/[id]/print.tsx` |
+| `src/app/lists/[id]/components/*` | `src/components/` (unchanged) |
+| `src/app/meals/page.tsx` | `src/pages/meals.tsx` |
+| `src/app/meals/[id]/page.tsx` | `src/pages/meals/[id].tsx` |
+| `src/app/meals/[id]/print/page.tsx` | `src/pages/meals/[id]/print.tsx` |
+| `src/app/meals/[id]/shopping/page.tsx` | `src/pages/meals/[id]/shopping.tsx` |
+| `src/app/meals/[id]/components/*` | `src/components/` (unchanged) |
+| `src/app/settings/page.tsx` | `src/pages/settings.tsx` |
+| `src/app/login/page.tsx` | `src/pages/login.tsx` |
+| `src/app/privacy/page.tsx` | `src/pages/privacy.tsx` |
+| `src/app/error.tsx` | `src/pages/_error.tsx` |
+| `src/app/not-found.tsx` | `src/pages/404.tsx` |
+| `src/app/globals.css` | `src/styles/globals.css` |
+| `src/app/api/chat/route.ts` | `src/pages/api/chat.ts` |
+| `src/app/api/account/delete/route.ts` | `src/pages/api/account/delete.ts` |
+| `src/app/api/byok/validate/route.ts` | `src/pages/api/byok/validate.ts` |
+| `src/app/auth/callback/route.ts` | `src/pages/api/auth/callback.ts` |
+
+## Page Adaptation Rules
+
+1. **`'use client'`** — remove directive (Pages Router pages are always client-capable)
+2. **`useTranslations`** — same API, no change
+3. **`params: Promise<{ id }>` + `use()`** → `const { id } = router.query` (from `useRouter`)
+4. **`tCommon, tGear` etc.** — same pattern, no change
+5. **Server Components** → Pages Router has no server components; use `getServerSideProps` for SSR or `useEffect` for client fetch
+6. **`loading.tsx`** → `router.events` for loading state or Suspense (limited)
+7. **`generateMetadata()`** → `<Head>` from `next/head` in each page
+8. **`notFound()`** → `return { notFound: true }` from `getServerSideProps` or `router.push('/404')`
+
+## Key Patterns
+
+- All components remain unchanged — only page wrappers change
+- `getServerSideProps` can be used for online SSR, but for offline we rely on `useEffect` + IndexedDB (same as current App Router pattern)
+- SW caches static assets (CacheFirst), doesn't touch HTML/RSC (not needed — Pages Router navigation is client-side)
+- IndexedDB cache (cache-first, network-update) wraps all 9 service.ts functions
+- `next build --webpack` forces webpack for production (Serwist webpack plugin compatible)
+
+## External Changes Needed (after deploy)
+
+1. **Google Cloud Console:** Add redirect URI `https://prohikes.vercel.app/api/auth/callback` to existing OAuth client
+2. **Vercel:** New project `prohikes` with same 6 env vars from hiker-app
+3. **Supabase:** No changes (same project, same DB, same RLS)
+
+## Verification
+
+- `npx tsc --noEmit` — must be clean
+- `npx next build --webpack` — must succeed, SW must be generated (`public/sw.js`)
+- Offline test: browse pages online → go offline → navigate between pages → should work
