@@ -1,5 +1,4 @@
 import { createClient } from './client';
-import { getCached, setCache } from '@/lib/cache';
 import type {
   Profile,
   GearItem,
@@ -40,10 +39,6 @@ export interface MealPlanLight {
 export async function fetchUserProfile(
   userId: string,
 ): Promise<{ data: Profile | null; error: Error | null }> {
-  const cacheKey = `profile:${userId}`;
-  const cached = await getCached<Profile>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('profiles')
@@ -51,8 +46,6 @@ export async function fetchUserProfile(
     .eq('id', userId)
     .single();
 
-  if (!error && data) setCache(cacheKey, data as Profile);
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   return { data: data as Profile, error: null };
 }
@@ -60,10 +53,6 @@ export async function fetchUserProfile(
 export async function fetchUserGear(
   userId: string,
 ): Promise<{ data: GearItem[] | null; error: Error | null }> {
-  const cacheKey = `gear:${userId}`;
-  const cached = await getCached<GearItem[]>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('gear_items')
@@ -71,8 +60,6 @@ export async function fetchUserGear(
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (!error && data) setCache(cacheKey, data as GearItem[]);
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   return { data: data as GearItem[], error: null };
 }
@@ -80,10 +67,6 @@ export async function fetchUserGear(
 export async function fetchUserFoodItems(
   userId: string,
 ): Promise<{ data: UserFoodItem[] | null; error: Error | null }> {
-  const cacheKey = `food:${userId}`;
-  const cached = await getCached<UserFoodItem[]>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('user_food_items')
@@ -91,8 +74,6 @@ export async function fetchUserFoodItems(
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (!error && data) setCache(cacheKey, data as UserFoodItem[]);
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   return { data: data as UserFoodItem[], error: null };
 }
@@ -100,10 +81,6 @@ export async function fetchUserFoodItems(
 export async function fetchUserLists(
   userId: string,
 ): Promise<{ data: GearListWithTotalWeight[] | null; error: Error | null }> {
-  const cacheKey = `lists:${userId}`;
-  const cached = await getCached<GearListWithTotalWeight[]>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('gear_lists')
@@ -111,7 +88,6 @@ export async function fetchUserLists(
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   if (!data) return { data: [], error: null };
 
@@ -123,17 +99,12 @@ export async function fetchUserLists(
     ),
   }));
 
-  setCache(cacheKey, lists);
   return { data: lists, error: null };
 }
 
 export async function fetchUserListDetail(
   listId: string,
 ): Promise<{ data: GearList | null; error: Error | null }> {
-  const cacheKey = `list:${listId}`;
-  const cached = await getCached<GearList>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('gear_lists')
@@ -141,8 +112,6 @@ export async function fetchUserListDetail(
     .eq('id', listId)
     .single();
 
-  if (!error && data) setCache(cacheKey, data as GearList);
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   return { data: data as GearList, error: null };
 }
@@ -150,18 +119,12 @@ export async function fetchUserListDetail(
 export async function fetchListItems(
   listId: string,
 ): Promise<{ data: ListItemWithGear[] | null; error: Error | null }> {
-  const cacheKey = `listItems:${listId}`;
-  const cached = await getCached<ListItemWithGear[]>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('list_items')
     .select('*, gear_item:gear_items(*)')
     .eq('list_id', listId);
 
-  if (!error && data) setCache(cacheKey, data as ListItemWithGear[]);
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   return { data: data as ListItemWithGear[], error: null };
 }
@@ -169,10 +132,6 @@ export async function fetchListItems(
 export async function fetchUserMealPlans(
   userId: string,
 ): Promise<{ data: MealPlanWithDays[] | null; error: Error | null }> {
-  const cacheKey = `meals:${userId}`;
-  const cached = await getCached<MealPlanWithDays[]>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('meal_plans')
@@ -180,8 +139,6 @@ export async function fetchUserMealPlans(
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (!error && data) setCache(cacheKey, data as unknown as MealPlanWithDays[]);
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   return { data: data as unknown as MealPlanWithDays[], error: null };
 }
@@ -189,10 +146,6 @@ export async function fetchUserMealPlans(
 export async function fetchMealPlanDetail(
   planId: string,
 ): Promise<{ data: { plan: MealPlan; days: MealDayWithEntries[] } | null; error: Error | null }> {
-  const cacheKey = `meal:${planId}`;
-  const cached = await getCached<{ plan: MealPlan; days: MealDayWithEntries[] }>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data: planData, error: planError } = await supabase
     .from('meal_plans')
@@ -200,9 +153,7 @@ export async function fetchMealPlanDetail(
     .eq('id', planId)
     .single();
 
-  if (planError && cached) return { data: cached, error: null };
   if (planError) return { data: null, error: new Error(planError.message) };
-  if (!planData && cached) return { data: cached, error: null };
   if (!planData) return { data: null, error: new Error('Plan not found') };
 
   const { data: daysData, error: daysError } = await supabase
@@ -211,24 +162,20 @@ export async function fetchMealPlanDetail(
     .eq('plan_id', planId)
     .order('day_number');
 
-  if (daysError && cached) return { data: cached, error: null };
   if (daysError) return { data: null, error: new Error(daysError.message) };
 
-  const result = {
-    plan: planData as MealPlan,
-    days: (daysData as MealDayWithEntries[]) || [],
+  return {
+    data: {
+      plan: planData as MealPlan,
+      days: (daysData as MealDayWithEntries[]) || [],
+    },
+    error: null,
   };
-  setCache(cacheKey, result);
-  return { data: result, error: null };
 }
 
 export async function fetchUserMealPlansLight(
   userId: string,
 ): Promise<{ data: MealPlanLight[] | null; error: Error | null }> {
-  const cacheKey = `mealsLight:${userId}`;
-  const cached = await getCached<MealPlanLight[]>(cacheKey);
-  if (cached && !navigator.onLine) return { data: cached, error: null };
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from('meal_plans')
@@ -236,8 +183,6 @@ export async function fetchUserMealPlansLight(
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (!error && data) setCache(cacheKey, data as MealPlanLight[]);
-  if (error && cached) return { data: cached, error: null };
   if (error) return { data: null, error: new Error(error.message) };
   return { data: data as MealPlanLight[], error: null };
 }
