@@ -393,8 +393,8 @@ export default function GearPage() {
 
       {/* Add/Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <div className="p-6">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 {editingItem ? tCommon('edit') : tGear('add_item')}
@@ -501,7 +501,7 @@ export default function GearPage() {
 
       {/* Delete confirmation modal */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {tCommon('delete')}

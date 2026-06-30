@@ -93,7 +93,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -102,7 +102,7 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        className={`bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 w-full ${maxWidth} max-h-[90vh] overflow-y-auto`}
+        className={`bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 w-full ${maxWidth} max-h-[90vh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (

@@ -672,7 +672,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 </select>
                 {linkedPlan && (
                   <span className="text-xs text-[var(--color-brand)]">
-                    · {formatWeight(linkedPlan.total_weight_g / linkedPlan.people_count, tCommon)} на особу · всього {formatWeight(linkedPlan.total_weight_g, tCommon)}
+                    · {formatWeight(linkedPlan.total_weight_g / linkedPlan.people_count, tCommon)} {t('per_person')} · {t('total')} {formatWeight(linkedPlan.total_weight_g, tCommon)}
                   </span>
                 )}
               </>

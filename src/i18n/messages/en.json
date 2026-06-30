@@ -146,7 +146,9 @@
     "gpx_removed": "GPX removed",
     "linked": "Meal plan linked",
     "removed": "Item removed",
-    "updated": "Updated"
+    "updated": "Updated",
+    "per_person": "per person",
+    "total": "total"
   },
   "meals": {
     "title": "Meal Plans",
