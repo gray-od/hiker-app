@@ -129,7 +129,7 @@ export default function ChatWidget() {
     }
 
     if (attachedFile) {
-      const fullContent = `[Файл: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
+      const fullContent = `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
       append({ role: 'user', content: fullContent }, { body: readByok() });
       setInput('');
       setAttachedFile(null);
@@ -149,7 +149,7 @@ export default function ChatWidget() {
       }
 
       if (attachedFile) {
-        const fullContent = `[Файл: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
+        const fullContent = `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
         append({ role: 'user', content: fullContent }, { body: readByok() });
         setInput('');
         setAttachedFile(null);

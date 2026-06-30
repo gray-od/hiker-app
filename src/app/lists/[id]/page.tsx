@@ -192,8 +192,10 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         return;
       }
 
+      toast.success(t('deleted'));
       router.push('/lists');
     } catch (err) {
+      toast.error(tCommon('error'));
       setError(err instanceof Error ? err.message : 'Failed to delete list');
       setDeletingList(false);
     }
@@ -399,6 +401,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
         .insert(inserts);
 
       if (insertError) {
+        toast.error(tCommon('error'));
         setError(insertError.message);
         return;
       }
@@ -459,6 +462,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
 
       setList((prev) => prev ? { ...prev, gpx_data: gpxData } as GearList : null);
     } catch (err: any) {
+      toast.error(tCommon('error'));
       setGpxError(err.message || 'Failed to parse GPX');
     } finally {
       setGpxUploading(false);
@@ -650,17 +654,22 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                 <select
                   value={list?.meal_plan_id || ''}
                   onChange={async (e) => {
-                    const newId = e.target.value || null;
+                    const planId = e.target.value;
                     const prevId = list?.meal_plan_id || '';
-                    const supabase = createClient();
-                    const { error } = await supabase.from('gear_lists').update({ meal_plan_id: newId }).eq('id', id);
-                    if (error) {
-                      setError(error.message);
-                      toast.error(error.message);
+                    try {
+                      const supabase = createClient();
+                      if (planId) {
+                        const { error } = await supabase.from('gear_lists').update({ meal_plan_id: planId }).eq('id', list?.id ?? '');
+                        if (error) throw error;
+                        toast.success(t('linked'));
+                      } else {
+                        const { error } = await supabase.from('gear_lists').update({ meal_plan_id: null }).eq('id', list?.id ?? '');
+                        if (error) throw error;
+                      }
+                      setList((prev) => prev ? { ...prev, meal_plan_id: planId || null } : null);
+                    } catch {
                       e.target.value = prevId;
-                    } else {
-                      toast.success(t('linked'));
-                      setList((prev) => prev ? { ...prev, meal_plan_id: newId as string | null } : null);
+                      toast.error(tCommon('error'));
                     }
                   }}
                   className="text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-zinc-600 dark:text-zinc-400"
@@ -775,6 +784,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                     onClick={() => handleUpdateQuantity(item.id, -1)}
                     disabled={item.quantity <= 1}
                     className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    aria-label={t('quantity')}
                   >
                     −
                   </button>
@@ -788,6 +798,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   <button
                     onClick={() => handleUpdateQuantity(item.id, 1)}
                     className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium"
+                    aria-label={t('quantity')}
                   >
                     +
                   </button>
@@ -821,6 +832,7 @@ export default function ListDetailPage({ params }: { params: Promise<{ id: strin
                   onClick={() => setConfirmRemoveItem(item.id)}
                   className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   title={t('remove_item')}
+                  aria-label={t('remove_item')}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

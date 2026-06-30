@@ -36,7 +36,9 @@
     "privacy_policy": "Политика конфиденциальности",
     "source_code": "GitHub",
     "template_apply_error": "Не удалось применить шаблон",
-    "error_occurred": "Произошла ошибка"
+    "error_occurred": "Произошла ошибка",
+    "locale_uk": "Украинский",
+    "locale_ru": "Русский"
   },
   "nav": {
     "dashboard": "Главная",
@@ -226,7 +228,10 @@
     "deleted": "План удалён",
     "entry_deleted": "Приём пищи удалён",
     "plan_updated": "План обновлён",
-    "updated": "Обновлено"
+    "updated": "Обновлено",
+    "plan_type_comfort": "Комфорт",
+    "plan_type_standard": "Стандарт",
+    "plan_type_ultralight": "Ультралайт"
   },
   "food": {
     "title": "Мои продукты",

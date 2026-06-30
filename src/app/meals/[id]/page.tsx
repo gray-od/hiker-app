@@ -159,7 +159,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       setDays(typedDays);
       setPlan(prev => prev ? { ...prev, total_weight_g: planTotalWeight, days_count: planDaysCount } : null);
     } catch (err) {
-      console.error('recalculateTotals failed', err);
+      toast.error(tCommon('error'));
     }
   }
 
@@ -462,8 +462,10 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       return;
     }
 
+    toast.success(t('deleted'));
     router.push('/meals');
     } catch (err) {
+      toast.error(tCommon('error'));
       setError(err instanceof Error ? err.message : 'Operation failed');
     }
   }
@@ -487,8 +489,10 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
       return;
     }
 
+    toast.success(t('created'));
     await recalculateTotals();
     } catch (err) {
+      toast.error(tCommon('error'));
       setError(err instanceof Error ? err.message : 'Operation failed');
     }
   }
@@ -622,6 +626,7 @@ export default function MealPlanDetailPage({ params }: { params: Promise<{ id: s
     } catch (err) {
       setConfirmTemplate(null);
       setError(tCommon('template_apply_error'));
+      toast.error(tCommon('error'));
     } finally {
       setApplyingTemplate(false);
     }

@@ -429,8 +429,8 @@ export default function MealsPage() {
       )}
 
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <div className="p-6">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 {t('add')}
@@ -625,8 +625,8 @@ export default function MealsPage() {
       )}
 
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {tCommon('delete')}
             </h3>

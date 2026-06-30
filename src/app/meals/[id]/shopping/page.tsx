@@ -8,12 +8,6 @@ import { fetchMealPlanDetail } from '@/lib/supabase/service';
 import type { MealPlan, MealDayWithEntries } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 
-const planTypeNames: Record<string, Record<string, string>> = {
-  comfort: { uk: 'Комфорт', ru: 'Комфорт', en: 'Comfort' },
-  standard: { uk: 'Стандарт', ru: 'Стандарт', en: 'Standard' },
-  ultralight: { uk: 'Ультралайт', ru: 'Ультралайт', en: 'Ultralight' },
-};
-
 export default function ShoppingListPage() {
   const params = useParams();
   const id = params.id as string;
@@ -91,7 +85,12 @@ export default function ShoppingListPage() {
   const daysCount = days.length || 1;
   const peopleCount = plan?.people_count ?? 1;
 
-  const planTypeName = planTypeNames[plan?.plan_type ?? 'standard']?.[locale] ?? plan?.plan_type ?? '';
+  const planTypeLabels: Record<string, string> = {
+    comfort: t('plan_type_comfort'),
+    standard: t('plan_type_standard'),
+    ultralight: t('plan_type_ultralight'),
+  };
+  const planTypeName = planTypeLabels[plan?.plan_type ?? 'standard'] ?? plan?.plan_type ?? '';
   const today = new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US');
 
   // Aggregate all meal entries across days, group by normalized name

@@ -36,7 +36,9 @@
     "privacy_policy": "Privacy Policy",
     "source_code": "GitHub",
     "template_apply_error": "Failed to apply template",
-    "error_occurred": "An error occurred"
+    "error_occurred": "An error occurred",
+    "locale_uk": "Ukrainian",
+    "locale_ru": "Russian"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -226,7 +228,10 @@
     "deleted": "Plan deleted",
     "entry_deleted": "Meal entry deleted",
     "plan_updated": "Plan updated",
-    "updated": "Updated"
+    "updated": "Updated",
+    "plan_type_comfort": "Comfort",
+    "plan_type_standard": "Standard",
+    "plan_type_ultralight": "Ultralight"
   },
   "food": {
     "title": "My Products",

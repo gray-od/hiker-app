@@ -9,12 +9,6 @@ import type { MealPlan, MealDayWithEntries, MealEntry } from '@/lib/types';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
-const planTypeNames: Record<string, Record<string, string>> = {
-  comfort: { uk: 'Комфорт', ru: 'Комфорт', en: 'Comfort' },
-  standard: { uk: 'Стандарт', ru: 'Стандарт', en: 'Standard' },
-  ultralight: { uk: 'Ультралайт', ru: 'Ультралайт', en: 'Ultralight' },
-};
-
 export default function MealPlanPrintPage() {
   const params = useParams();
   const id = params.id as string;
@@ -102,7 +96,12 @@ export default function MealPlanPrintPage() {
   const avgCalPerPersonDay = Math.round(totalCalories / daysCount / peopleCount);
   const avgWeightPerPersonDay = Math.round(totalWeight / daysCount / peopleCount);
 
-  const planTypeName = planTypeNames[plan?.plan_type ?? 'standard']?.[locale] ?? plan?.plan_type ?? '';
+  const planTypeLabels: Record<string, string> = {
+    comfort: t('plan_type_comfort'),
+    standard: t('plan_type_standard'),
+    ultralight: t('plan_type_ultralight'),
+  };
+  const planTypeName = planTypeLabels[plan?.plan_type ?? 'standard'] ?? plan?.plan_type ?? '';
   const today = new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US');
 
   return (

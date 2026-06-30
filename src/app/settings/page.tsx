@@ -10,16 +10,15 @@ import { inputClass, cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
-const locales = [
-  { code: 'uk', label: 'Українська' },
-  { code: 'ru', label: 'Русский' },
-  { code: 'en', label: 'English' },
-] as const;
-
 export default function SettingsPage() {
   const router = useRouter();
   const t = useTranslations('settings');
   const tCommon = useTranslations('common');
+  const locales = [
+    { code: 'uk', label: tCommon('locale_uk') },
+    { code: 'ru', label: tCommon('locale_ru') },
+    { code: 'en', label: 'English' },
+  ] as const;
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -108,11 +107,15 @@ export default function SettingsPage() {
 
   const switchLocale = async (locale: string) => {
     document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
-    setCurrentLocale(locale);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').update({ lang: locale }).eq('id', user.id);
+    try {
+      setCurrentLocale(locale);
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles').update({ lang: locale }).eq('id', user.id);
+      }
+    } catch {
+      // silent — cookie already set, DB update is best-effort
     }
     window.location.reload();
   };
@@ -515,8 +518,8 @@ export default function SettingsPage() {
       </div>
 
       {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] w-full max-w-md">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('delete_confirm_title')}
             </h3>
