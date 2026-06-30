@@ -37,6 +37,7 @@
     "source_code": "GitHub",
     "template_apply_error": "Не вдалося застосувати шаблон",
     "error_occurred": "Сталася помилка",
+    "offline_banner": "Ви офлайн. Дані з кешу.",
     "locale_uk": "Українська",
     "locale_ru": "Російська"
   },
