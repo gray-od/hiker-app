@@ -30,13 +30,8 @@ Pages Router делает SPA-переходы на клиенте (через `
 
 **Round 2 — Фундамент Pages Router:** готовы все базовые файлы.
 **Round 3 — Core pages + API:** адаптированы auth callback, login, dashboard, chat API (AI SDK v7), error/404.
+**Round 4 — All remaining pages:** адаптированы gear, food, lists (3), meals (4), settings, privacy + 2 API + 11 компонентов.
 
-**Готово (R3):**
-- `pages/api/auth/callback.ts` — Supabase OAuth callback (cookie-based)
-- `pages/api/chat.ts` — AI chat API (все 8 tools, rate limit, BYOK, streaming v7)
-- `pages/login.tsx` — Google OAuth + email/password auth
-- `pages/index.tsx` — Dashboard (useEffect + IndexedDB-ready)
-- `pages/_error.tsx` + `pages/404.tsx` — error handling
-- `error_with_status` добавлен в uk/ru/en locale JSON
+**Миграция завершена.** Все страницы и API перенесены. `tsc --noEmit`: 2 ошибки (ChatWidget — из R1, не регресс).
 
-**Осталось:** 13 страниц (gear, food, lists/meals + sub-pages) + 2 API routes (account/delete, byok/validate).
+**Осталось:** деплой на Vercel + Google Cloud redirect URI.
