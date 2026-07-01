@@ -42,6 +42,7 @@ supabase/         — 9 migrations
 | R2 | 2026-06-30 | Pages Router foundation | 11 files: _app, _document, middleware, globals.css, next.config, sw, cache, OfflineBanner + hook fixes |
 | R3 | 2026-06-30 | Core pages + API routes | 9 files: auth callback, login, dashboard, chat API, error, 404, locales fix |
 | R4 | 2026-06-30 | All remaining pages + APIs | 25 files: gear, food, lists, meals, settings, privacy + sub-pages + 2 APIs + 11 list/meal components |
+| R5 | 2026-07-01 | Fix TS errors + Vercel deploy | ChatWidget.tsx — migrate ai/react→@ai-sdk/react v4, install @ai-sdk/react, tsc clean, build OK, pushed to Vercel |
 
 ## What's Done So Far
 
