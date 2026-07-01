@@ -30,10 +30,26 @@ Pages Router делает SPA-переходы на клиенте (через `
 
 ## Current State
 
-**Round 2 — Фундамент Pages Router:** готовы все базовые файлы.
-**Round 3 — Core pages + API:** адаптированы auth callback, login, dashboard, chat API (AI SDK v7), error/404.
-**Round 4 — All remaining pages:** адаптированы gear, food, lists (3), meals (4), settings, privacy + 2 API + 11 компонентов.
+**Миграция завершена.** Все страницы и API перенесены из hiker-app → Pages Router.
 
-**Миграция завершена.** Все страницы и API перенесены. `tsc --noEmit`: 2 ошибки (ChatWidget — из R1, не регресс).
+| Раунд | Сделано |
+|---|---|
+| R1–R4 | Миграция всех страниц, компонентов, хуков, i18n |
+| R5 | Фикс TS-ошибок: `ai/react` → `@ai-sdk/react` v4 (ChatWidget) |
+| R6 | Чистка App Router артефактов (request.ts, createNavigation) |
+| R7 | Фикс 404 на Vercel: замена `next-intl/middleware` на свой middleware |
+| R8 | `LAUNCH.md` — чеклист для публичного запуска |
 
-**Осталось:** деплой на Vercel + Google Cloud redirect URI.
+**Деплой:** Vercel `https://prohikes.vercel.app` — собирается без ошибок. ENVIRONMENT_FALLBACK (косметика) остаётся.
+
+**Не сделано (в LAUNCH.md):**
+- [ ] Google OAuth redirect URI в Google Cloud Console
+- [ ] BYOK миграция на новый API
+- [ ] PWA/офлайн тестирование
+- [ ] SEO, безопасность, мониторинг
+
+## Gotchas
+
+- **`next-intl/middleware` v4 не работает с Pages Router + Next.js 16** — вызывает 404 на всех страницах. Заменён на свой middleware в `src/middleware.ts`.
+- **`ENVIRONMENT_FALLBACK`** — ошибка от `useTranslations()` при сборке, безвредна. Известный баг next-intl v4 + Next.js 16.
+- **`@ai-sdk/react` v4 API** отличается от старого `ai/react` — `input`/`handleInputChange`/`handleSubmit` заменены на ручной `useState` + `sendMessage({ text })`.
