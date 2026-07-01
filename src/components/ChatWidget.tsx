@@ -1,6 +1,5 @@
-'use client';
-
-import { useChat } from 'ai/react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Sparkles, X, Send, Loader2, Maximize2, Minimize2, Copy, Check, Paperclip } from 'lucide-react';
@@ -31,6 +30,14 @@ function stripThoughts(text: string): string {
     .replace(/^\s+/, '');
 }
 
+function getMessageText(msg: any): string {
+  if (!msg.parts) return '';
+  return msg.parts
+    .filter((p: any) => p.type === 'text')
+    .map((p: any) => p.text || '')
+    .join('');
+}
+
 export default function ChatWidget() {
   const t = useTranslations('chat');
   const [open, setOpen] = useState(false);
@@ -42,10 +49,14 @@ export default function ChatWidget() {
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [todayUsage, setTodayUsage] = useState<number | null>(null);
   const [byokActive, setByokActive] = useState(false);
+  const [input, setInput] = useState('');
 
-  const { messages, input, handleInputChange, handleSubmit, append, setInput, isLoading, error } = useChat({
-    api: '/api/chat',
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new DefaultChatTransport({
+      api: '/api/chat',
+    }),
   });
+  const isLoading = status === 'streaming' || status === 'submitted';
 
   useEffect(() => {
     const el = messagesContainerRef.current;
@@ -128,14 +139,12 @@ export default function ChatWidget() {
       setTodayUsage(todayUsage + 1);
     }
 
-    if (attachedFile) {
-      const fullContent = `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
-      append({ role: 'user', content: fullContent }, { body: readByok() });
-      setInput('');
-      setAttachedFile(null);
-    } else {
-      handleSubmit(e, { body: readByok() });
-    }
+    const text = attachedFile
+      ? `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`
+      : input;
+    sendMessage({ text });
+    setInput('');
+    setAttachedFile(null);
     resetTextareaHeight();
   };
 
@@ -148,14 +157,12 @@ export default function ChatWidget() {
         setTodayUsage(todayUsage + 1);
       }
 
-      if (attachedFile) {
-        const fullContent = `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`;
-        append({ role: 'user', content: fullContent }, { body: readByok() });
-        setInput('');
-        setAttachedFile(null);
-      } else {
-        handleSubmit(e, { body: readByok() });
-      }
+      const text = attachedFile
+        ? `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`
+        : input;
+      sendMessage({ text });
+      setInput('');
+      setAttachedFile(null);
       resetTextareaHeight();
     }
   };
@@ -222,7 +229,7 @@ export default function ChatWidget() {
                 >
                   {msg.role === 'user' ? (
                     <div className="max-w-[85%] min-w-0 px-3 py-2 rounded-2xl text-sm leading-relaxed break-words overflow-hidden bg-[var(--color-brand)] text-white rounded-br-md whitespace-pre-wrap">
-                      {msg.content}
+                      {getMessageText(msg)}
                     </div>
                   ) : (
                     <div className="group max-w-[85%] min-w-0">
@@ -246,12 +253,12 @@ export default function ChatWidget() {
                             td: ({ children }) => <td className="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5">{children}</td>,
                           }}
                         >
-                          {stripThoughts(msg.content)}
+                          {stripThoughts(getMessageText(msg))}
                         </ReactMarkdown>
                       </div>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(stripThoughts(msg.content));
+                          navigator.clipboard.writeText(stripThoughts(getMessageText(msg)));
                           setCopiedId(msg.id);
                           setTimeout(() => setCopiedId(null), 2000);
                         }}
@@ -266,7 +273,7 @@ export default function ChatWidget() {
               );
             })}
 
-            {isLoading && messages.length > 0 && (messages[messages.length - 1]?.role === 'user' || !messages[messages.length - 1]?.content) && (
+            {isLoading && messages.length > 0 && (messages[messages.length - 1]?.role === 'user' || !getMessageText(messages[messages.length - 1])) && (
               <div className="flex justify-start">
                 <div className="bg-zinc-100 dark:bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-md">
                   <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
@@ -368,7 +375,7 @@ export default function ChatWidget() {
                 ref={textareaRef}
                 id="chat-input"
                 value={input}
-                onChange={(e) => { handleInputChange(e); adjustTextareaHeight(); }}
+                onChange={(e) => { setInput(e.target.value); adjustTextareaHeight(); }}
                 onKeyDown={onKeyDown}
                 placeholder={t('placeholder')}
                 aria-label={t('placeholder')}
