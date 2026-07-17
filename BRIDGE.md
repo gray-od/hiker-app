@@ -12,9 +12,10 @@
 ## Target Project
 
 - **Path:** `D:\Projects\ProHikes` (current)
-- **Git:** not yet created
+- **Git:** `github.com/gray-od/prohikes` (private, branch `main`)
+- **Vercel:** `prohikes-ten.vercel.app` (public, auto-deploy from `main`; `prohikes.vercel.app` is taken by a stranger)
 - **Stack:** Next.js 16 Pages Router + Supabase
-- **Migration status:** Shared files copied, core setup pending
+- **Migration status:** Complete (R1–R8). Finish & launch tracked in `PLAN.md`
 
 ## What Was Copied (unchanged)
 
@@ -45,8 +46,8 @@
 
 ## Post-Deploy Checklist
 
-- [ ] Vercel new project `prohikes` — copy 6 env vars from hiker-app
-- [ ] Google Cloud Console — add `https://prohikes.vercel.app/api/auth/callback` redirect URI
+- [x] Vercel project exists (`prohikes-ten.vercel.app`) — verify 6 env vars at launch (PLAN.md R13)
+- [ ] Google Cloud Console — add `https://prohikes-ten.vercel.app/api/auth/callback` redirect URI
 - [ ] Test online: auth, all pages, CRUD
 - [ ] Test offline: navigate between pages without internet
 - [ ] When ready: close `gray-od/hiker-app` GitHub repo, remove Vercel project

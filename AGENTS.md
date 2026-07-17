@@ -43,7 +43,11 @@ supabase/         — 9 migrations
 | R3 | 2026-06-30 | Core pages + API routes | 9 files: auth callback, login, dashboard, chat API, error, 404, locales fix |
 | R4 | 2026-06-30 | All remaining pages + APIs | 25 files: gear, food, lists, meals, settings, privacy + sub-pages + 2 APIs + 11 list/meal components |
 | R5 | 2026-07-01 | Fix TS errors + Vercel deploy | ChatWidget.tsx — migrate ai/react→@ai-sdk/react v4, install @ai-sdk/react, tsc clean, build OK, pushed to Vercel |
-| R6 | 2026-07-17 | Supabase July 2026 update analysis (no code impact; keys already new sb_* format) + Supabase MCP setup: PAT `SUPABASE_ACCESS_TOKEN` + `supabase` server in global opencode.json, project-scoped `lcqsbjflososfglajydw` | global opencode.json, AGENTS.md |
+| R6 | 2026-07-01 | Cleanup App Router artifacts (request.ts, createNavigation) — clean build | commit c6e4a19 |
+| R7 | 2026-07-01 | Fix 404 on Vercel: custom middleware replaces next-intl/middleware | commit e5a5a61, src/middleware.ts |
+| R8 | 2026-07-01 | Launch checklist created (LAUNCH.md, superseded by PLAN.md in R10) | commit 445be1b |
+| R9 | 2026-07-17 | Supabase July 2026 update analysis (no code impact; keys already new sb_* format) + Supabase MCP setup: PAT `SUPABASE_ACCESS_TOKEN` + `supabase` server in global opencode.json, project-scoped `lcqsbjflososfglajydw` | global opencode.json, AGENTS.md |
+| R10 | 2026-07-17 | Reality audit + docs sync: deploy exists at prohikes-ten.vercel.app (public), BYOK confirmed broken (client never sends keys), public/sw.js was tracked + build script lacked --webpack (deploy mine), LAUNCH.md → PLAN.md | AGENTS.md, wiki_map_project.md, BRIDGE.md, PLAN.md, .gitignore, package.json |
 
 ## What's Done So Far
 
@@ -63,7 +67,8 @@ supabase/         — 9 migrations
 - [x] Error + 404 pages (`_error.tsx`, `404.tsx`)
 - [x] Remaining 13 pages (gear, food, lists, meals + sub-pages)
 - [x] 2 API routes (account/delete, byok/validate)
-- [ ] Deploy to Vercel + Google Cloud redirect URI
+- [x] Vercel deploy exists: `https://prohikes-ten.vercel.app` (public, auto-deploy from GitHub main)
+- [ ] Finish & launch — see `PLAN.md` (single source of truth for remaining work)
 
 ## Page Migration Map
 
@@ -114,11 +119,11 @@ supabase/         — 9 migrations
 
 ## External Changes Needed (after deploy)
 
-1. **Google Cloud Console:** Add redirect URI `https://prohikes.vercel.app/api/auth/callback` to existing OAuth client
-2. **Vercel:** New project `prohikes` with same 6 env vars from hiker-app
-3. **Supabase:** No changes (same project, same DB, same RLS)
+1. **Google Cloud Console:** Add redirect URI `https://prohikes-ten.vercel.app/api/auth/callback` to existing OAuth client
+2. **Vercel:** Project `prohikes` exists (domain `prohikes-ten.vercel.app` — `prohikes.vercel.app` is taken by a stranger; alias `hiker.vercel.app` is free). Verify 6 env vars
+3. **Supabase:** Add `https://prohikes-ten.vercel.app` to Auth Redirect URLs (via Management API)
 
-## Supabase MCP (since R6)
+## Supabase MCP (since R9)
 
 - Global MCP server `supabase` (opencode.json) → Management API, scoped to project `lcqsbjflososfglajydw` (prod DB, shared with live hiker-app)
 - **Rule: DDL via `apply_migration`/`execute_sql` — ONLY after explicit user confirmation per migration**

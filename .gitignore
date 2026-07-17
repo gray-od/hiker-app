@@ -42,3 +42,7 @@ next-env.d.ts
 
 # credentials
 prohiker_*.md
+
+# serwist build artifacts
+/public/sw.js
+/public/swe-worker-*.js
