@@ -48,6 +48,7 @@ supabase/         — 9 migrations
 | R8 | 2026-07-01 | Launch checklist created (LAUNCH.md, superseded by PLAN.md in R10) | commit 445be1b |
 | R9 | 2026-07-17 | Supabase July 2026 update analysis (no code impact; keys already new sb_* format) + Supabase MCP setup: PAT `SUPABASE_ACCESS_TOKEN` + `supabase` server in global opencode.json, project-scoped `lcqsbjflososfglajydw` | global opencode.json, AGENTS.md |
 | R10 | 2026-07-17 | Reality audit + docs sync: deploy exists at prohikes-ten.vercel.app (public), BYOK confirmed broken (client never sends keys), public/sw.js was tracked + build script lacked --webpack (deploy mine), LAUNCH.md → PLAN.md | AGENTS.md, wiki_map_project.md, BRIDGE.md, PLAN.md, .gitignore, package.json |
+| R11 | 2026-07-17 | BYOK fix: readByok hoisted to module level, wired via `body: () => readByok()` into DefaultChatTransport (ai@7 Resolvable, fresh per request); tsc clean, build+SW OK | src/components/ChatWidget.tsx |
 
 ## What's Done So Far
 

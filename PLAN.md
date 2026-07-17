@@ -20,14 +20,14 @@
 
 ---
 
-## R11 — BYOK-фикс (код)
+## R11 — BYOK-фикс (код) ✅ (2026-07-17)
 
-- [ ] `ChatWidget.tsx`: прокинуть `readByok()` в тело каждого запроса — `body`-опция `DefaultChatTransport` или кастомный `fetch` (проверить сигнатуру в `node_modules/ai`)
-- [ ] Сверить контракт с `pages/api/chat.ts:38` (`{ messages, ai, search }`)
-- [ ] `npx tsc --noEmit` чисто
-- [ ] `npx next build --webpack` успешен, `public/sw.js` генерируется
+- [x] `ChatWidget.tsx`: `readByok()` вынесен на уровень модуля, прокинут через `body: () => readByok()` в `DefaultChatTransport` (Resolvable — вычисляется на каждый запрос)
+- [x] Контракт сверен: сервер ждёт `{ messages, ai, search }` — форма совпадает
+- [x] `npx tsc --noEmit` чисто
+- [x] `npx next build --webpack` успешен, `public/sw.js` генерируется (43 896 байт)
 
-**Выход:** ключи из localStorage доходят до API; сборка зелёная.
+**Выход:** ключи из localStorage доходят до API; сборка зелёная. ✅
 
 ## R12 — Офлайн локально (суть проекта)
 

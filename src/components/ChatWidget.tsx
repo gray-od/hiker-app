@@ -38,6 +38,17 @@ function getMessageText(msg: any): string {
     .join('');
 }
 
+function readByok() {
+  if (typeof window === 'undefined') return { ai: null, search: null };
+  const parse = (k: string) => {
+    try {
+      const v = localStorage.getItem(k);
+      return v ? JSON.parse(v) : null;
+    } catch { return null; }
+  };
+  return { ai: parse('prohikes.ai'), search: parse('prohikes.search') };
+}
+
 export default function ChatWidget() {
   const t = useTranslations('chat');
   const [open, setOpen] = useState(false);
@@ -54,6 +65,7 @@ export default function ChatWidget() {
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/chat',
+      body: () => readByok(),
     }),
   });
   const isLoading = status === 'streaming' || status === 'submitted';
@@ -118,17 +130,6 @@ export default function ChatWidget() {
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
     }, 0);
   }, []);
-
-  const readByok = () => {
-    if (typeof window === 'undefined') return { ai: null, search: null };
-    const parse = (k: string) => {
-      try {
-        const v = localStorage.getItem(k);
-        return v ? JSON.parse(v) : null;
-      } catch { return null; }
-    };
-    return { ai: parse('prohikes.ai'), search: parse('prohikes.search') };
-  };
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
