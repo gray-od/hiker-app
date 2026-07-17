@@ -29,14 +29,18 @@
 
 **Выход:** ключи из localStorage доходят до API; сборка зелёная. ✅
 
-## R12 — Офлайн локально (суть проекта)
+## R12 — Офлайн локально (суть проекта) — в процессе
 
-- [ ] `npx next build --webpack` → осмотреть precache manifest в `public/sw.js` (все ли статик-ассеты и JS-бандлы страниц)
-- [ ] `npx next start` → залогиниться → обойти все страницы онлайн (прогрев IndexedDB + SW-кэша)
-- [ ] DevTools → Offline → пройти все 13 страниц: dashboard, gear, food, lists, lists/[id], lists/[id]/print, meals, meals/[id], meals/[id]/print, meals/[id]/shopping, settings, privacy, login
-- [ ] Данные из IndexedDB отображаются (gear, lists, meals)
-- [ ] OfflineBanner показывается при потере сети
-- [ ] Фикс-цикл при провалах (агенты), критерий — все страницы живы офлайн
+- [x] `npx next build --webpack` → precache manifest осмотрен: все чанки страниц (вкл. динамические `[id]` в URL-кодировке), framework/main, CSS, шрифты
+- [x] `npx next start` → первый прогон пользователем: **OfflineBanner ✅, страницы открываются ✅, F5 офлайн выживает ✅**
+- [x] Фикс-цикл №1 (2026-07-17):
+  - [x] uuid "undefined" — guard `router.isReady + typeof id === 'string'` во всех 5 динамических страницах
+  - [x] `manifest.json` создан (был 404 → PWA-установка не работала), apple-touch-icon починен (`/icons/…` → `/icon-180x180.png`), добавлен `mobile-web-app-capable`
+  - [x] React #418 (гидрация): локаль — двухпроходный паттерн в `_app.tsx` (SSR/первый рендер = path-локаль или uk, cookie — после mount); даты в 3 print/shopping-страницах — в useEffect
+- [ ] Повторный прогон пользователем: uuid-ошибка ушла, консоль чистая (кроме Vercel insights — норма локально), офлайн-обход полный
+- [ ] Данные из IndexedDB отображаются офлайн (gear, lists, meals)
+
+**Известное локальное «не-баг»:** `/_vercel/insights/script.js ERR_FAILED` — скрипт Vercel Analytics существует только на платформе Vercel; на проде заработает. Шум «listener indicated an asynchronous response» — расширения браузера, не наш код.
 
 **Выход:** полная офлайн-навигация с данными локально. **Ворота для push.**
 

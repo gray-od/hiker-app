@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import "@/styles/globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { AppProps } from "next/app";
@@ -29,26 +30,27 @@ const allMessages: Record<string, Record<string, unknown>> = {
 
 const SUPPORTED_LOCALES = ["uk", "ru", "en"];
 
-function getLocale(router: ReturnType<typeof useRouter>): string {
-  // Try from first path segment: /ru/gear → ru, /gear → fallback
-  const pathParts = router.asPath.split("/").filter(Boolean);
+function getPathLocale(asPath: string): string {
+  const pathParts = asPath.split("/").filter(Boolean);
   if (pathParts.length > 0 && SUPPORTED_LOCALES.includes(pathParts[0])) {
     return pathParts[0];
-  }
-  // Try NEXT_LOCALE cookie (client-side only to avoid SSR issues)
-  if (typeof document !== "undefined") {
-    const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
-    if (match && SUPPORTED_LOCALES.includes(match[1])) {
-      return match[1];
-    }
   }
   return "uk";
 }
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  const locale = getLocale(router);
+  const [locale, setLocale] = useState(() => getPathLocale(router.asPath));
   const messages = allMessages[locale];
+
+  useEffect(() => {
+    // Path prefix always wins; cookie lookup only when no prefix
+    if (getPathLocale(router.asPath) !== "uk") return;
+    const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
+    if (match && SUPPORTED_LOCALES.includes(match[1]) && match[1] !== "uk") {
+      setLocale(match[1]);
+    }
+  }, [router.asPath]);
 
   return (
     <div

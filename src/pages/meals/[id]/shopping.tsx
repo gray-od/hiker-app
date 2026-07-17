@@ -25,6 +25,7 @@ export default function ShoppingListPage() {
   }, []);
 
   useEffect(() => {
+    if (!router.isReady || typeof id !== 'string') return;
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -53,6 +54,12 @@ export default function ShoppingListPage() {
       setError(tCommon('error_loading'));
     });
   }, [id, router]);
+
+  const [today, setToday] = useState('');
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US'));
+  }, [locale]);
 
   if (loading) {
     return (
@@ -89,7 +96,6 @@ export default function ShoppingListPage() {
     ultralight: t('plan_type_ultralight'),
   };
   const planTypeName = planTypeLabels[plan?.plan_type ?? 'standard'] ?? plan?.plan_type ?? '';
-  const today = new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US');
 
   // Aggregate all meal entries across days, group by normalized name
   const map = new Map<string, { name: string; weight_g: number }>();

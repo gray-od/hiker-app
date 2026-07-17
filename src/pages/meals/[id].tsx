@@ -82,6 +82,7 @@ export default function MealPlanDetailPage() {
   }, []);
 
   useEffect(() => {
+    if (!router.isReady || typeof id !== 'string') return;
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {

@@ -49,6 +49,7 @@ export default function ListDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
   useEffect(() => {
+    if (!router.isReady || typeof id !== 'string') return;
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {

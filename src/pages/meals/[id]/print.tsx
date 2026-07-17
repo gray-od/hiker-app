@@ -26,6 +26,7 @@ export default function MealPlanPrintPage() {
   }, []);
 
   useEffect(() => {
+    if (!router.isReady || typeof id !== 'string') return;
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -54,6 +55,12 @@ export default function MealPlanPrintPage() {
       setError(tCommon('error_loading'));
     });
   }, [id, router]);
+
+  const [today, setToday] = useState('');
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US'));
+  }, [locale]);
 
   if (loading) {
     return (
@@ -100,7 +107,6 @@ export default function MealPlanPrintPage() {
     ultralight: t('plan_type_ultralight'),
   };
   const planTypeName = planTypeLabels[plan?.plan_type ?? 'standard'] ?? plan?.plan_type ?? '';
-  const today = new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US');
 
   return (
     <>

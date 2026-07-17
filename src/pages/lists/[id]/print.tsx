@@ -20,6 +20,7 @@ export default function PrintListPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!router.isReady || typeof id !== 'string') return;
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -55,6 +56,12 @@ export default function PrintListPage() {
       setError(tCommon('error_loading'));
     });
   }, [id, router]);
+
+  const [today, setToday] = useState('');
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString('uk-UA'));
+  }, []);
 
   if (loading) {
     return (
@@ -104,8 +111,6 @@ export default function PrintListPage() {
   }, 0);
 
   const totalWeight = baseWeight + wornWeight + consumableWeight;
-
-  const today = new Date().toLocaleDateString('uk-UA');
 
   return (
     <div className="min-h-screen bg-white text-black">

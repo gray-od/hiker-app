@@ -5,6 +5,7 @@ export default function Document() {
     <Html lang="uk">
       <Head>
         {/* PWA meta tags */}
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta
@@ -18,7 +19,7 @@ export default function Document() {
           media="(prefers-color-scheme: dark)"
         />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icon-180x180.png" />
 
         {/* Plausible analytics */}
         {process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN && (
