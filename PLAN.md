@@ -44,33 +44,44 @@
 
 **Выход достигнут: полная офлайн-навигация с данными локально. Ворота для push ОТКРЫТЫ.** ✅
 
-## R13 — Деплой
+## R13 — Деплой (следующий шаг; ждёт подтверждения пользователя)
 
-- [ ] Подтверждение пользователя → `git push` (автодеплой prohikes-ten)
-- [ ] Проверить на Vercel: build прошёл c webpack, `/sw.js` отдаётся, регистрация SW в HTML
+Порядок согласован 2026-07-17. Открытие: **Google Cloud Console НЕ нужен** — вход идёт `signInWithOAuth` через Supabase (`login.tsx:67-70`), Google видит только Supabase-callback, он уже прописан (hiker-app работает через него).
+
+- [ ] **Я, PATCH auth-конфига** (Management API, одним вызовом): `uri_allow_list` += `https://prohikes-ten.vercel.app/**`; `site_url` → `https://prohikes-ten.vercel.app` (ссылки в письмах перестанут вести на localhost). Подтверждение почты НЕ отключаем
+- [ ] Подтверждение пользователя → `git push` (уедут коммиты R9–R12, автодеплой prohikes-ten)
+- [ ] Проверить деплой через GitHub API (state=success) + Vercel build с webpack: `/sw.js` отдаётся, precache свежий
 - [ ] Проверить 6 env vars в Vercel: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_GENERATIVE_AI_API_KEY, EXA_API_KEY, NEXT_PUBLIC_DONATE_URL
-- [ ] **Google Cloud Console (пользователь):** добавить `https://prohikes-ten.vercel.app/api/auth/callback` в Authorized redirect URIs; проверить `http://localhost:3000/api/auth/callback` для dev
-- [ ] **Supabase (я, Management API):** добавить `https://prohikes-ten.vercel.app` в Auth Redirect URLs
-- [ ] Прод-smoke онлайн: email-вход, Google-вход, чат AI, CRUD gear/lists/meals
+- [ ] Smoke пользователем: **Google-вход** (аккаунт s.odessa0 — общая БД, данные на месте), чат AI, CRUD, офлайн на телефоне
+- [ ] Email-форма остаётся как есть (заработает в R14 после SMTP)
 - [ ] Опционально: алиас `hiker.vercel.app` (свободен)
 
-**Выход:** прод работает онлайн, оба входа живы.
+**Выход:** прод живой, Google-вход работает, офлайн на телефоне подтверждён.
 
-## R14 — Прод-офлайн + запуск-QA
+## R14 — Email-регистрация (SMTP) + прод-QA + запуск
 
-Офлайн на проде:
+**Продуктовое решение (2026-07-17): регистрация email+пароль ОБЯЗАТЕЛЬНА для запуска** (Европа не доверяет Google-входу). Факт: в hiker-app она никогда не работала — спящая поломка (все 3 юзера — Google; site_url=localhost; встроенный SMTP 2 письма/час).
+
+SMTP (путь B, согласован):
+- [ ] Пользователь: завести бесплатный аккаунт Resend или Brevo (100–300 писем/день), получить SMTP-ключ (пошаговую инструкцию дам на месте)
+- [ ] Я: вписать SMTP в Supabase через Management API + поднять rate limit писем
+- [ ] Подтверждение почты остаётся ВКЛючённым (правильно для Европы)
+- [ ] Тест end-to-end: регистрация свежей почтой → письмо дошло (не спам) → ссылка ведёт на прод → аккаунт подтверждён → вход
+- [ ] Позже (опционально): свой домен для отправителя (`no-reply@…`) — лучшая доставляемость
+
+Прод-офлайн:
 - [ ] Телефон: открыть сайт → авиарежим → навигация по страницам с данными
 
 Финализация (из старого LAUNCH.md):
-- [ ] Supabase Auth Settings: Confirm email (решить UX), Rate Limiting
+- [ ] Supabase Auth Settings: Rate Limiting ревизия
 - [ ] Vercel Analytics включить (`@vercel/analytics` уже в deps)
 - [ ] Лимиты Serverless Functions (AI-чат долгий)
-- [ ] SEO: `<Head>` на всех страницах (сейчас на dashboard нет `<title>`!), favicon/manifest/robots, sitemap по желанию
+- [ ] SEO: `<Head>` на всех страницах (сейчас на dashboard нет `<title>`!), favicon/robots, sitemap по желанию
 - [ ] Безопасность: SERVICE_ROLE_KEY только в API-роутах; RLS-политики (через MCP advisors); нет секретов в NEXT_PUBLIC_*; CSP-заголовки
 - [ ] Мониторинг: Vercel Runtime Logs, алерты Supabase, логирование в `_error.tsx`
 - [ ] README.md обновить (локальный запуск, env vars)
 
-Финальная QA-матрица:
+Финальная QA-матрица (перед «в свет»):
 - [ ] Регистрация + email-вход | Google-вход | AI-чат | CRUD gear | CRUD lists | CRUD meals | uk/ru/en | тёмная/светлая тема | мобильная вёрстка | офлайн
 
-**Выход:** проект запущен. hiker-app закрыть (репо + Vercel) — по решению пользователя.
+**Выход:** проект запущен публично. hiker-app закрыть (репо + Vercel) — по решению пользователя.

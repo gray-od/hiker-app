@@ -121,9 +121,10 @@ supabase/         — 9 migrations
 
 ## External Changes Needed (after deploy)
 
-1. **Google Cloud Console:** Add redirect URI `https://prohikes-ten.vercel.app/api/auth/callback` to existing OAuth client
+1. **Google Cloud Console: НЕ ТРЕБУЕТСЯ** — вход через `signInWithOAuth` (Supabase-callback уже прописан у Google; проверено в R12/R13-планировании)
 2. **Vercel:** Project `prohikes` exists (domain `prohikes-ten.vercel.app` — `prohikes.vercel.app` is taken by a stranger; alias `hiker.vercel.app` is free). Verify 6 env vars
-3. **Supabase:** Add `https://prohikes-ten.vercel.app` to Auth Redirect URLs (via Management API)
+3. **Supabase (R13, Management API):** `uri_allow_list` += `https://prohikes-ten.vercel.app/**`; `site_url` → prod URL
+4. **SMTP (R14):** кастомный отправитель (Resend/Brevo) — email-регистрация обязательна для запуска (Европа)
 
 ## Supabase MCP (since R9)
 

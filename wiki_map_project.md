@@ -41,10 +41,14 @@ Pages Router делает SPA-переходы на клиенте (через `
 | R8 | `LAUNCH.md` — чеклист запуска (в R10 заменён на `PLAN.md`) |
 | R9 | Supabase MCP подключён (PAT + opencode.json); July 2026 update — без влияния на код |
 | R10 | Аудит реальности + синхронизация документации; `public/sw.js` убран из git; build script → `--webpack` |
+| R11 | BYOK-фикс: ключи уходят с каждым запросом (`body: () => readByok()`) |
+| R12 | Локальный офлайн-тест ПРОЙДЕН + фиксы: uuid-guard'ы, manifest.json, гидрация #418 |
+
+**Стоп-точка (2026-07-17):** R12 закрыт, локально 5 коммитов (ahead 5), **push НЕ делался**. Следующий шаг — R13 (PATCH auth-конфига + push + Google-smoke), детали в PLAN.md.
 
 **Деплой:** `https://prohikes-ten.vercel.app` — публичный, автодеплой из GitHub `main` (Vercel-проект подвязан к репо). Адрес `prohikes.vercel.app` занят чужим проектом и нашим не будет. Свободный кандидат на алиас: `hiker.vercel.app`. ENVIRONMENT_FALLBACK (косметика) остаётся.
 
-**Осталось до запуска — см. `PLAN.md`:** BYOK-фикс (сломан: клиент не отправляет ключи), локальный офлайн-тест, деплой с рабочим SW, Google OAuth URI, запуск-QA.
+**Осталось до запуска — см. `PLAN.md`:** R13 деплой (PATCH auth + push + Google-smoke) → R14 email-регистрация через SMTP (обязательна для Европы) + прод-офлайн + QA.
 
 ⚠️ **Push embargo:** пуш в GitHub = автодеплой на Vercel. Пушить только с явного «да» пользователя (после локальной проверки офлайна).
 
@@ -55,4 +59,6 @@ Pages Router делает SPA-переходы на клиенте (через `
 - **`@ai-sdk/react` v4 API** отличается от старого `ai/react` — `input`/`handleInputChange`/`handleSubmit` заменены на ручной `useState` + `sendMessage({ text })`.
 - **`prohikes.vercel.app` — чужой сайт** («ProHikes - Digital Services»). Наш домен: `prohikes-ten.vercel.app`. Не путать в конфигах Google OAuth / Supabase.
 - **Vercel собирает без `--webpack`, если build script его не указывает** → Serwist не запускается → SW нет/устаревший. `public/sw.js` — build-артефакт, в git ему не место (вычищен в R10).
-- **BYOK после миграции на `@ai-sdk/react` v4** — `readByok()` читает ключи, но транспорт их не отправляет (`ChatWidget.tsx`: транспорт без `body`). Сервер ждёт `req.body.ai/search`. Чинится в R11 (PLAN.md).
+- **BYOK после миграции на `@ai-sdk/react` v4** — `readByok()` читает ключи, но транспорт их не отправляет (`ChatWidget.tsx`: транспорт без `body`). Сервер ждёт `req.body.ai/search`. Починено в R11.
+- **Email-регистрация никогда не работала** (и в hiker-app тоже — спящая поломка): встроенный SMTP Supabase = 2 письма/час + `site_url` указывал на localhost (ссылки из писем вели в никуда). Все 3 существующих юзера — Google. Лечится в R14: кастомный SMTP (Resend/Brevo) + `site_url` на прод (R13).
+- **Google Cloud Console для входа НЕ нужен** — `signInWithOAuth` идёт через Supabase-callback, который уже прописан у Google. Единственный замок прод-входа — `uri_allow_list` в Supabase (PATCH в R13).
