@@ -43,6 +43,7 @@ supabase/         — 9 migrations
 | R3 | 2026-06-30 | Core pages + API routes | 9 files: auth callback, login, dashboard, chat API, error, 404, locales fix |
 | R4 | 2026-06-30 | All remaining pages + APIs | 25 files: gear, food, lists, meals, settings, privacy + sub-pages + 2 APIs + 11 list/meal components |
 | R5 | 2026-07-01 | Fix TS errors + Vercel deploy | ChatWidget.tsx — migrate ai/react→@ai-sdk/react v4, install @ai-sdk/react, tsc clean, build OK, pushed to Vercel |
+| R6 | 2026-07-17 | Supabase July 2026 update analysis (no code impact; keys already new sb_* format) + Supabase MCP setup: PAT `SUPABASE_ACCESS_TOKEN` + `supabase` server in global opencode.json, project-scoped `lcqsbjflososfglajydw` | global opencode.json, AGENTS.md |
 
 ## What's Done So Far
 
@@ -116,6 +117,11 @@ supabase/         — 9 migrations
 1. **Google Cloud Console:** Add redirect URI `https://prohikes.vercel.app/api/auth/callback` to existing OAuth client
 2. **Vercel:** New project `prohikes` with same 6 env vars from hiker-app
 3. **Supabase:** No changes (same project, same DB, same RLS)
+
+## Supabase MCP (since R6)
+
+- Global MCP server `supabase` (opencode.json) → Management API, scoped to project `lcqsbjflososfglajydw` (prod DB, shared with live hiker-app)
+- **Rule: DDL via `apply_migration`/`execute_sql` — ONLY after explicit user confirmation per migration**
 
 ## Verification
 
