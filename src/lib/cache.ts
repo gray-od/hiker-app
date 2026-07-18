@@ -52,6 +52,15 @@ export async function clearCache(): Promise<void> {
   }
 }
 
+export async function removeCache(key: string): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.delete('cache', key);
+  } catch {
+    // Silently fail
+  }
+}
+
 /**
  * Wraps a fetch function with cache-first strategy.
  * Returns cached data immediately if available, then updates in background from network.
