@@ -98,7 +98,7 @@ export default function LoginPage() {
       }
       router.push('/');
     } else {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
@@ -106,6 +106,10 @@ export default function LoginPage() {
       if (authError) {
         setError(authError.message);
         setEmailLoading(false);
+        return;
+      }
+      if (data?.session) {
+        router.push('/');
         return;
       }
       setSignUpSuccess(true);
