@@ -9,6 +9,7 @@ export default function NotFound() {
     <>
       <Head>
         <title>404 — ProHikes</title>
+        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black p-4">
         <div className="text-center">

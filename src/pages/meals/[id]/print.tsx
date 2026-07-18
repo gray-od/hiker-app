@@ -112,6 +112,7 @@ export default function MealPlanPrintPage() {
     <>
       <Head>
         <title>ProHikes — {plan?.name ?? 'Meal Plan'} — {tCommon('print')}</title>
+        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
       <style>{`
         @page { margin: 1cm; }

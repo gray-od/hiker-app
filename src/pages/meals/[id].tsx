@@ -664,6 +664,7 @@ export default function MealPlanDetailPage() {
     <>
       <Head>
         <title>ProHikes — {plan?.name ?? 'Meal Plan'}</title>
+        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
       <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
         {error && (

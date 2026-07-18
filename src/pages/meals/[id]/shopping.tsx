@@ -117,6 +117,7 @@ export default function ShoppingListPage() {
     <>
       <Head>
         <title>ProHikes — {t('shopping_list')}</title>
+        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
       <style>{`
         @page { margin: 1cm; }

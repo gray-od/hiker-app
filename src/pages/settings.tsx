@@ -231,6 +231,7 @@ export default function SettingsPage() {
     <div className="flex-1 p-4 md:p-8 max-w-2xl mx-auto w-full">
       <Head>
         <title>ProHikes — {t('title')}</title>
+        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
 
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">

@@ -9,6 +9,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <Head>
         <title>ProHikes — Privacy Policy</title>
+        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
 
       <div className="max-w-2xl mx-auto px-4 py-12 md:py-20">

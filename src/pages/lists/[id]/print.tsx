@@ -116,6 +116,7 @@ export default function PrintListPage() {
     <div className="min-h-screen bg-white text-black">
       <Head>
         <title>ProHikes — {t('print')} — {list.name}</title>
+        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
 
       <div className="print:hidden flex items-center justify-between p-4 border-b border-zinc-200">
