@@ -5,14 +5,11 @@
 Migrated from `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) to Pages Router.
 
 **GitHub:** https://github.com/gray-od/prohikes (private, branch `main`)
-
 **Source context:** `D:\Projects\hiker-app\AGENTS.md` + `D:\Projects\hiker-app\wiki_map_project.md`
 
 ## Why Pages Router
 
-App Router RSC-навигация требует сервер при каждом переходе между страницами. Без интернета — навигация ломается. 3 попытки исправить (R19, R51, R52) в исходном проекте провалились.
-
-Pages Router делает SPA-переходы на клиенте (через `next/link` + JS-роутер). Без сервера. С IndexedDB для данных и Serwist SW для статики — полноценный офлайн.
+App Router RSC-навигация требует сервер при каждом переходе. Без интернета — навигация ломается. Pages Router делает SPA-переходы на клиенте — офлайн-совместим.
 
 ## Architecture
 
@@ -23,42 +20,62 @@ Pages Router делает SPA-переходы на клиенте (через `
 | БД + Auth | Supabase (тот же проект что и hiker-app) |
 | i18n | next-intl v4 (uk/ru/en, middleware-based) |
 | Темы | next-themes |
-| AI | Gemma 4 26B (native @ai-sdk/google) + Exa + Open-Meteo |
+| AI | Gemma 4 26B (`ai@4.3.19` + `@ai-sdk/google@1.2.22`) + Exa + Open-Meteo |
 | SW | @serwist/next + webpack |
-| Офлайн-данные | IndexedDB (idb) cache-first в service.ts |
-| Хостинг | Vercel (новый проект prohikes) |
+| Офлайн-данные | IndexedDB (idb) cache-first в service.ts (R15) |
+| Хостинг | Vercel (проект prohikes) |
 
 ## Current State
 
-**Миграция завершена (R1–R8). Идёт доводка до запуска — план в `PLAN.md`.**
+**Код готов (R1–R17). Email-регистрация БЕЗ подтверждения (autoconfirm). Сброс пароля НЕ работает. SMTP — открытый вопрос.**
 
-| Раунд | Сделано |
+### Что работает (R1–R17)
+
+| Функция | Статус |
 |---|---|
-| R1–R4 | Миграция всех страниц, компонентов, хуков, i18n |
-| R5 | Фикс TS-ошибок: `ai/react` → `@ai-sdk/react` v4 (ChatWidget) |
-| R6 | Чистка App Router артефактов (request.ts, createNavigation) |
-| R7 | Фикс 404 на Vercel: замена `next-intl/middleware` на свой middleware |
-| R8 | `LAUNCH.md` — чеклист запуска (в R10 заменён на `PLAN.md`) |
-| R9 | Supabase MCP подключён (PAT + opencode.json); July 2026 update — без влияния на код |
-| R10 | Аудит реальности + синхронизация документации; `public/sw.js` убран из git; build script → `--webpack` |
-| R11 | BYOK-фикс: ключи уходят с каждым запросом (`body: () => readByok()`) |
-| R12 | Локальный офлайн-тест ПРОЙДЕН + фиксы: uuid-guard'ы, manifest.json, гидрация #418 |
+| Все 17 страниц (полный паритет с hiker-app) | ✅ |
+| Google-вход | ✅ |
+| AI-чат (Gemma 4, BYOK, 8 инструментов) | ✅ |
+| CRUD gear/food/lists/meals | ✅ |
+| Офлайн: SW (Serwist) + IndexedDB (cache.ts → service.ts) | ✅ |
+| i18n (uk/ru/en), тёмная тема | ✅ |
+| favicon, robots.txt, SEO meta на всех страницах | ✅ |
+| Email-регистрация (autoconfirm: true) | ✅ Без подтверждения |
 
-**Стоп-точка (2026-07-17):** R12 закрыт, локально 5 коммитов (ahead 5), **push НЕ делался**. Следующий шаг — R13 (PATCH auth-конфига + push + Google-smoke), детали в PLAN.md.
+### Что НЕ работает
 
-**Деплой:** `https://prohikes-ten.vercel.app` — публичный, автодеплой из GitHub `main` (Vercel-проект подвязан к репо). Адрес `prohikes.vercel.app` занят чужим проектом и нашим не будет. Свободный кандидат на алиас: `hiker.vercel.app`. ENVIRONMENT_FALLBACK (косметика) остаётся.
+| Функция | Причина |
+|---|---|
+| Подтверждение email при регистрации | Нет работающего SMTP |
+| Сброс пароля | Нет работающего SMTP |
 
-**Осталось до запуска — см. `PLAN.md`:** R13 деплой (PATCH auth + push + Google-smoke) → R14 email-регистрация через SMTP (обязательна для Европы) + прод-офлайн + QA.
+### Блокер: SMTP
 
-⚠️ **Push embargo:** пуш в GitHub = автодеплой на Vercel. Пушить только с явного «да» пользователя (после локальной проверки офлайна).
+Проверены варианты без своего домена:
+- **Resend** — требует домен (бесплатно только на свой email)
+- **Brevo** — аккаунт не активирован для SMTP (нужен контакт с поддержкой)
+- **Gmail SMTP** — Google блокирует отправку с серверов Supabase
+- **Supabase встроенный** — только для авторизованных адресатов на бесплатном плане
+
+**Вывод:** без своего домена никакой SMTP-провайдер не отправляет письма подтверждения произвольным получателям. Это индустриальный стандарт (SPF/DKIM/DMARC).
+
+**Workaround сейчас:** пользователь забыл пароль → входит через Google (та же почта).
+
+### Деплой
+
+`https://prohikes-ten.vercel.app` — автодеплой из GitHub `main`.
+
+### Push embargo
+
+⚠️ Пуш = автодеплой на Vercel. Пушить только с явного «да» пользователя.
 
 ## Gotchas
 
-- **`next-intl/middleware` v4 не работает с Pages Router + Next.js 16** — вызывает 404 на всех страницах. Заменён на свой middleware в `src/middleware.ts`.
-- **`ENVIRONMENT_FALLBACK`** — ошибка от `useTranslations()` при сборке, безвредна. Известный баг next-intl v4 + Next.js 16.
-- **`@ai-sdk/react` v4 API** отличается от старого `ai/react` — `input`/`handleInputChange`/`handleSubmit` заменены на ручной `useState` + `sendMessage({ text })`.
-- **`prohikes.vercel.app` — чужой сайт** («ProHikes - Digital Services»). Наш домен: `prohikes-ten.vercel.app`. Не путать в конфигах Google OAuth / Supabase.
-- **Vercel собирает без `--webpack`, если build script его не указывает** → Serwist не запускается → SW нет/устаревший. `public/sw.js` — build-артефакт, в git ему не место (вычищен в R10).
-- **BYOK после миграции на `@ai-sdk/react` v4** — `readByok()` читает ключи, но транспорт их не отправляет (`ChatWidget.tsx`: транспорт без `body`). Сервер ждёт `req.body.ai/search`. Починено в R11.
-- **Email-регистрация никогда не работала** (и в hiker-app тоже — спящая поломка): встроенный SMTP Supabase = 2 письма/час + `site_url` указывал на localhost (ссылки из писем вели в никуда). Все 3 существующих юзера — Google. Лечится в R14: кастомный SMTP (Resend/Brevo) + `site_url` на прод (R13).
-- **Google Cloud Console для входа НЕ нужен** — `signInWithOAuth` идёт через Supabase-callback, который уже прописан у Google. Единственный замок прод-входа — `uri_allow_list` в Supabase (PATCH в R13).
+- **`next-intl/middleware` v4 не работает с Pages Router + Next.js 16** — заменён на свой middleware.
+- **`ENVIRONMENT_FALLBACK`** — ошибка при сборке, безвредна. Баг next-intl v4 + Next.js 16.
+- **`ai@4` vs `ai@7`** — ProHikes использует `ai@4.3.19` (зеркало hiker-app). Обновление до v7 в R5 было ошибкой — откат в R13.
+- **`prohikes.vercel.app` — чужой сайт.** Наш домен: `prohikes-ten.vercel.app`.
+- **Vercel собирает без `--webpack` → SW нет.** Исправлено: build script = `next build --webpack`.
+- **`gray@multima.local`** — git email исправлен на `s.odessa0@gmail.com` (R13).
+- **Email-регистрация не работала в hiker-app тоже** — спящая поломка (все 3 юзера — Google).
+- **Google Cloud Console для входа НЕ нужен** — `signInWithOAuth` через Supabase-callback.

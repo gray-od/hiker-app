@@ -21,18 +21,15 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 - **BYOK:** опц. свой ключ AI/поиска через `localStorage` (`prohikes.ai`/`prohikes.search`)
 - **Hosting:** Vercel (new project `prohikes`, same env vars)
 
-## Current State — Files Copied (unchanged from hiker-app)
+## Current State — Код готов, SMTP блокер
 
-```
-src/components/   — 11 files (AppShell, ChatWidget, Modal, Navbar, etc.)*
-src/lib/          — 18 files (types, format, service, AI providers, etc.)
-src/hooks/        — 3 files (useDebounce, useAuth, useForm)*
-src/i18n/         — messages/ + request.ts
-public/           — icons, manifest, images
-supabase/         — 9 migrations
-.env.local        — same env vars
-```
-*AppShell, Navbar, useAuth adapted for Pages Router (next/router) in R2.
+Деплой: `https://prohikes-ten.vercel.app` (Vercel, авто-деплой из GitHub main).
+
+**Работает:** Google-вход, AI-чат, CRUD gear/food/lists/meals, офлайн (SW + IndexedDB), i18n, темы, SEO.
+
+**НЕ работает:** подтверждение email при регистрации, сброс пароля. Причина: все бесплатные SMTP требуют свой домен. Workaround: `autoconfirm: true`, забыл пароль → Google-вход.
+
+**Дальше:** R18 (замена hiker-app) — заблокирован до решения SMTP.
 
 ## Round History
 
@@ -50,6 +47,11 @@ supabase/         — 9 migrations
 | R10 | 2026-07-17 | Reality audit + docs sync: deploy exists at prohikes-ten.vercel.app (public), BYOK confirmed broken (client never sends keys), public/sw.js was tracked + build script lacked --webpack (deploy mine), LAUNCH.md → PLAN.md | AGENTS.md, wiki_map_project.md, BRIDGE.md, PLAN.md, .gitignore, package.json |
 | R11 | 2026-07-17 | BYOK fix: readByok hoisted to module level, wired via `body: () => readByok()` into DefaultChatTransport (ai@7 Resolvable, fresh per request); tsc clean, build+SW OK | src/components/ChatWidget.tsx |
 | R12 | 2026-07-17 | Local offline test PASSED (banner, pages, F5) + fix-cycle: uuid "undefined" guards (5 [id] pages), manifest.json created + apple-touch-icon fixed + mobile-web-app-capable meta, React #418 hydration (two-pass locale in _app, dates→useEffect in 3 print pages). Re-test clean: all 3 bugs gone, full offline nav confirmed | _app, _document, 5×[id] pages, public/manifest.json |
+| R13 | 2026-07-18 | AI fix: downgrade ai@7→ai@4, @ai-sdk/google@4→@1, @ai-sdk/react removed (ai/react used). chat.ts: inputSchema→parameters, stopWhen→maxSteps, pipeDataStreamToResponse. ChatWidget: msg.parts→msg.content. Git email fixed gray@multima.local→s.odessa0@gmail.com. Supabase: site_url + uri_allow_list patched. BYOK preserved. | package.json, chat.ts, ChatWidget.tsx, _document.tsx |
+| R14 | 2026-07-18 | Email registration: autoconfirm on, signUp redirects to dashboard. SMTP investigation: Resend (needs domain), Brevo (SMTP not activated), Gmail (blocked), Supabase built-in (authorized only). SMTP BLOCKED — requires custom domain. | login.tsx, Supabase auth config |
+| R15 | 2026-07-18 | IndexedDB cache: cache.ts wired to service.ts (9 functions with withCache). 12 mutation functions added to service.ts with invalidateCache. 4 pages (gear, food, lists, lists/[id]) now use service.ts for writes. | cache.ts, service.ts, gear.tsx, food.tsx, lists.tsx, lists/[id].tsx |
+| R16 | 2026-07-18 | Favicon fix: added <link rel="icon"> to _document.tsx (override Vercel default icon) | _document.tsx |
+| R17 | 2026-07-18 | Full audit parity: created gear/print + food/print pages (were 404). manifest.json theme_color→#75a93a. robots.txt added. Meta description on all 12 pages. | gear/print.tsx, food/print.tsx, manifest.json, robots.txt, 12 page files |
 
 ## What's Done So Far
 
@@ -60,17 +62,25 @@ supabase/         — 9 migrations
 - [x] Globals CSS copied from hiker-app
 - [x] next.config.ts (withSerwistInit + webpack build)
 - [x] SW file created (`src/sw.ts`)
-- [x] IndexedDB cache layer (`src/lib/cache.ts`)
+- [x] IndexedDB cache layer (`src/lib/cache.ts`) + wired to service.ts (R15)
 - [x] OfflineBanner component
 - [x] Auth callback adapted (`pages/api/auth/callback.ts`)
-- [x] Chat API adapted (`pages/api/chat.ts`) — AI SDK v7
-- [x] Login page adapted (`pages/login.tsx`)
+- [x] Chat API adapted (`pages/api/chat.ts`) — AI SDK v4
+- [x] Login page adapted (`pages/login.tsx`) + autoconfirm redirect (R14)
 - [x] Dashboard adapted (`pages/index.tsx`)
 - [x] Error + 404 pages (`_error.tsx`, `404.tsx`)
-- [x] Remaining 13 pages (gear, food, lists, meals + sub-pages)
+- [x] Remaining 17 pages (gear, food, lists, meals + sub-pages + print)
 - [x] 2 API routes (account/delete, byok/validate)
 - [x] Vercel deploy exists: `https://prohikes-ten.vercel.app` (public, auto-deploy from GitHub main)
-- [ ] Finish & launch — see `PLAN.md` (single source of truth for remaining work)
+- [x] AI chat working (Gemma 4, BYOK, 8 tools)
+- [x] Full offline: SW static cache + IndexedDB data cache
+- [x] SEO: favicon, robots.txt, meta descriptions, manifest.json
+- [x] Full parity audit vs hiker-app (R17)
+
+## Open Issues
+
+- [ ] **SMTP:** email confirmation + password reset blocked — requires custom domain. All free options checked (Resend/Brevo/Gmail/Supabase-built-in). Workaround: `autoconfirm: true`, forgot password → Google login.
+- [ ] **R18 (replace hiker-app):** blocked until SMTP resolved. Code is ready.
 
 ## Page Migration Map
 
