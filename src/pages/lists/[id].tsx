@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import Head from 'next/head';
 import { createClient } from '@/lib/supabase/client';
-import { fetchUserListDetail, fetchListItems, fetchUserGear, fetchUserMealPlansLight } from '@/lib/supabase/service';
+import { fetchUserListDetail, fetchListItems, fetchUserGear, fetchUserMealPlansLight, updateList, deleteList, updateListItem, deleteListItem, addListItems } from '@/lib/supabase/service';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
@@ -48,6 +48,7 @@ export default function ListDetailPage() {
   const [removingGpx, setRemovingGpx] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
+  const userIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!router.isReady || typeof id !== 'string') return;
     const supabase = createClient();
@@ -58,6 +59,7 @@ export default function ListDetailPage() {
         return;
       }
 
+      userIdRef.current = user.id;
       setLoading(true);
 
       const [listResult, itemsResult, gearResult, plansResult] = await Promise.all([
@@ -138,19 +140,17 @@ export default function ListDetailPage() {
 
   async function handleUpdateList() {
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
+      if (!userId) return;
 
       setSaving(true);
       setError(null);
 
-      const { error: updateError } = await supabase
-        .from('gear_lists')
-        .update({
-          name: editForm.name,
-          season: editForm.season,
-          trip_date: editForm.trip_date || null,
-        })
-        .eq('id', id);
+      const { error: updateError } = await updateList(id, userId, {
+        name: editForm.name,
+        season: editForm.season,
+        trip_date: editForm.trip_date || null,
+      });
 
       if (updateError) {
         setError(updateError.message);
@@ -179,12 +179,10 @@ export default function ListDetailPage() {
   async function handleDeleteList() {
     setDeletingList(true);
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
+      if (!userId) return;
 
-      const { error: deleteError } = await supabase
-        .from('gear_lists')
-        .delete()
-        .eq('id', id);
+      const { error: deleteError } = await deleteList(id, userId);
 
       if (deleteError) {
         setError(deleteError.message);
@@ -204,16 +202,13 @@ export default function ListDetailPage() {
   async function handleTogglePacked(itemId: string) {
     setTogglingItems(prev => new Set(prev).add(itemId));
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
       const item = listItems.find(li => li.id === itemId);
-      if (!item) return;
+      if (!item || !userId) return;
 
       const newPacked = !item.is_packed;
 
-      const { error: updateError } = await supabase
-        .from('list_items')
-        .update({ is_packed: newPacked })
-        .eq('id', itemId);
+      const { error: updateError } = await updateListItem(itemId, userId, id, { is_packed: newPacked });
 
       if (updateError) {
         setError(updateError.message);
@@ -234,9 +229,9 @@ export default function ListDetailPage() {
   async function handleToggleWorn(itemId: string) {
     setTogglingItems(prev => new Set(prev).add(itemId));
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
       const item = listItems.find(li => li.id === itemId);
-      if (!item) return;
+      if (!item || !userId) return;
 
       const newWorn = !item.worn;
       const updates: Record<string, boolean> = { worn: newWorn };
@@ -244,10 +239,7 @@ export default function ListDetailPage() {
         updates.consumable = false;
       }
 
-      const { error: updateError } = await supabase
-        .from('list_items')
-        .update(updates)
-        .eq('id', itemId);
+      const { error: updateError } = await updateListItem(itemId, userId, id, updates);
 
       if (updateError) {
         setError(updateError.message);
@@ -268,9 +260,9 @@ export default function ListDetailPage() {
   async function handleToggleConsumable(itemId: string) {
     setTogglingItems(prev => new Set(prev).add(itemId));
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
       const item = listItems.find(li => li.id === itemId);
-      if (!item) return;
+      if (!item || !userId) return;
 
       const newConsumable = !item.consumable;
       const updates: Record<string, boolean> = { consumable: newConsumable };
@@ -278,10 +270,7 @@ export default function ListDetailPage() {
         updates.worn = false;
       }
 
-      const { error: updateError } = await supabase
-        .from('list_items')
-        .update(updates)
-        .eq('id', itemId);
+      const { error: updateError } = await updateListItem(itemId, userId, id, updates);
 
       if (updateError) {
         setError(updateError.message);
@@ -301,17 +290,14 @@ export default function ListDetailPage() {
 
   async function handleUpdateQuantity(itemId: string, delta: number) {
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
       const item = listItems.find(li => li.id === itemId);
-      if (!item) return;
+      if (!item || !userId) return;
 
       const newQuantity = Math.max(1, item.quantity + delta);
       if (newQuantity === item.quantity) return;
 
-      const { error: updateError } = await supabase
-        .from('list_items')
-        .update({ quantity: newQuantity })
-        .eq('id', itemId);
+      const { error: updateError } = await updateListItem(itemId, userId, id, { quantity: newQuantity });
 
       if (updateError) {
         setError(updateError.message);
@@ -329,15 +315,12 @@ export default function ListDetailPage() {
 
   async function handleSetQuantity(itemId: string, newQuantity: number) {
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
       const q = Math.max(1, newQuantity);
       const item = listItems.find(li => li.id === itemId);
-      if (!item || q === item.quantity) return;
+      if (!item || q === item.quantity || !userId) return;
 
-      const { error: updateError } = await supabase
-        .from('list_items')
-        .update({ quantity: q })
-        .eq('id', itemId);
+      const { error: updateError } = await updateListItem(itemId, userId, id, { quantity: q });
 
       if (updateError) {
         setError(updateError.message);
@@ -356,12 +339,10 @@ export default function ListDetailPage() {
   async function handleRemoveItem(itemId: string) {
     setRemovingItemId(itemId);
     try {
-      const supabase = createClient();
+      const userId = userIdRef.current;
+      if (!userId) return;
 
-      const { error: deleteError } = await supabase
-        .from('list_items')
-        .delete()
-        .eq('id', itemId);
+      const { error: deleteError } = await deleteListItem(itemId, userId, id);
 
       if (deleteError) {
         setError(deleteError.message);
@@ -385,20 +366,10 @@ export default function ListDetailPage() {
     setSaving(true);
     try {
       if (selectedGearIds.size === 0) return;
-      const supabase = createClient();
+      const userId = userIdRef.current;
+      if (!userId) return;
 
-      const inserts = Array.from(selectedGearIds).map(gearItemId => ({
-        list_id: id,
-        gear_item_id: gearItemId,
-        quantity: 1,
-        is_packed: false,
-        worn: false,
-        consumable: false,
-      }));
-
-      const { error: insertError } = await supabase
-        .from('list_items')
-        .insert(inserts);
+      const { error: insertError } = await addListItems(id, userId, Array.from(selectedGearIds));
 
       if (insertError) {
         toast.error(tCommon('error'));
@@ -410,13 +381,10 @@ export default function ListDetailPage() {
       setSelectedGearIds(new Set());
       setSearchQuery('');
 
-      const { data: itemsData } = await supabase
-        .from('list_items')
-        .select('*, gear_item:gear_items(*)')
-        .eq('list_id', id);
+      const { data: itemsData } = await fetchListItems(id);
 
       if (itemsData) {
-        setListItems(itemsData as ListItemWithGear[]);
+        setListItems(itemsData);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to add items';
@@ -434,8 +402,10 @@ export default function ListDetailPage() {
     setGpxError(null);
     
     try {
+      const userId = userIdRef.current;
+      if (!userId) return;
+
       const result = await parseGpxFile(file);
-      const supabase = createClient();
 
       const gpxData = {
         track_name: result.trackName,
@@ -453,10 +423,7 @@ export default function ListDetailPage() {
         gpxData.weather = weather;
       }
 
-      const { error: updateError } = await supabase
-        .from('gear_lists')
-        .update({ gpx_data: gpxData })
-        .eq('id', id);
+      const { error: updateError } = await updateList(id, userId, { gpx_data: gpxData });
 
       if (updateError) throw updateError;
 
@@ -499,11 +466,10 @@ export default function ListDetailPage() {
   const handleRemoveGpx = async () => {
     setRemovingGpx(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('gear_lists')
-        .update({ gpx_data: null })
-        .eq('id', id);
+      const userId = userIdRef.current;
+      if (!userId) return;
+
+      const { error } = await updateList(id, userId, { gpx_data: null });
       if (error) {
         setError(error.message);
         toast.error(error.message);
@@ -661,15 +627,11 @@ export default function ListDetailPage() {
                     const planId = e.target.value;
                     const prevId = list?.meal_plan_id || '';
                     try {
-                      const supabase = createClient();
-                      if (planId) {
-                        const { error } = await supabase.from('gear_lists').update({ meal_plan_id: planId }).eq('id', list?.id ?? '');
-                        if (error) throw error;
-                        toast.success(t('linked'));
-                      } else {
-                        const { error } = await supabase.from('gear_lists').update({ meal_plan_id: null }).eq('id', list?.id ?? '');
-                        if (error) throw error;
-                      }
+                      const userId = userIdRef.current;
+                      if (!userId) return;
+                      const { error } = await updateList(list?.id ?? '', userId, { meal_plan_id: planId || null });
+                      if (error) throw error;
+                      if (planId) toast.success(t('linked'));
                       setList((prev) => prev ? { ...prev, meal_plan_id: planId || null } : null);
                     } catch {
                       e.target.value = prevId;

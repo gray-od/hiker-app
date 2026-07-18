@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations } from 'next-intl';
@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { UserFoodItem } from '@/lib/types';
 import { formatKbju } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
-import { fetchUserFoodItems } from '@/lib/supabase/service';
+import { fetchUserFoodItems, createFoodItem, updateFoodItem, deleteFoodItem } from '@/lib/supabase/service';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -39,6 +39,7 @@ export default function FoodPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -49,6 +50,7 @@ export default function FoodPage() {
         return;
       }
 
+      userIdRef.current = user.id;
       setLoading(true);
 
       fetchUserFoodItems(user.id).then(({ data, error }) => {
@@ -85,10 +87,8 @@ export default function FoodPage() {
 
   async function handleSave() {
     try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) return;
+    const userId = userIdRef.current;
+    if (!userId) return;
 
     setSaving(true);
     setError(null);
@@ -104,10 +104,7 @@ export default function FoodPage() {
     };
 
     if (editingItem) {
-      const { error: updateError } = await supabase
-        .from('user_food_items')
-        .update(payload)
-        .eq('id', editingItem.id);
+      const { error: updateError } = await updateFoodItem(editingItem.id, userId, payload);
 
       if (updateError) {
         toast.error(updateError.message || tCommon('error_occurred'));
@@ -125,14 +122,7 @@ export default function FoodPage() {
         ),
       );
     } else {
-      const { data, error: insertError } = await supabase
-        .from('user_food_items')
-        .insert({
-          user_id: user.id,
-          ...payload,
-        })
-        .select()
-        .single();
+      const { data, error: insertError } = await createFoodItem(userId, payload);
 
       if (insertError) {
         toast.error(insertError.message || tCommon('error_occurred'));
@@ -143,7 +133,7 @@ export default function FoodPage() {
 
       toast.success(tFood('created'));
       if (data) {
-        setItems(prev => [data as UserFoodItem, ...prev]);
+        setItems(prev => [data, ...prev]);
       }
     }
 
@@ -158,13 +148,12 @@ export default function FoodPage() {
 
   async function handleDelete(id: string) {
     try {
-    setDeleting(true);
-    const supabase = createClient();
+    const userId = userIdRef.current;
+    if (!userId) return;
 
-    const { error: deleteError } = await supabase
-      .from('user_food_items')
-      .delete()
-      .eq('id', id);
+    setDeleting(true);
+
+    const { error: deleteError } = await deleteFoodItem(id, userId);
 
     if (deleteError) {
       toast.error(deleteError.message || tCommon('error_occurred'));

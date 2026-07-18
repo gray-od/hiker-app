@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import Head from 'next/head';
 import { createClient } from '@/lib/supabase/client';
 import { formatDate, formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
-import { fetchUserLists, fetchUserMealPlansLight } from '@/lib/supabase/service';
+import { fetchUserLists, fetchUserMealPlansLight, createList, deleteList } from '@/lib/supabase/service';
 import type { GearListWithTotalWeight } from '@/lib/supabase/service';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -40,6 +40,7 @@ export default function ListsPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,6 +51,7 @@ export default function ListsPage() {
         return;
       }
 
+      userIdRef.current = user.id;
       setLoading(true);
 
       fetchUserLists(user.id).then(({ data, error }) => {
@@ -95,25 +97,18 @@ export default function ListsPage() {
 
   async function handleCreate() {
     try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) return;
+    const userId = userIdRef.current;
+    if (!userId) return;
 
     setSaving(true);
     setError(null);
 
-    const { data, error: insertError } = await supabase
-      .from('gear_lists')
-      .insert({
-        user_id: user.id,
-        name: formData.name,
-        season: formData.season,
-        trip_date: formData.trip_date || null,
-        meal_plan_id: formData.meal_plan_id || null,
-      })
-      .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
-      .single();
+    const { data, error: insertError } = await createList(userId, {
+      name: formData.name,
+      season: formData.season,
+      trip_date: formData.trip_date || null,
+      meal_plan_id: formData.meal_plan_id || null,
+    });
 
     if (insertError) {
       toast.error(insertError.message || tCommon('error_occurred'));
@@ -124,7 +119,7 @@ export default function ListsPage() {
 
     toast.success(t('created'));
     if (data) {
-      setLists((prev) => [data as unknown as GearListWithTotalWeight, ...prev]);
+      setLists((prev) => [data, ...prev]);
     }
 
     setSaving(false);
@@ -139,13 +134,12 @@ export default function ListsPage() {
 
   async function handleDelete(id: string) {
     try {
-    setDeleting(true);
-    const supabase = createClient();
+    const userId = userIdRef.current;
+    if (!userId) return;
 
-    const { error: deleteError } = await supabase
-      .from('gear_lists')
-      .delete()
-      .eq('id', id);
+    setDeleting(true);
+
+    const { error: deleteError } = await deleteList(id, userId);
 
     if (deleteError) {
       toast.error(deleteError.message || tCommon('error_occurred'));

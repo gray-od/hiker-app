@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations } from 'next-intl';
@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { GearItem } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
-import { fetchUserGear } from '@/lib/supabase/service';
+import { fetchUserGear, createGearItem, updateGearItem, deleteGearItem } from '@/lib/supabase/service';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -40,6 +40,7 @@ export default function GearPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,6 +51,7 @@ export default function GearPage() {
         return;
       }
 
+      userIdRef.current = user.id;
       setLoading(true);
 
       fetchUserGear(user.id).then(({ data, error }) => {
@@ -84,10 +86,8 @@ export default function GearPage() {
 
   async function handleSave() {
     try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) return;
+    const userId = userIdRef.current;
+    if (!userId) return;
 
     setSaving(true);
     setError(null);
@@ -101,10 +101,7 @@ export default function GearPage() {
     };
 
     if (editingItem) {
-      const { error: updateError } = await supabase
-        .from('gear_items')
-        .update(payload)
-        .eq('id', editingItem.id);
+      const { error: updateError } = await updateGearItem(editingItem.id, userId, payload);
 
       if (updateError) {
         toast.error(updateError.message || tCommon('error_occurred'));
@@ -122,14 +119,7 @@ export default function GearPage() {
         ),
       );
     } else {
-      const { data, error: insertError } = await supabase
-        .from('gear_items')
-        .insert({
-          user_id: user.id,
-          ...payload,
-        })
-        .select()
-        .single();
+      const { data, error: insertError } = await createGearItem(userId, payload);
 
       if (insertError) {
         toast.error(insertError.message || tCommon('error_occurred'));
@@ -140,7 +130,7 @@ export default function GearPage() {
 
       toast.success(tGear('created'));
       if (data) {
-        setItems(prev => [data as GearItem, ...prev]);
+        setItems(prev => [data, ...prev]);
       }
     }
 
@@ -155,13 +145,12 @@ export default function GearPage() {
 
   async function handleDelete(id: string) {
     try {
-    setDeleting(true);
-    const supabase = createClient();
+    const userId = userIdRef.current;
+    if (!userId) return;
 
-    const { error: deleteError } = await supabase
-      .from('gear_items')
-      .delete()
-      .eq('id', id);
+    setDeleting(true);
+
+    const { error: deleteError } = await deleteGearItem(id, userId);
 
     if (deleteError) {
       toast.error(deleteError.message || tCommon('error_occurred'));

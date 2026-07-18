@@ -215,3 +215,169 @@ export function clearAllCache(): Promise<void> {
 export function invalidateCache(key: string): Promise<void> {
   return removeCache(key);
 }
+
+// ── Gear mutations ──
+
+export async function createGearItem(
+  userId: string,
+  payload: { name: string; category: string; weight_g: number; season: string; notes?: string | null },
+): Promise<{ data: GearItem | null; error: Error | null }> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('gear_items')
+    .insert({ user_id: userId, ...payload })
+    .select()
+    .single();
+  invalidateCache(cacheKeys.gear(userId));
+  if (error) return { data: null, error: new Error(error.message) };
+  return { data: data as GearItem, error: null };
+}
+
+export async function updateGearItem(
+  id: string, userId: string,
+  payload: Record<string, unknown>,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('gear_items').update(payload).eq('id', id);
+  invalidateCache(cacheKeys.gear(userId));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+export async function deleteGearItem(
+  id: string, userId: string,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('gear_items').delete().eq('id', id);
+  invalidateCache(cacheKeys.gear(userId));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+// ── Food mutations ──
+
+export async function createFoodItem(
+  userId: string,
+  payload: Record<string, unknown>,
+): Promise<{ data: UserFoodItem | null; error: Error | null }> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('user_food_items')
+    .insert({ user_id: userId, ...payload })
+    .select()
+    .single();
+  invalidateCache(cacheKeys.foodItems(userId));
+  if (error) return { data: null, error: new Error(error.message) };
+  return { data: data as UserFoodItem, error: null };
+}
+
+export async function updateFoodItem(
+  id: string, userId: string,
+  payload: Record<string, unknown>,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('user_food_items').update(payload).eq('id', id);
+  invalidateCache(cacheKeys.foodItems(userId));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+export async function deleteFoodItem(
+  id: string, userId: string,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('user_food_items').delete().eq('id', id);
+  invalidateCache(cacheKeys.foodItems(userId));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+// ── List mutations ──
+
+export async function createList(
+  userId: string,
+  payload: { name: string; season: string; trip_date: string | null; meal_plan_id: string | null },
+): Promise<{ data: GearListWithTotalWeight | null; error: Error | null }> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('gear_lists')
+    .insert({ user_id: userId, ...payload })
+    .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
+    .single();
+  invalidateCache(cacheKeys.lists(userId));
+  if (error) return { data: null, error: new Error(error.message) };
+  return { data: data as unknown as GearListWithTotalWeight, error: null };
+}
+
+export async function deleteList(
+  id: string, userId: string,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('gear_lists').delete().eq('id', id);
+  invalidateCache(cacheKeys.lists(userId));
+  invalidateCache(cacheKeys.listDetail(id));
+  invalidateCache(cacheKeys.listItems(id));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+// ── List item / detail mutations ──
+
+/** Updates any gear_lists columns (metadata, gpx_data, meal_plan_id, etc.). */
+export async function updateList(
+  id: string, userId: string,
+  payload: Record<string, unknown>,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('gear_lists').update(payload).eq('id', id);
+  invalidateCache(cacheKeys.lists(userId));
+  invalidateCache(cacheKeys.listDetail(id));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+/** Bulk-insert items into a list. */
+export async function addListItems(
+  listId: string, userId: string,
+  gearItemIds: string[],
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const inserts = gearItemIds.map(gearItemId => ({
+    list_id: listId,
+    gear_item_id: gearItemId,
+    quantity: 1,
+    is_packed: false,
+    worn: false,
+    consumable: false,
+  }));
+  const { error } = await supabase.from('list_items').insert(inserts);
+  invalidateCache(cacheKeys.listItems(listId));
+  invalidateCache(cacheKeys.lists(userId));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+/** Updates a single list_item row (packed, worn, consumable, quantity, etc.). */
+export async function updateListItem(
+  id: string, userId: string, listId: string,
+  payload: Record<string, unknown>,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('list_items').update(payload).eq('id', id);
+  invalidateCache(cacheKeys.listItems(listId));
+  invalidateCache(cacheKeys.lists(userId));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
+
+/** Removes a single item from a list. */
+export async function deleteListItem(
+  id: string, userId: string, listId: string,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('list_items').delete().eq('id', id);
+  invalidateCache(cacheKeys.listItems(listId));
+  invalidateCache(cacheKeys.lists(userId));
+  if (error) return { error: new Error(error.message) };
+  return { error: null };
+}
