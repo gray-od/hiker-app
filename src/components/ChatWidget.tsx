@@ -1,5 +1,4 @@
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { useChat } from 'ai/react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Sparkles, X, Send, Loader2, Maximize2, Minimize2, Copy, Check, Paperclip } from 'lucide-react';
@@ -60,15 +59,11 @@ export default function ChatWidget() {
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [todayUsage, setTodayUsage] = useState<number | null>(null);
   const [byokActive, setByokActive] = useState(false);
-  const [input, setInput] = useState('');
 
-  const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({
-      api: '/api/chat',
-      body: () => readByok(),
-    }),
+  const { messages, input, handleInputChange, handleSubmit, append, setInput, status, error, isLoading: hookLoading } = useChat({
+    api: '/api/chat',
   });
-  const isLoading = status === 'streaming' || status === 'submitted';
+  const isLoading = hookLoading || status === 'streaming' || status === 'submitted';
 
   useEffect(() => {
     const el = messagesContainerRef.current;
@@ -143,7 +138,11 @@ export default function ChatWidget() {
     const text = attachedFile
       ? `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`
       : input;
-    sendMessage({ text });
+    if (attachedFile) {
+      append({ role: 'user', content: text }, { body: readByok() });
+    } else {
+      handleSubmit(e, { body: readByok() });
+    }
     setInput('');
     setAttachedFile(null);
     resetTextareaHeight();
@@ -161,7 +160,11 @@ export default function ChatWidget() {
       const text = attachedFile
         ? `[ATTACHMENT: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${input}`
         : input;
-      sendMessage({ text });
+      if (attachedFile) {
+        append({ role: 'user', content: text }, { body: readByok() });
+      } else {
+        handleSubmit(e, { body: readByok() });
+      }
       setInput('');
       setAttachedFile(null);
       resetTextareaHeight();
@@ -376,7 +379,7 @@ export default function ChatWidget() {
                 ref={textareaRef}
                 id="chat-input"
                 value={input}
-                onChange={(e) => { setInput(e.target.value); adjustTextareaHeight(); }}
+                onChange={(e) => { handleInputChange(e); adjustTextareaHeight(); }}
                 onKeyDown={onKeyDown}
                 placeholder={t('placeholder')}
                 aria-label={t('placeholder')}

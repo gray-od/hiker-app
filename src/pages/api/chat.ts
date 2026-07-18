@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient } from '@supabase/ssr';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { streamText, tool, isStepCount } from 'ai';
+import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
@@ -196,7 +196,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         searchWeb: tool({
           description:
             'Search the internet for current information: emergency contacts, route conditions, transport, trail closures, gear info. For WEATHER, use getWeather instead. Use when the user asks about specific locations or you need up-to-date data. Cite the returned source URLs and advise verifying safety-critical info.',
-          inputSchema: z.object({
+          parameters: z.object({
             query: z.string().describe('Search query in the language most likely to return good results'),
           }),
           execute: async ({ query }: { query: string }) => {
@@ -241,7 +241,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         getWeather: tool({
           description:
             'Get current weather and a 7-day forecast for any location (mountains, trailheads, towns). Use this for ANY weather question. No API key needed.',
-          inputSchema: z.object({
+          parameters: z.object({
             location: z.string().describe('Place name, e.g. "Hoverla", "Yaremche", "Zakopane"'),
           }),
           execute: async ({ location }: { location: string }) => {
@@ -302,7 +302,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         getPackingList: tool({
           description:
             "Read the FULL contents of one of the user's packing lists — every gear item with weight, quantity, and packed/worn/consumable status. The context below only lists names and item counts, NOT the items themselves, so you MUST call this before analyzing or editing a specific list.",
-          inputSchema: z.object({
+          parameters: z.object({
             listId: z
               .string()
               .describe('ID of the packing list (from the Packing Lists context below)'),
@@ -353,7 +353,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         getMealPlanDetails: tool({
           description:
             "Read the FULL day-by-day contents of one of the user's meal plans — meals, foods, calories and weight per day. The context below only has plan summaries, NOT the entries, so you MUST call this before analyzing or editing a specific plan.",
-          inputSchema: z.object({
+          parameters: z.object({
             planId: z
               .string()
               .describe('ID of the meal plan (from the Meal Plans context below)'),
@@ -391,7 +391,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         createMealPlan: tool({
           description:
             'Create a new meal plan in the app. Can optionally apply a template to auto-fill days with food entries. Available templates: standard_3day, comfort_winter, ultralight_3day.',
-          inputSchema: z.object({
+          parameters: z.object({
             name: z.string().describe('Name of the meal plan'),
             planType: z.enum(['comfort', 'standard', 'ultralight']).describe('Plan type'),
             daysCount: z.number().min(1).max(30).describe('Number of days'),
@@ -550,7 +550,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         addGearItems: tool({
           description:
             "Add one or more gear items to the user's gear library. Use real product names and accurate weights. Check existing gear first to avoid duplicates.",
-          inputSchema: z.object({
+          parameters: z.object({
             items: z
               .array(
                 z.object({
@@ -632,7 +632,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         createGearList: tool({
           description: 'Create a new packing list for a trip.',
-          inputSchema: z.object({
+          parameters: z.object({
             name: z.string().describe('List name (e.g., trip name)'),
             season: z.enum(['summer', 'winter', 'demi']).describe('Season'),
             tripDate: z
@@ -675,7 +675,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         addItemsToList: tool({
           description:
             "Add gear items to an existing packing list. Items are matched by name from the user's gear library.",
-          inputSchema: z.object({
+          parameters: z.object({
             listId: z.string().describe('ID of the packing list'),
             itemNames: z
               .array(z.string())
@@ -733,8 +733,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         }),
       },
-      stopWhen: isStepCount(4),
-      maxOutputTokens: 4096,
+      maxSteps: 4,
+      maxTokens: 4096,
       onFinish: async () => {
         if (!usingOwnKey) {
           try {
@@ -753,8 +753,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
-    const response = result.toUIMessageStreamResponse({
-      onError: (error: unknown) => {
+    result.pipeDataStreamToResponse(res, {
+      getErrorMessage: (error: unknown) => {
         const msg = error instanceof Error ? error.message : String(error);
         const lower = msg.toLowerCase();
         if (
@@ -785,41 +785,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return 'AI service is temporarily unavailable. Please try again in a moment.';
       },
     });
-
-    // Pages Router: pipe AI SDK Response stream to the Node.js response
-    const reader = response.body?.getReader();
-    if (!reader) {
-      return res.status(500).end('Stream error');
-    }
-
-    // Copy headers from the AI SDK response (Content-Type, etc.)
-    const responseHeaders: Record<string, string> = {};
-    response.headers.forEach((value: string, key: string) => {
-      responseHeaders[key] = value;
-    });
-    res.writeHead(response.status, responseHeaders);
-
-    const pump = async () => {
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            res.end();
-            break;
-          }
-          res.write(value);
-        }
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        console.error('[chat] stream pump error:', sanitizeLog(errMsg, secrets));
-        if (!res.writableEnded) {
-          res.end();
-        }
-      }
-    };
-
-    // Start pumping — don't await, let the stream flow
-    pump();
 
     return;
   } catch (error) {
