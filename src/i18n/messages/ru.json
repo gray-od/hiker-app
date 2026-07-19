@@ -38,7 +38,24 @@
     "template_apply_error": "Не удалось применить шаблон",
     "error_occurred": "Произошла ошибка",
     "locale_uk": "Украинский",
-    "locale_ru": "Русский"
+    "locale_ru": "Русский",
+    "back_to_login": "Назад ко входу",
+    "enter_new_password": "Новый пароль",
+    "fill_security_fields": "Пожалуйста, выберите контрольный вопрос и дайте ответ",
+    "forgot_password": "Забыли пароль?",
+    "forgot_password_title": "Восстановление пароля",
+    "password_reset_success": "Пароль сброшен. Теперь можно войти.",
+    "question_birth_city": "Город рождения",
+    "question_first_school": "Первая школа",
+    "question_mother_maiden": "Девичья фамилия матери",
+    "question_pet_name": "Имя первого питомца",
+    "recovery_not_available": "Восстановление пароля недоступно для этой почты",
+    "recovery_too_many_attempts": "Слишком много попыток. Попробуйте через 24 часа",
+    "recovery_wrong_answer": "Неправильный ответ",
+    "reset_password": "Сбросить пароль",
+    "security_answer": "Ответ",
+    "security_question": "Контрольный вопрос",
+    "security_warning": "Сохраните ответ — без него невозможно восстановить пароль"
   },
   "nav": {
     "dashboard": "Главная",
@@ -333,7 +350,11 @@
     "byok_invalid": "Ключ недействителен",
     "clear": "Очистить",
     "error_saving": "Ошибка сохранения",
-    "name_saved": "Имя сохранено"
+    "name_saved": "Имя сохранено",
+    "change_password": "Сменить пароль",
+    "current_password": "Текущий пароль",
+    "password_changed": "Пароль изменён",
+    "wrong_password": "Неверный текущий пароль"
   },
   "chat": {
     "title": "AI-помощник",

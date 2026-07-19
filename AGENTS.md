@@ -52,6 +52,7 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 | R15 | 2026-07-18 | IndexedDB cache: cache.ts wired to service.ts (9 functions with withCache). 12 mutation functions added to service.ts with invalidateCache. 4 pages (gear, food, lists, lists/[id]) now use service.ts for writes. | cache.ts, service.ts, gear.tsx, food.tsx, lists.tsx, lists/[id].tsx |
 | R16 | 2026-07-18 | Favicon fix: added <link rel="icon"> to _document.tsx (override Vercel default icon) | _document.tsx |
 | R17 | 2026-07-18 | Full audit parity: created gear/print + food/print pages (were 404). manifest.json theme_color→#75a93a. robots.txt added. Meta description on all 12 pages. | gear/print.tsx, food/print.tsx, manifest.json, robots.txt, 12 page files |
+| R18 | 2026-07-19 | Password recovery without SMTP: security question during signUp (PBKDF2-hashed), forgot-password page, password change in settings. Supabase user_security table. No external services. | login.tsx, settings.tsx, forgot-password.tsx, i18n×3, api/auth/{security,recover,lookup}.ts, Supabase migration |
 
 ## What's Done So Far
 

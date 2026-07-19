@@ -57,6 +57,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [signUpSuccess, setSignUpSuccess] = useState(false);
+  const [securityQuestion, setSecurityQuestion] = useState('');
+  const [securityAnswer, setSecurityAnswer] = useState('');
+
+  const securityQuestions = [
+    { value: 'mother_maiden', key: 'question_mother_maiden' },
+    { value: 'birth_city', key: 'question_birth_city' },
+    { value: 'first_school', key: 'question_first_school' },
+    { value: 'pet_name', key: 'question_pet_name' },
+  ];
 
   const handleSignInWithGoogle = async () => {
     setGoogleLoading(true);
@@ -98,6 +107,11 @@ export default function LoginPage() {
       }
       router.push('/');
     } else {
+      if (!securityQuestion || !securityAnswer) {
+        setError(t('fill_security_fields'));
+        setEmailLoading(false);
+        return;
+      }
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -109,6 +123,11 @@ export default function LoginPage() {
         return;
       }
       if (data?.session) {
+        await fetch('/api/auth/security', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: securityQuestion, answer: securityAnswer }),
+        });
         router.push('/');
         return;
       }
@@ -252,6 +271,47 @@ export default function LoginPage() {
                   placeholder="••••••"
                 />
               </div>
+              {authMode === 'signin' && (
+                <button type="button" onClick={() => router.push('/forgot-password')}
+                  className="text-sm text-[var(--color-brand)] hover:underline mb-2">
+                  {t('forgot_password')}
+                </button>
+              )}
+              {authMode === 'signup' && (
+                <>
+                  <div>
+                    <label htmlFor="securityQuestion" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                      {t('security_question')}
+                    </label>
+                    <select
+                      id="securityQuestion"
+                      required
+                      value={securityQuestion}
+                      onChange={(e) => setSecurityQuestion(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none text-base"
+                    >
+                      <option value="">—</option>
+                      {securityQuestions.map((q) => (
+                        <option key={q.value} value={q.value}>{t(q.key as any)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="securityAnswer" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                      {t('security_answer')}
+                    </label>
+                    <input
+                      id="securityAnswer"
+                      type="text"
+                      required
+                      value={securityAnswer}
+                      onChange={(e) => setSecurityAnswer(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none text-base"
+                    />
+                    <p className="text-xs text-zinc-400 mt-1">{t('security_warning')}</p>
+                  </div>
+                </>
+              )}
               <button
                 type="submit"
                 disabled={emailLoading}

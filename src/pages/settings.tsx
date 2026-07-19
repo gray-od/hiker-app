@@ -45,6 +45,11 @@ export default function SettingsPage() {
   const [searchTesting, setSearchTesting] = useState(false);
   const [searchTestResult, setSearchTestResult] = useState<'valid' | 'invalid' | null>(null);
   const saveMsgTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -215,6 +220,24 @@ export default function SettingsPage() {
     setSearchProvider('exa');
     setSearchKey('');
     setSearchCx('');
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordMessage(null);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user?.email!, password: currentPassword
+    });
+    if (signInError) { setPasswordError(t('wrong_password')); return; }
+    setChangingPassword(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+    if (updateError) { setPasswordError(updateError.message); return; }
+    setPasswordMessage(t('password_changed'));
+    setCurrentPassword('');
+    setNewPassword('');
   };
 
   if (loading) {
@@ -503,8 +526,54 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+          </section>
+
+        <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            {t('change_password')}
+          </h2>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="currentPassword" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                {t('current_password')}
+              </label>
+              <input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(null); setPasswordMessage(null); }}
+                className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label htmlFor="newPassword" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                {t('enter_new_password')}
+              </label>
+              <input
+                id="newPassword"
+                type="password"
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null); setPasswordMessage(null); }}
+                className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
+              />
+            </div>
+            {passwordError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{typeof passwordError === 'string' && passwordError.startsWith('wrong') ? t('wrong_password') : passwordError}</p>
+            )}
+            {passwordMessage && (
+              <p className="text-sm text-[var(--color-brand)]">{t('password_changed')}</p>
+            )}
+            <button
+              onClick={handleChangePassword}
+              disabled={changingPassword || !currentPassword || !newPassword}
+              className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {changingPassword ? <LoadingSpinner size="sm" /> : t('change_password')}
+            </button>
+          </div>
         </section>
-      </div>
+        </div>
 
       <div className="mt-10 border-t border-red-200 dark:border-red-900 pt-6">
         <h2 className="text-base font-semibold text-red-600 dark:text-red-400 mb-2">

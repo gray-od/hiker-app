@@ -38,7 +38,24 @@
     "template_apply_error": "Failed to apply template",
     "error_occurred": "An error occurred",
     "locale_uk": "Ukrainian",
-    "locale_ru": "Russian"
+    "locale_ru": "Russian",
+    "back_to_login": "Back to login",
+    "enter_new_password": "New password",
+    "fill_security_fields": "Please select a security question and provide an answer",
+    "forgot_password": "Forgot password?",
+    "forgot_password_title": "Reset password",
+    "password_reset_success": "Password reset. You can now sign in.",
+    "question_birth_city": "City of birth",
+    "question_first_school": "First school",
+    "question_mother_maiden": "Mother's maiden name",
+    "question_pet_name": "First pet name",
+    "recovery_not_available": "Password recovery is not available for this email",
+    "recovery_too_many_attempts": "Too many attempts. Try again in 24 hours",
+    "recovery_wrong_answer": "Incorrect answer",
+    "reset_password": "Reset password",
+    "security_answer": "Answer",
+    "security_question": "Security question",
+    "security_warning": "Save your answer — without it you cannot reset your password"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -333,7 +350,11 @@
     "byok_invalid": "Key invalid",
     "clear": "Clear",
     "error_saving": "Error saving",
-    "name_saved": "Name saved"
+    "name_saved": "Name saved",
+    "change_password": "Change password",
+    "current_password": "Current password",
+    "password_changed": "Password changed successfully",
+    "wrong_password": "Current password is incorrect"
   },
   "chat": {
     "title": "AI Assistant",
