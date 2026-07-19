@@ -1,13 +1,15 @@
+import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import dynamic from 'next/dynamic';
+import SWRegister from '@/components/SWRegister';
+import OfflineBanner from '@/components/OfflineBanner';
+import { syncPendingMutations } from '@/lib/supabase/service';
 
 const ChatWidget = dynamic(() => import('@/components/ChatWidget'), {
   ssr: false,
   loading: () => null,
 });
-import SWRegister from '@/components/SWRegister';
-import OfflineBanner from '@/components/OfflineBanner';
 
 const PUBLIC_ROUTES = ['/login', '/privacy'];
 
@@ -15,6 +17,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = router.pathname;
   const isPublic = PUBLIC_ROUTES.includes(pathname);
+
+  useEffect(() => {
+    syncPendingMutations();
+    const handleOnline = () => syncPendingMutations();
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
 
   if (isPublic) {
     return <main className="min-h-screen">{children}</main>;

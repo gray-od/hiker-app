@@ -1,6 +1,6 @@
 import { createClient } from './client';
 import { withCache, cacheKeys, clearCache as clearIDBCache, removeCache } from '@/lib/cache';
-import { enqueue } from '@/lib/offline-queue';
+import { enqueue, syncQueue } from '@/lib/offline-queue';
 import type {
   Profile,
   GearItem,
@@ -417,4 +417,30 @@ export async function deleteListItem(
     return { error: new Error(error.message) };
   }
   return { error: null };
+}
+
+/** Replay all queued offline mutations. Call on app load and when coming back online. */
+export async function syncPendingMutations(): Promise<number> {
+  const supabase = createClient();
+
+  return syncQueue(async (m) => {
+    try {
+      switch (m.action) {
+        case 'insert':
+          await supabase.from(m.table).insert(m.payload);
+          break;
+        case 'update': {
+          const { id, ...rest } = m.payload;
+          if (id) await supabase.from(m.table).update(rest).eq('id', id as string);
+          break;
+        }
+        case 'delete':
+          await supabase.from(m.table).delete().eq('id', m.payload.id as string);
+          break;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  });
 }
