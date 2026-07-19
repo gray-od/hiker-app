@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { pbkdf2Sync, randomBytes } from 'crypto';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -43,29 +44,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
     const salt = randomBytes(16).toString('hex');
     const answerHash = pbkdf2Sync(answer, salt, 100000, 64, 'sha512').toString('hex');
 
-    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/user_security`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': serviceRoleKey,
-        'Authorization': `Bearer ${serviceRoleKey}`,
-        'Prefer': 'return=minimal',
-      },
-      body: JSON.stringify({
-        user_id: user.id,
-        email: user.email?.toLowerCase(),
-        question,
-        answer_hash: answerHash,
-        salt,
-      }),
+    const { error: rpcError } = await adminClient.rpc('upsert_security_record', {
+      p_user_id: user.id,
+      p_email: user.email?.toLowerCase(),
+      p_question: question,
+      p_answer_hash: answerHash,
+      p_salt: salt,
     });
 
-    if (!response.ok) {
+    if (rpcError) {
       res.status(500).json({ error: 'Failed to save security question' });
       return;
     }

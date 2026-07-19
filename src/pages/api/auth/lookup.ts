@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -19,22 +20,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/user_security?select=question&email=eq.${encodeURIComponent(email.toLowerCase())}&limit=1`;
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
 
-    const response = await fetch(url, {
-      headers: {
-        'apikey': serviceRoleKey,
-        'Authorization': `Bearer ${serviceRoleKey}`,
-      },
+    const { data: records, error: lookupError } = await adminClient.rpc('lookup_security_record', {
+      p_email: email.toLowerCase(),
     });
 
-    if (!response.ok) {
-      res.status(404).json({ error: 'No recovery record found' });
-      return;
-    }
-
-    const records = await response.json();
-    if (!records || records.length === 0) {
+    if (lookupError || !records || records.length === 0) {
       res.status(404).json({ error: 'No recovery record found' });
       return;
     }
