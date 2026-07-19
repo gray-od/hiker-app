@@ -70,6 +70,9 @@ export default function MealsPage() {
         }
         setLoading(false);
       });
+    }).catch((err) => {
+      console.error(err);
+      setLoading(false);
     });
   }, [router]);
 

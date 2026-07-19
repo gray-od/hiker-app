@@ -63,6 +63,9 @@ export default function GearPage() {
         }
         setLoading(false);
       });
+    }).catch((err) => {
+      console.error(err);
+      setLoading(false);
     });
   }, [router]);
 

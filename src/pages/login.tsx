@@ -125,11 +125,15 @@ export default function LoginPage() {
         return;
       }
       if (data?.session) {
-        await fetch('/api/auth/security', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer }),
-        });
+        try {
+          await fetch('/api/auth/security', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer }),
+          });
+        } catch {
+          console.error('[login] failed to save security question, session exists');
+        }
         router.push('/');
         return;
       }

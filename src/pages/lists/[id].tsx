@@ -418,16 +418,24 @@ export default function ListDetailPage() {
         weather: null as string | null,
       };
 
-      if (result.points.length > 0) {
-        const weather = await fetchRouteWeather(result.points[0][0], result.points[0][1], list?.trip_date || undefined);
-        gpxData.weather = weather;
-      }
-
+      // Save GPX first — weather is non-critical and must not block the save
       const { error: updateError } = await updateList(id, userId, { gpx_data: gpxData });
 
       if (updateError) throw updateError;
 
       setList((prev) => prev ? { ...prev, gpx_data: gpxData } as GearList : null);
+
+      // Fetch weather after GPX is saved — if it fails, GPX data is already persisted
+      if (result.points.length > 0) {
+        try {
+          const weather = await fetchRouteWeather(result.points[0][0], result.points[0][1], list?.trip_date || undefined);
+          if (weather) {
+            setList((prev) => prev ? { ...prev, gpx_data: { ...prev.gpx_data, weather } } as GearList : null);
+          }
+        } catch {
+          // Weather fetch failed — non-critical, GPX is already saved
+        }
+      }
     } catch (err: any) {
       toast.error(tCommon('error'));
       setGpxError(err.message || 'Failed to parse GPX');

@@ -14,5 +14,5 @@ export function formatDate(dateStr: string | null): string {
 }
 
 export function formatKbju(p: number, f: number, c: number, cal: number): string {
-  return `${Math.round(cal)} ккал · Б:${p.toFixed(1)} Ж:${f.toFixed(1)} В:${c.toFixed(1)}`;
+  return `${Math.round(cal)} ккал · P:${p.toFixed(1)} F:${f.toFixed(1)} C:${c.toFixed(1)}`;
 }

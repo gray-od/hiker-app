@@ -5,7 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { fetchUserProfile, fetchUserLists, fetchUserMealPlans } from '@/lib/supabase/service';
-import type { GearList, MealPlan } from '@/lib/types';
+import type { GearList, MealPlan, Profile } from '@/lib/types';
 import type { GearListWithTotalWeight } from '@/lib/supabase/service';
 import { getPlanType, type PlanTypeId } from '@/lib/hiking-standards';
 import { formatDate } from '@/lib/format';
@@ -38,17 +38,23 @@ export default function Dashboard() {
       if (cancelled) return;
       setUser(user);
 
-      Promise.all([
+      Promise.allSettled([
         fetchUserProfile(user.id),
         fetchUserLists(user.id),
         fetchUserMealPlans(user.id),
-      ]).then(([profileRes, listsRes, plansRes]) => {
+      ]).then((results) => {
         if (cancelled) return;
-        if (profileRes.data) setProfile(profileRes.data);
-        if (listsRes.data) setLists(listsRes.data);
+        const [profileRes, listsRes, plansRes] = results.map(r =>
+          r.status === 'fulfilled' ? r.value : { data: null, error: r.reason }
+        );
+        if (profileRes.data) setProfile(profileRes.data as Profile);
+        if (listsRes.data) setLists(listsRes.data as GearListWithTotalWeight[]);
         if (plansRes.data) setPlans(plansRes.data as (MealPlan & { meal_days?: { total_weight_g: number }[] })[]);
         setLoading(false);
       });
+    }).catch((err) => {
+      console.error('Dashboard init failed:', err);
+      setLoading(false);
     });
 
     return () => {

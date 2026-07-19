@@ -55,7 +55,8 @@ export default function PrintGearPage() {
     );
   }
 
-  const today = new Date().toLocaleDateString('uk-UA');
+  const [today, setToday] = useState('');
+  useEffect(() => { setToday(new Date().toLocaleDateString('uk-UA')); }, []);
   const totalWeight = items.reduce((sum, item) => sum + item.weight_g, 0);
 
   return (

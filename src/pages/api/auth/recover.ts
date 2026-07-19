@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     if (fetchError || !records || records.length === 0) {
-      res.status(404).json({ error: 'No recovery record found for this email' });
+      res.status(404).json({ error: 'Email not found or no recovery record' });
       return;
     }
 

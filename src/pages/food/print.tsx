@@ -54,7 +54,8 @@ export default function PrintFoodPage() {
     );
   }
 
-  const today = new Date().toLocaleDateString('uk-UA');
+  const [today, setToday] = useState('');
+  useEffect(() => { setToday(new Date().toLocaleDateString('uk-UA')); }, []);
 
   return (
     <div className="min-h-screen bg-white text-black">

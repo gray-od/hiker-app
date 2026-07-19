@@ -62,6 +62,9 @@ export default function FoodPage() {
         }
         setLoading(false);
       });
+    }).catch((err) => {
+      console.error(err);
+      setLoading(false);
     });
   }, [router]);
 

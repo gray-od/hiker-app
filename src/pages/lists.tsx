@@ -67,6 +67,9 @@ export default function ListsPage() {
       fetchUserMealPlansLight(user.id).then(({ data }) => {
         if (data) setMealPlans(data);
       });
+    }).catch((err) => {
+      console.error(err);
+      setLoading(false);
     });
   }, [router]);
 

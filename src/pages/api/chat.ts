@@ -72,9 +72,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     );
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (userError || !user) {
       return res.status(401).end('Unauthorized');
     }
 
@@ -105,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data: usage } = await supabase
         .from('ai_usage')
         .select('message_count')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .eq('date', new Date().toISOString().split('T')[0])
         .single();
 
@@ -122,19 +122,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       supabase
         .from('gear_items')
         .select('id, name, category, weight_g, season')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20),
       supabase
         .from('gear_lists')
         .select('id, name, season, created_at, list_items(id)')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10),
       supabase
         .from('meal_plans')
         .select('id, name, plan_type, days_count, people_count, target_calories, target_weight_g')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10),
     ]);
@@ -184,7 +184,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const systemPrompt = buildSystemPrompt(locale, userContext);
 
-    const userId = session.user.id;
+    const userId = user.id;
     const dataLocale =
       locale === 'uk' || locale === 'ru' ? (locale as 'uk' | 'ru') : ('en' as const);
 
@@ -740,7 +740,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           try {
             await supabase.from('ai_usage').upsert(
               {
-                user_id: session.user.id,
+                user_id: user.id,
                 date: new Date().toISOString().split('T')[0],
                 message_count: todayCount + 1,
               },

@@ -227,8 +227,9 @@ export default function SettingsPage() {
     setPasswordMessage(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) { setPasswordError('wrong_password'); return; }
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user?.email!, password: currentPassword
+      email: user.email, password: currentPassword
     });
     if (signInError) { setPasswordError(t('wrong_password')); return; }
     setChangingPassword(true);
