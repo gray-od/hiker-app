@@ -49,6 +49,7 @@
     "question_first_school": "Перша школа",
     "question_mother_maiden": "Дівоче прізвище матері",
     "question_pet_name": "Ім'я першого домашнього улюбленця",
+    "question_custom": "Своє питання",
     "recovery_not_available": "Відновлення паролю недоступне для цієї пошти",
     "recovery_too_many_attempts": "Забагато спроб. Спробуйте через 24 години",
     "recovery_wrong_answer": "Неправильна відповідь",

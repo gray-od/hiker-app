@@ -59,12 +59,14 @@ export default function LoginPage() {
   const [signUpSuccess, setSignUpSuccess] = useState(false);
   const [securityQuestion, setSecurityQuestion] = useState('');
   const [securityAnswer, setSecurityAnswer] = useState('');
+  const [customQuestion, setCustomQuestion] = useState('');
 
   const securityQuestions = [
     { value: 'mother_maiden', key: 'question_mother_maiden' },
     { value: 'birth_city', key: 'question_birth_city' },
     { value: 'first_school', key: 'question_first_school' },
     { value: 'pet_name', key: 'question_pet_name' },
+    { value: 'custom', key: 'question_custom' },
   ];
 
   const handleSignInWithGoogle = async () => {
@@ -107,7 +109,7 @@ export default function LoginPage() {
       }
       router.push('/');
     } else {
-      if (!securityQuestion || !securityAnswer) {
+      if (!securityQuestion || !securityAnswer || (securityQuestion === 'custom' && !customQuestion)) {
         setError(t('fill_security_fields'));
         setEmailLoading(false);
         return;
@@ -126,7 +128,7 @@ export default function LoginPage() {
         await fetch('/api/auth/security', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: securityQuestion, answer: securityAnswer }),
+          body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer }),
         });
         router.push('/');
         return;
@@ -295,6 +297,19 @@ export default function LoginPage() {
                         <option key={q.value} value={q.value}>{t(q.key as any)}</option>
                       ))}
                     </select>
+                    {securityQuestion === 'custom' && (
+                      <div className="mt-4">
+                        <input
+                          id="customQuestion"
+                          type="text"
+                          required
+                          value={customQuestion}
+                          onChange={(e) => setCustomQuestion(e.target.value)}
+                          placeholder={t('question_custom')}
+                          className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none text-base"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="securityAnswer" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
