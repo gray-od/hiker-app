@@ -5,7 +5,6 @@ import type { AppProps } from "next/app";
 import { NextIntlClientProvider } from "next-intl";
 import { useRouter } from "next/router";
 import { Analytics } from "@vercel/analytics/next";
-import { SerwistProvider } from "@serwist/next/react";
 import { Providers } from "@/components/Providers";
 import AppShell from "@/components/AppShell";
 import Toaster from "@/components/Toaster";
@@ -60,13 +59,11 @@ export default function App({ Component, pageProps }: AppProps) {
     >
       <Providers>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <SerwistProvider swUrl="/sw.js">
-            <Toaster />
-            <AppShell>
-              <Component {...pageProps} />
-            </AppShell>
-            <Analytics />
-          </SerwistProvider>
+          <Toaster />
+          <AppShell>
+            <Component {...pageProps} />
+          </AppShell>
+          <Analytics />
         </NextIntlClientProvider>
       </Providers>
     </div>
