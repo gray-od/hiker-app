@@ -21,8 +21,22 @@ AI-first hiking planner — gear, packing lists, meals, and an AI partner that a
 - Packing lists with GPX route import + weather
 - Meal plans with day-by-day calories, templates, shopping list
 - AI chat (8 tools: weather, search, gear, food, lists, meals, mountaineering standards, trail knowledge)
-- Full offline (PWA): all pages precached, data cached, mutations queued
 - Dark/light theme, 3 languages (UA/RU/EN)
+
+### Auth & Registration
+
+- **Google OAuth** — instant sign in
+- **Email + password** — instant registration (autoconfirm), no email verification needed
+- **Password recovery** — security question (PBKDF2-hashed) set at signup. No SMTP required
+- **Google fallback** — if recovery unavailable, sign in with Google (same email) then change password in Settings
+- **Password change** — in `/settings` for authenticated users
+
+### Offline (PWA)
+
+- **All pages precached** — install once, all pages work offline immediately
+- **IndexedDB data cache** — 5-minute TTL, cache-first with background refresh
+- **Mutation queue** — 12 CRUD operations (gear, food, lists, list items) are queued when offline and sync automatically
+- **F5 resistant** — full page refresh works offline via precached HTML
 
 ## Getting Started
 
