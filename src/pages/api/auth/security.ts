@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
 import { pbkdf2Sync, randomBytes } from 'crypto';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -11,7 +10,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { question, answer } = req.body;
-
     if (!question || !answer) {
       res.status(400).json({ error: 'Question and answer are required' });
       return;
@@ -34,7 +32,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-
     if (userError || !user) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
@@ -46,36 +43,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-        global: {
-          headers: {
-            Authorization: `Bearer ${serviceRoleKey}`,
-          },
-        },
-      },
-    );
-
     const salt = randomBytes(16).toString('hex');
     const answerHash = pbkdf2Sync(answer, salt, 100000, 64, 'sha512').toString('hex');
 
-    const { error: insertError } = await adminClient
-      .from('user_security')
-      .insert({
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/user_security`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
         user_id: user.id,
         email: user.email?.toLowerCase(),
         question,
         answer_hash: answerHash,
         salt,
-      });
+      }),
+    });
 
-    if (insertError) {
+    if (!response.ok) {
       res.status(500).json({ error: 'Failed to save security question' });
       return;
     }

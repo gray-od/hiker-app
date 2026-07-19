@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -9,7 +8,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { email } = req.body;
-
     if (!email) {
       res.status(400).json({ error: 'Email is required' });
       return;
@@ -21,29 +19,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-        global: {
-          headers: {
-            Authorization: `Bearer ${serviceRoleKey}`,
-          },
-        },
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/user_security?select=question&email=eq.${encodeURIComponent(email.toLowerCase())}&limit=1`;
+
+    const response = await fetch(url, {
+      headers: {
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        'Authorization': `Bearer ${serviceRoleKey}`,
       },
-    );
+    });
 
-    const { data: records, error: lookupError } = await adminClient
-      .from('user_security')
-      .select('question')
-      .eq('email', email.toLowerCase())
-      .limit(1);
+    if (!response.ok) {
+      res.status(404).json({ error: 'No recovery record found' });
+      return;
+    }
 
-    if (lookupError || !records || records.length === 0) {
+    const records = await response.json();
+    if (!records || records.length === 0) {
       res.status(404).json({ error: 'No recovery record found' });
       return;
     }

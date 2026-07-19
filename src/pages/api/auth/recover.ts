@@ -10,12 +10,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { email, answer, newPassword } = req.body;
-
     if (!email || !answer || !newPassword) {
       res.status(400).json({ error: 'Email, answer, and new password are required' });
       return;
     }
-
     if (newPassword.length < 6) {
       res.status(400).json({ error: 'New password must be at least 6 characters' });
       return;
@@ -27,29 +25,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-        global: {
-          headers: {
-            Authorization: `Bearer ${serviceRoleKey}`,
-          },
-        },
-      },
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      'Authorization': `Bearer ${serviceRoleKey}`,
+    };
+
+    // Look up security record
+    const lookupRes = await fetch(
+      `${baseUrl}/rest/v1/user_security?select=*&email=eq.${encodeURIComponent(email.toLowerCase())}&limit=1`,
+      { headers },
     );
 
-    const { data: records, error: lookupError } = await adminClient
-      .from('user_security')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .limit(1);
+    if (!lookupRes.ok) {
+      res.status(404).json({ error: 'No recovery record found for this email' });
+      return;
+    }
 
-    if (lookupError || !records || records.length === 0) {
+    const records = await lookupRes.json();
+    if (!records || records.length === 0) {
       res.status(404).json({ error: 'No recovery record found for this email' });
       return;
     }
@@ -58,14 +53,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check if locked
     if (record.locked_until) {
-      const lockedUntil = new Date(record.locked_until).getTime();
-      if (lockedUntil > Date.now()) {
+      if (new Date(record.locked_until).getTime() > Date.now()) {
         res.status(429).json({ error: 'too_many_attempts' });
         return;
       }
     }
 
-    // Verify answer with PBKDF2 constant-time comparison
+    // Verify answer
     const hash = pbkdf2Sync(answer, record.salt, 100000, 64, 'sha512');
     const storedHash = Buffer.from(record.answer_hash, 'hex');
 
@@ -76,24 +70,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!answerMatches) {
       const attempts = (record.attempts || 0) + 1;
-      const update: Record<string, unknown> = { attempts };
-
+      const patchBody: Record<string, unknown> = { attempts };
       if (attempts >= 5) {
-        // Lock for 24 hours
-        update.locked_until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        patchBody.locked_until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       }
-
-      await adminClient.from('user_security').update(update).eq('user_id', record.user_id);
-
+      await fetch(`${baseUrl}/rest/v1/user_security?user_id=eq.${encodeURIComponent(record.user_id)}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify(patchBody),
+      });
       res.status(403).json({ error: 'wrong_answer' });
       return;
     }
 
-    // Correct answer — reset attempts and update password
-    await adminClient.from('user_security').update({
-      attempts: 0,
-      locked_until: null,
-    }).eq('user_id', record.user_id);
+    // Reset attempts
+    await fetch(`${baseUrl}/rest/v1/user_security?user_id=eq.${encodeURIComponent(record.user_id)}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ attempts: 0, locked_until: null }),
+    });
+
+    // Update password
+    const adminClient = createClient(baseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     const { error: updateError } = await adminClient.auth.admin.updateUserById(
       record.user_id,
