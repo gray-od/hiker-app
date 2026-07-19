@@ -18,7 +18,8 @@ export default function Document() {
           content="#0a0a0a"
           media="(prefers-color-scheme: dark)"
         />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icon-16x16.png" />
         <link rel="apple-touch-icon" href="/icon-180x180.png" />
