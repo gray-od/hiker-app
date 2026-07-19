@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const response = await fetch(url, {
       headers: {
-        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        'apikey': serviceRoleKey,
         'Authorization': `Bearer ${serviceRoleKey}`,
       },
     });
