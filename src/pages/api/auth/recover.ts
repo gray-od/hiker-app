@@ -35,6 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           autoRefreshToken: false,
           persistSession: false,
         },
+        global: {
+          headers: {
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+        },
       },
     );
 
