@@ -51,6 +51,7 @@
     "question_pet_name": "First pet name",
     "question_custom": "Custom question",
     "recovery_not_available": "Password recovery is not available for this email",
+    "recovery_try_google": "No recovery option? Try signing in with Google (same email) instead:",
     "recovery_too_many_attempts": "Too many attempts. Try again in 24 hours",
     "recovery_wrong_answer": "Incorrect answer",
     "reset_password": "Reset password",

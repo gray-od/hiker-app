@@ -51,6 +51,7 @@
     "question_pet_name": "Имя первого питомца",
     "question_custom": "Свой вопрос",
     "recovery_not_available": "Восстановление пароля недоступно для этой почты",
+    "recovery_try_google": "Нет доступа к восстановлению? Войдите через Google (та же почта):",
     "recovery_too_many_attempts": "Слишком много попыток. Попробуйте через 24 часа",
     "recovery_wrong_answer": "Неправильный ответ",
     "reset_password": "Сбросить пароль",

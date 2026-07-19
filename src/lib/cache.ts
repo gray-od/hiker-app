@@ -23,12 +23,16 @@ function getDB(): Promise<IDBPDatabase> {
   return dbPromise;
 }
 
-export async function getCached<T>(key: string): Promise<T | null> {
+export async function getCached<T>(key: string, maxAge?: number): Promise<T | null> {
   try {
     const db = await getDB();
     const entry = await db.get('cache', key) as CacheEntry<T> | undefined;
-    if (entry) return entry.data;
-    return null;
+    if (!entry) return null;
+    if (maxAge && Date.now() - entry.timestamp > maxAge) {
+      await db.delete('cache', key);
+      return null;
+    }
+    return entry.data;
   } catch {
     return null;
   }
@@ -70,11 +74,11 @@ export async function withCache<T>(
   fetcher: () => Promise<{ data: T | null; error: Error | null }>,
   options?: { maxAge?: number; skipCache?: boolean },
 ): Promise<{ data: T | null; error: Error | null; fromCache: boolean }> {
-  const { maxAge, skipCache } = options || {};
+  const { maxAge = 5 * 60 * 1000, skipCache } = options || {};
 
   // Return cached data immediately
   if (!skipCache) {
-    const cached = await getCached<T>(key);
+    const cached = await getCached<T>(key, maxAge);
     if (cached) {
       // Update in background
       fetcher().then((fresh) => {
@@ -94,7 +98,7 @@ export async function withCache<T>(
     }
     return { ...fresh, fromCache: false };
   } catch (err) {
-    // Network failed — try cache as fallback
+    // Network failed — try cache as fallback (skip TTL check — stale is better than nothing)
     const cached = await getCached<T>(key);
     if (cached) {
       return { data: cached, error: null, fromCache: true };
