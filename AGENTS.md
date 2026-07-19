@@ -21,15 +21,13 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 - **BYOK:** опц. свой ключ AI/поиска через `localStorage` (`prohikes.ai`/`prohikes.search`)
 - **Hosting:** Vercel (new project `prohikes`, same env vars)
 
-## Current State — Код готов, SMTP блокер
+## Current State
 
-Деплой: `https://prohikes-ten.vercel.app` (Vercel, авто-деплой из GitHub main).
+Деплой: `https://hiker-app.vercel.app` (Vercel, авто-деплой из GitHub `gray-od/hiker-app` main).
 
-**Работает:** Google-вход, AI-чат, CRUD gear/food/lists/meals, офлайн (SW + IndexedDB), i18n, темы, SEO.
+**Работает:** Google-вход, email/пароль регистрация, сброс пароля (контрольный вопрос), смена пароля, AI-чат, CRUD gear/food/lists/meals, офлайн (SW precache + IndexedDB cache + mutation queue), i18n, темы, SEO.
 
-**НЕ работает:** подтверждение email при регистрации, сброс пароля. Причина: все бесплатные SMTP требуют свой домен. Workaround: `autoconfirm: true`, забыл пароль → Google-вход.
-
-**Дальше:** R18 (замена hiker-app) — заблокирован до решения SMTP.
+**НЕ работает:** подтверждение email при регистрации (SMTP). Workaround: `autoconfirm: true`. Сброс пароля — через контрольный вопрос (PBKDF2) без SMTP.
 
 ## Round History
 
@@ -53,6 +51,8 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 | R16 | 2026-07-18 | Favicon fix: added <link rel="icon"> to _document.tsx (override Vercel default icon) | _document.tsx |
 | R17 | 2026-07-18 | Full audit parity: created gear/print + food/print pages (were 404). manifest.json theme_color→#75a93a. robots.txt added. Meta description on all 12 pages. | gear/print.tsx, food/print.tsx, manifest.json, robots.txt, 12 page files |
 | R18 | 2026-07-19 | Password recovery without SMTP: security question during signUp (PBKDF2-hashed), forgot-password page, password change in settings. Supabase user_security table. No external services. | login.tsx, settings.tsx, forgot-password.tsx, i18n×3, api/auth/{security,recover,lookup}.ts, Supabase migration |
+| R19 | 2026-07-19 | Deep audit — 14 bugs fixed: auth on byok/validate, getUser in chat, .catch() on 5 pages (infinite spinner fix), null guard in settings, security fetch try/catch in login, unified error messages, Promise.all→allSettled, weather-after-GPX, hydration fix on print pages, formatKbju localization, method guards on API routes, zod in deps, dead code cleanup, session cookie persistence | 24 files: all API routes, all pages, middleware, format.ts, package.json, deleted 5 dead files |
+| R20 | 2026-07-19 | UX improvements: IndexedDB TTL (5min), forgot-password Google fallback, offline mutation queue (12 CRUD functions in service.ts wrapped with IndexedDB queue) | cache.ts, forgot-password.tsx, offline-queue.ts (new), service.ts, i18n×3 |
 
 ## What's Done So Far
 
@@ -61,27 +61,31 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 - [x] All shared files copied (components, lib, hooks, i18n, public, supabase, .env.local)
 - [x] Pages Router foundation (_app.tsx, _document.tsx, middleware.ts)
 - [x] Globals CSS copied from hiker-app
-- [x] next.config.ts (withSerwistInit + webpack build)
-- [x] SW file created (`src/sw.ts`)
-- [x] IndexedDB cache layer (`src/lib/cache.ts`) + wired to service.ts (R15)
+- [x] next.config.ts (withSerwistInit + webpack build + additionalPrecacheEntries)
+- [x] SW file created (`src/sw.ts`) — Serwist with precache + runtime caching
+- [x] IndexedDB cache layer (`src/lib/cache.ts`) + wired to service.ts (R15) + TTL (R20)
 - [x] OfflineBanner component
+- [x] Offline mutation queue (`src/lib/offline-queue.ts`) — 12 CRUD functions (R20)
 - [x] Auth callback adapted (`pages/api/auth/callback.ts`)
 - [x] Chat API adapted (`pages/api/chat.ts`) — AI SDK v4
-- [x] Login page adapted (`pages/login.tsx`) + autoconfirm redirect (R14)
+- [x] Login page adapted (`pages/login.tsx`) + autoconfirm + security question (R18)
+- [x] Password recovery: forgot-password page + PBKDF2 security question (R18)
+- [x] Password change in settings (R18)
 - [x] Dashboard adapted (`pages/index.tsx`)
 - [x] Error + 404 pages (`_error.tsx`, `404.tsx`)
-- [x] Remaining 17 pages (gear, food, lists, meals + sub-pages + print)
-- [x] 2 API routes (account/delete, byok/validate)
-- [x] Vercel deploy exists: `https://prohikes-ten.vercel.app` (public, auto-deploy from GitHub main)
+- [x] All 17 pages (gear, food, lists, meals + sub-pages + print)
+- [x] 7 API routes (account/delete, byok/validate, chat, auth/callback, auth/security, auth/recover, auth/lookup)
+- [x] Vercel deploy: `https://hiker-app.vercel.app` (auto-deploy from GitHub main)
 - [x] AI chat working (Gemma 4, BYOK, 8 tools)
-- [x] Full offline: SW static cache + IndexedDB data cache
+- [x] Full offline: SW precache all pages + IndexedDB data cache + mutation queue
 - [x] SEO: favicon, robots.txt, meta descriptions, manifest.json
-- [x] Full parity audit vs hiker-app (R17)
+- [x] Full parity audit vs original hiker-app (R17)
+- [x] Deep security audit + bug fixes (R19)
+- [x] Supabase user_security table + SECURITY DEFINER functions
 
 ## Open Issues
 
-- [ ] **SMTP:** email confirmation + password reset blocked — requires custom domain. All free options checked (Resend/Brevo/Gmail/Supabase-built-in). Workaround: `autoconfirm: true`, forgot password → Google login.
-- [ ] **R18 (replace hiker-app):** blocked until SMTP resolved. Code is ready.
+- [ ] **SMTP:** email confirmation blocked — requires custom domain. All free options checked (Resend/Brevo/Gmail/Supabase-built-in). Workaround: `autoconfirm: true`. Password reset via security question (PBKDF2).
 
 ## Page Migration Map
 
@@ -133,8 +137,8 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 ## External Changes Needed (after deploy)
 
 1. **Google Cloud Console: НЕ ТРЕБУЕТСЯ** — вход через `signInWithOAuth` (Supabase-callback уже прописан у Google; проверено в R12/R13-планировании)
-2. **Vercel:** Project `prohikes` exists (domain `prohikes-ten.vercel.app` — `prohikes.vercel.app` is taken by a stranger; alias `hiker.vercel.app` is free). Verify 6 env vars
-3. **Supabase (R13, Management API):** `uri_allow_list` += `https://prohikes-ten.vercel.app/**`; `site_url` → prod URL
+2. **Vercel:** Project `hiker-app` (domain `hiker-app.vercel.app`). Verify env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+3. **Supabase:** `uri_allow_list` += `https://hiker-app.vercel.app/**`; `site_url` → `https://hiker-app.vercel.app`
 4. **SMTP (R14):** кастомный отправитель (Resend/Brevo) — email-регистрация обязательна для запуска (Европа)
 
 ## Supabase MCP (since R9)

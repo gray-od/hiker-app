@@ -79,12 +79,30 @@
 
 ## Осталось
 
-### R18 — Замена hiker-app
-- [ ] Force push ProHikes → репо `hiker-app` (код уже залит, ждёт проверки)
-- [ ] Vercel авто-деплоит → `hiker-app.vercel.app` = ProHikes
-- [ ] Проверить: Google-вход, AI, CRUD, офлайн, регистрация
-- [ ] `site_url` → `hiker-app.vercel.app`
-- [ ] Удалить Vercel-проект `prohikes`
-- [ ] GitHub: архивировать/удалить `gray-od/prohikes`
+### SMTP — единственный открытый вопрос
+- [ ] Найти бесплатный SMTP-провайдер без требования домена
+- [ ] Или купить домен (~$10/год) → любой SMTP
 
-⚠️ R18 заблокирован до решения SMTP.
+## Выполненные раунды (сверх списка выше)
+
+### R18 — Восстановление пароля без SMTP ✅ (2026-07-19)
+- Контрольный вопрос при регистрации (PBKDF2-хеш)
+- Страница `/forgot-password` — 3 шага: email → вопрос → новый пароль
+- Смена пароля в `/settings`
+- Supabase: таблица `user_security` + SECURITY DEFINER функции
+- 3 API-роута: security, recover, lookup
+
+### R19 — Глубокий аудит и исправление 14 багов ✅ (2026-07-19)
+- Безопасность: auth на byok/validate, `getUser` вместо `getSession` в chat
+- `.catch()` на 5 страницах (бесконечный спиннер)
+- `Promise.all` → `Promise.allSettled` в index.tsx
+- Унификация сообщений об ошибках
+- Hydration fix на print-страницах
+- HTTP method guards на API-роутах
+- Локализация formatKbju, zod в deps, удаление 5 мёртвых файлов
+- Cookie persistence в middleware
+
+### R20 — Улучшения ✅ (2026-07-19)
+- IndexedDB TTL 5 минут
+- Google-вход как fallback на forgot-password
+- Офлайн-очередь мутаций (12 CRUD-функций в service.ts)
