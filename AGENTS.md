@@ -53,6 +53,8 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 | R18 | 2026-07-19 | Password recovery without SMTP: security question during signUp (PBKDF2-hashed), forgot-password page, password change in settings. Supabase user_security table. No external services. | login.tsx, settings.tsx, forgot-password.tsx, i18n×3, api/auth/{security,recover,lookup}.ts, Supabase migration |
 | R19 | 2026-07-19 | Deep audit — 14 bugs fixed: auth on byok/validate, getUser in chat, .catch() on 5 pages (infinite spinner fix), null guard in settings, security fetch try/catch in login, unified error messages, Promise.all→allSettled, weather-after-GPX, hydration fix on print pages, formatKbju localization, method guards on API routes, zod in deps, dead code cleanup, session cookie persistence | 24 files: all API routes, all pages, middleware, format.ts, package.json, deleted 5 dead files |
 | R20 | 2026-07-19 | UX improvements: IndexedDB TTL (5min), forgot-password Google fallback, offline mutation queue (12 CRUD functions in service.ts wrapped with IndexedDB queue) | cache.ts, forgot-password.tsx, offline-queue.ts (new), service.ts, i18n×3 |
+| R21 | 2026-08-01 | Fix setSaving(false) in catch blocks (5 locations) — prevents permanently disabled save buttons after errors | meals/[id].tsx, gear.tsx, food.tsx, lists.tsx |
+| R22 | 2026-08-01 | Remaining bugfixes: userId guards + IndexedDB cache invalidation in 7 meals mutations, name.trim() on save, i18n for ConfirmDeleteModal, GPX error message fix, middleware auth redirect, meals handleCreate rollback. Supabase anti-pause scheduled task. | meals/[id].tsx, meals.tsx, gear.tsx, food.tsx, ConfirmDeleteModal.tsx, lists/[id].tsx, middleware.ts, cache.ts
 
 ## What's Done So Far
 

@@ -28,7 +28,7 @@ App Router RSC-навигация требует сервер при каждо�
 
 ## Current State
 
-**Код готов (R1–R20). Деплой: `hiker-app.vercel.app`**
+**Код готов (R1–R22). Деплой: `hiker-app.vercel.app`**
 
 ### Что работает
 
