@@ -289,6 +289,7 @@ export default function EntryModal({
                   )}
                 </div>
               )}
+              {!selectedProduct && <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{tCommon('select_product')}</p>}
             </div>
           ) : entryMode === 'my_products' && !editEntryId ? (
             <div className="space-y-4">
@@ -414,6 +415,7 @@ export default function EntryModal({
                   )}
                 </div>
               )}
+              {!selectedUserProduct && <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{tCommon('select_product')}</p>}
             </div>
           ) : (
             <div className="space-y-4">
@@ -448,6 +450,7 @@ export default function EntryModal({
                   maxLength={200}
                   className={cn(inputClass, 'placeholder-zinc-400')}
                 />
+                {!entryForm.name.trim() && <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{tCommon('enter_name')}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

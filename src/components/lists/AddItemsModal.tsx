@@ -130,6 +130,7 @@ export default function AddItemsModal({
           </button>
         </div>
       </div>
+      {selectedGearIds.size === 0 && <p className="text-gray-400 dark:text-gray-500 text-xs mt-2 text-center">{tCommon('select_items')}</p>}
     </Modal>
   );
 }

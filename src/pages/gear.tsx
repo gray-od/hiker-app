@@ -411,6 +411,7 @@ export default function GearPage() {
                     className={cn(inputClass, 'placeholder-zinc-400')}
                     placeholder={tGear('name')}
                   />
+                  {!formData.name.trim() && <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{tCommon('enter_name')}</p>}
                 </div>
 
                 <div>
