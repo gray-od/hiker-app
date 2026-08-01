@@ -146,6 +146,7 @@ export default function FoodPage() {
       const msg = err instanceof Error ? err.message : 'Operation failed';
       toast.error(msg || tCommon('error_occurred'));
       setError(msg);
+      setSaving(false);
     }
   }
 

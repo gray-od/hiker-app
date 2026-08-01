@@ -340,6 +340,7 @@ export default function MealPlanDetailPage() {
       const msg = err instanceof Error ? err.message : 'Operation failed';
       setActionError(msg);
       toast.error(msg);
+      setSaving(false);
     }
   }
 
@@ -445,6 +446,7 @@ export default function MealPlanDetailPage() {
       const msg = err instanceof Error ? err.message : 'Operation failed';
       setActionError(msg);
       toast.error(msg);
+      setSaving(false);
     }
   }
 
