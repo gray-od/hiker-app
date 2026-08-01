@@ -96,7 +96,7 @@ export default function GearPage() {
     setError(null);
 
     const payload = {
-      name: formData.name,
+      name: formData.name.trim(),
       category: formData.category,
       weight_g: Math.round(formData.weight_g),
       season: formData.season,

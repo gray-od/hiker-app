@@ -40,7 +40,14 @@ export default async function middleware(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const publicRoutes = ['/login', '/privacy', '/forgot-password'];
+  const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/'));
+
+  if (!user && !isPublicRoute) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
   response.cookies.set('NEXT_LOCALE', locale, {
     path: '/',

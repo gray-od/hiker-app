@@ -1,5 +1,4 @@
-'use client';
-
+import { useTranslations } from 'next-intl';
 import Modal from '@/components/Modal';
 
 interface ConfirmDeleteModalProps {
@@ -19,6 +18,7 @@ export default function ConfirmDeleteModal({
   message = 'This action cannot be undone.',
   loading = false,
 }: ConfirmDeleteModalProps) {
+  const tCommon = useTranslations('common');
   return (
     <Modal open={open} onClose={onCancel} title={title} maxWidth="max-w-sm" showCloseButton={false}>
       <p className="text-sm text-zinc-600 dark:text-zinc-400">{message}</p>
@@ -28,7 +28,7 @@ export default function ConfirmDeleteModal({
           disabled={loading}
           className="min-h-[44px] px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 rounded-lg transition-colors"
         >
-          Cancel
+          {tCommon('cancel')}
         </button>
         <button
           onClick={onConfirm}
@@ -45,7 +45,7 @@ export default function ConfirmDeleteModal({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           )}
-          Delete
+          {tCommon('delete')}
         </button>
       </div>
     </Modal>

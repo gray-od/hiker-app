@@ -66,6 +66,12 @@ export async function removeCache(key: string): Promise<void> {
 }
 
 /**
+ * Invalidate a cache entry (alias for removeCache).
+ * Used by page components to invalidate IndexedDB cache after mutations.
+ */
+export const invalidateCache = removeCache;
+
+/**
  * Wraps a fetch function with cache-first strategy.
  * Returns cached data immediately if available, then updates in background from network.
  */

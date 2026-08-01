@@ -97,7 +97,7 @@ export default function FoodPage() {
     setError(null);
 
     const payload = {
-      name: formData.name,
+      name: formData.name.trim(),
       category: formData.category,
       calories_per100g: formData.calories_per100g,
       protein_per100g: formData.protein_per100g,

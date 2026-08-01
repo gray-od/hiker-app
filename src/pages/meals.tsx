@@ -96,6 +96,7 @@ export default function MealsPage() {
   }
 
   async function handleCreate() {
+    let planId: string | null = null;
     try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -127,6 +128,8 @@ export default function MealsPage() {
     }
 
     if (plan) {
+      planId = plan.id;
+
       const days = Array.from({ length: formData.days_count }, (_, i) => ({
         plan_id: plan.id,
         day_number: i + 1,
@@ -139,10 +142,7 @@ export default function MealsPage() {
         .order('day_number', { ascending: true });
 
       if (daysError || !createdDays) {
-        toast.error(daysError?.message || tCommon('error_occurred'));
-        setError(daysError?.message ?? 'Failed to create days');
-        setSaving(false);
-        return;
+        throw new Error(daysError?.message ?? 'Failed to create days');
       }
 
       if (formData.template_id) {
@@ -196,10 +196,7 @@ export default function MealsPage() {
               .insert(entries);
 
             if (entriesError) {
-              toast.error(entriesError.message || tCommon('error_occurred'));
-              setError(entriesError.message);
-              setSaving(false);
-              return;
+              throw new Error(entriesError.message || tCommon('error_occurred'));
             }
 
             const { data: daysWithEntries } = await supabase
@@ -233,6 +230,16 @@ export default function MealsPage() {
       toast.error(msg || tCommon('error_occurred'));
       setSaving(false);
       setError(msg);
+
+      // Rollback: delete the orphan plan (cascades to days)
+      if (planId) {
+        try {
+          const supabase = createClient();
+          await supabase.from('meal_plans').delete().eq('id', planId);
+        } catch {
+          // Silently fail — best-effort cleanup
+        }
+      }
     }
   }
 

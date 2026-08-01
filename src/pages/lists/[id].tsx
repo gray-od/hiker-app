@@ -437,8 +437,12 @@ export default function ListDetailPage() {
         }
       }
     } catch (err: any) {
+      const isSaveError = err?.code && typeof err.code === 'string';
+      const msg = isSaveError
+        ? (err.message || tCommon('error_occurred') || 'Failed to save GPX data')
+        : (err.message || 'Failed to parse GPX');
       toast.error(tCommon('error'));
-      setGpxError(err.message || 'Failed to parse GPX');
+      setGpxError(msg);
     } finally {
       setGpxUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

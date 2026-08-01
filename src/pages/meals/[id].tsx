@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
@@ -11,6 +11,7 @@ import { type PlanTypeId, getPlanType } from '@/lib/hiking-standards';
 import { getMealTemplate } from '@/lib/meal-templates';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { toast } from '@/lib/toast';
+import { invalidateCache, cacheKeys } from '@/lib/cache';
 import StatsCards from '@/components/meals/StatsCards';
 import PlanHeader from '@/components/meals/PlanHeader';
 import DayCard from '@/components/meals/DayCard';
@@ -67,6 +68,7 @@ export default function MealPlanDetailPage() {
   const [confirmTemplate, setConfirmTemplate] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
   const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
   const [entryMode, setEntryMode] = useState<'catalog' | 'my_products' | 'custom'>('catalog');
   const [selectedProduct, setSelectedProduct] = useState<FoodItem | null>(null);
@@ -91,6 +93,7 @@ export default function MealPlanDetailPage() {
         return;
       }
 
+      userIdRef.current = user.id;
       setLoading(true);
 
       const [planResult, foodResult] = await Promise.all([
@@ -255,6 +258,9 @@ export default function MealPlanDetailPage() {
     if (entryMode === 'catalog' && !selectedProduct) return;
     if (entryMode === 'my_products' && !selectedUserProduct) return;
 
+    const userId = userIdRef.current;
+    if (!userId) { toast.error(tCommon('error_loading')); return; }
+
     const supabase = createClient();
     setSaving(true);
     setActionError(null);
@@ -335,6 +341,8 @@ export default function MealPlanDetailPage() {
     setEntryModalOpen(false);
     setSaving(false);
     await recalculateTotals();
+    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlans(userId));
     toast.success(editEntryId ? t('updated') : t('added'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
@@ -347,6 +355,9 @@ export default function MealPlanDetailPage() {
   async function handleDeleteEntry(entryId: string) {
     setDeletingEntryId(entryId);
     try {
+    const userId = userIdRef.current;
+    if (!userId) { toast.error(tCommon('error_loading')); return; }
+
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -362,6 +373,8 @@ export default function MealPlanDetailPage() {
 
     toast.success(t('entry_deleted'));
     await recalculateTotals();
+    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlans(userId));
     setConfirmDeleteEntry(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
@@ -375,6 +388,9 @@ export default function MealPlanDetailPage() {
   async function handleUpdatePlan() {
     try {
     if (!editForm.name.trim()) return;
+
+    const userId = userIdRef.current;
+    if (!userId) { toast.error(tCommon('error_loading')); return; }
 
     const supabase = createClient();
     setSaving(true);
@@ -441,6 +457,8 @@ export default function MealPlanDetailPage() {
       target_weight_g: editForm.target_weight_g,
     } : null);
     await recalculateTotals();
+    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlans(userId));
     toast.success(t('plan_updated'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
@@ -452,6 +470,9 @@ export default function MealPlanDetailPage() {
 
   async function handleDeletePlan() {
     try {
+    const userId = userIdRef.current;
+    if (!userId) { toast.error(tCommon('error_loading')); return; }
+
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
@@ -464,6 +485,7 @@ export default function MealPlanDetailPage() {
       return;
     }
 
+    await invalidateCache(cacheKeys.mealPlans(userId));
     toast.success(t('deleted'));
     router.push('/meals');
     } catch (err) {
@@ -474,6 +496,9 @@ export default function MealPlanDetailPage() {
 
   async function handleAddDay() {
     try {
+    const userId = userIdRef.current;
+    if (!userId) { toast.error(tCommon('error_loading')); return; }
+
     const supabase = createClient();
     const maxDayNumber = days.reduce((max, d) => Math.max(max, d.day_number), 0);
 
@@ -493,6 +518,8 @@ export default function MealPlanDetailPage() {
 
     toast.success(t('created'));
     await recalculateTotals();
+    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlans(userId));
     } catch (err) {
       toast.error(tCommon('error'));
       setError(err instanceof Error ? err.message : 'Operation failed');
@@ -503,6 +530,9 @@ export default function MealPlanDetailPage() {
     setRemovingDay(true);
     try {
     if (days.length <= 1) return;
+
+    const userId = userIdRef.current;
+    if (!userId) { toast.error(tCommon('error_loading')); return; }
 
     const supabase = createClient();
     const lastDay = days[days.length - 1];
@@ -520,6 +550,8 @@ export default function MealPlanDetailPage() {
 
     toast.success(t('day_deleted'));
     await recalculateTotals();
+    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlans(userId));
     setConfirmRemoveDay(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
@@ -546,6 +578,9 @@ export default function MealPlanDetailPage() {
   async function handleApplyTemplate(templateId: string, peopleCountOverride?: number) {
     const template = getMealTemplate(templateId);
     if (!template || !plan) return;
+
+    const userId = userIdRef.current;
+    if (!userId) { toast.error(tCommon('error_loading')); return; }
 
     setApplyingTemplate(true);
     const supabase = createClient();
@@ -624,6 +659,8 @@ export default function MealPlanDetailPage() {
       setConfirmTemplate(null);
       setTemplateModalOpen(false);
       await recalculateTotals();
+      await invalidateCache(cacheKeys.mealPlanDetail(id));
+      await invalidateCache(cacheKeys.mealPlans(userId));
       toast.success(t('template_applied'));
     } catch (err) {
       setConfirmTemplate(null);
