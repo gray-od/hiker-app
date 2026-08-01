@@ -41,4 +41,4 @@ AI-first hiking planner — gear, packing lists, meals, and an AI partner that a
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, architecture, and contribution guide.
-See [ARCHITECTURE.md](ARCHITECTURE.md) for stack details and known issues.
+See [ARCHITECTURE.md](wiki_map_project.md) for stack details and known issues.

@@ -56,7 +56,7 @@ src/
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for full stack details, known issues, and gotchas.
+See [wiki_map_project.md](wiki_map_project.md) for full stack details, known issues, and gotchas.
 
 ## Offline data flow
 
