@@ -38,22 +38,7 @@ AI-first hiking planner — gear, packing lists, meals, and an AI partner that a
 - **Mutation queue** — 12 CRUD operations (gear, food, lists, list items) are queued when offline and sync automatically
 - **F5 resistant** — full page refresh works offline via precached HTML
 
-## Getting Started
+## Development
 
-```bash
-npm install
-npm run dev
-```
-
-Requires `.env.local` with:
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-```
-
-## Build
-
-```bash
-npm run build -- --webpack   # webpack required for Serwist SW
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, architecture, and contribution guide.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for stack details and known issues.

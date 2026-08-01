@@ -1,4 +1,4 @@
-# ProHikes — Project Map
+# Architecture
 
 ## Origin
 
