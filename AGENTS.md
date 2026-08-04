@@ -56,6 +56,7 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 | R21 | 2026-08-01 | Fix setSaving(false) in catch blocks (5 locations) — prevents permanently disabled save buttons after errors | meals/[id].tsx, gear.tsx, food.tsx, lists.tsx |
 | R22 | 2026-08-01 | Remaining bugfixes: userId guards + IndexedDB cache invalidation in 7 meals mutations, name.trim() on save, i18n for ConfirmDeleteModal, GPX error message fix, middleware auth redirect, meals handleCreate rollback. Supabase anti-pause scheduled task. | meals/[id].tsx, meals.tsx, gear.tsx, food.tsx, ConfirmDeleteModal.tsx, lists/[id].tsx, middleware.ts, cache.ts |
 | R23 | 2026-08-01 | UX: validation hints below form inputs — 8 locations show why save button is disabled (i18n: enter_name, select_product, select_items). Docs: CONTRIBUTING.md added, README simplified. | meals.tsx, lists.tsx, gear.tsx, food.tsx, EditPlanModal.tsx, EntryModal.tsx, EditListModal.tsx, AddItemsModal.tsx, i18n×3, README.md, CONTRIBUTING.md |
+| R24 | 2026-08-04 | Mobile fix + deep audit: viewport meta, SW rewrite (no IndexedDB, explicit runtime caching, catchHandler, 7d TTL), removed additionalPrecacheEntries (root cause of stale SW), cache invalidation order fix (12 funcs), open redirect fix, email enumeration fix, API guards (AbortController, .maybeSingle, null guard), 5 pages useEffect cleanup, i18n Deleting, offline-queue logging, manifest icons, 22 bugs total in 27 files | _document.tsx, manifest.json, sw.ts, next.config.ts, SWRegister.tsx, AppShell.tsx, service.ts, offline-queue.ts, cache.ts, gpx-weather.ts, callback.ts, lookup.ts, recover.ts, byok/validate.ts, chat.ts, index.tsx, login.tsx, gear.tsx, food.tsx, lists.tsx, meals.tsx, settings.tsx, TripWeightCard.tsx, _error.tsx, i18n×3 |
 
 ## What's Done So Far
 
@@ -64,7 +65,7 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 - [x] All shared files copied (components, lib, hooks, i18n, public, supabase, .env.local)
 - [x] Pages Router foundation (_app.tsx, _document.tsx, middleware.ts)
 - [x] Globals CSS copied from hiker-app
-- [x] next.config.ts (withSerwistInit + webpack build + additionalPrecacheEntries)
+- [x] next.config.ts (withSerwistInit + webpack build, no precache pages — runtime NetworkFirst)
 - [x] SW file created (`src/sw.ts`) — Serwist with precache + runtime caching
 - [x] IndexedDB cache layer (`src/lib/cache.ts`) + wired to service.ts (R15) + TTL (R20)
 - [x] OfflineBanner component
