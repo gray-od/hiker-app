@@ -28,7 +28,7 @@ export default function Document() {
         <meta property="og:type" content="website" />
         <meta property="og:title" content="ProHikes" />
         <meta property="og:description" content="Hiking gear, packing lists and meal planner" />
-        <meta property="og:image" content="https://prohikes-ten.vercel.app/og-logo.png" />
+        <meta property="og:image" content="https://hiker-app.vercel.app/og-logo.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
 
