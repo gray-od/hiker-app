@@ -6,10 +6,7 @@ const withSerwist = withSerwistInit({
   swDest: "public/sw.js",
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === "development",
-  additionalPrecacheEntries: [
-    '/', '/gear', '/food', '/lists', '/meals', '/settings', '/login', '/forgot-password', '/privacy',
-    '/gear/print', '/food/print',
-  ],
+  // Navigation handled by runtime NetworkFirst + offline catchHandler in sw.ts
 });
 
 const nextConfig: NextConfig = {
