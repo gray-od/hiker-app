@@ -91,7 +91,7 @@ export async function withCache<T>(
         if (fresh.data && !fresh.error) {
           setCache(key, fresh.data);
         }
-      }).catch(() => {});
+      }).catch((err) => { console.error('Background cache refresh failed:', err); });
       return { data: cached, error: null, fromCache: true };
     }
   }

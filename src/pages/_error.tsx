@@ -17,7 +17,11 @@ export default function Error({ statusCode }: ErrorProps) {
             : t('something_went_wrong')}
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            try {
+              window.location.reload();
+            } catch {}
+          }}
           className="inline-flex items-center justify-center px-6 py-3 min-w-[44px] min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-medium rounded-lg transition-colors"
         >
           {t('try_again')}

@@ -8,12 +8,6 @@ export default function SWRegister() {
 
     let refreshing = false;
 
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const reg of registrations) {
-        reg.update().catch(() => {});
-      }
-    });
-
     navigator.serviceWorker.register('/sw.js').then((registration) => {
       registration.addEventListener('updatefound', () => {
         const installing = registration.installing;

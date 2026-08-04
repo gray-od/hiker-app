@@ -9,7 +9,8 @@ export async function fetchRouteWeather(lat: number, lng: number, tripDate?: str
     const weatherCode = data.current.weather_code;
     const condition = getWeatherCondition(weatherCode);
     return `${temp}°C, ${condition}`;
-  } catch {
+  } catch (err) {
+    console.error('fetchRouteWeather error:', err);
     return null;
   }
 }

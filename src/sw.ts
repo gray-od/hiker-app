@@ -86,4 +86,32 @@ const serwist = new Serwist({
   runtimeCaching,
 });
 
+// Offline fallback: when navigation fails (offline + not in cache),
+// serve cached homepage or inline HTML instead of browser error page
+serwist.setCatchHandler(async ({ request }) => {
+  if (request.mode === 'navigate') {
+    const cache = await caches.open('pages');
+    const cached = await cache.match('/');
+    if (cached) return cached;
+    return new Response(
+      '<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#0a0a0a;color:#fff"><div style="text-align:center"><h1 style="color:#75a93a">ProHikes</h1><p>You are offline</p><p style="color:#888">Check your connection and try again</p></div></body></html>',
+      { headers: { 'Content-Type': 'text/html' } }
+    );
+  }
+  return Response.error();
+});
+
 serwist.addEventListeners();
+
+// Clean up orphaned caches from previous SW versions on activate
+self.addEventListener('activate', (event) => {
+  (event as ExtendableEvent).waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => !key.startsWith('workbox-') && key !== 'pages' && key !== 'static-assets' && key !== 'images' && key !== 'fonts')
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
+});
