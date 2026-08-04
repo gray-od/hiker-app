@@ -336,6 +336,7 @@ export default function SettingsPage() {
                 <input
                   id="byok-ai-key"
                   type="password"
+                  autoComplete="off"
                   value={aiKey}
                   onChange={(e) => { setAiKey(e.target.value); setAiTestResult(null); }}
                   className={inputClass}
@@ -411,6 +412,7 @@ export default function SettingsPage() {
                 <input
                   id="byok-search-key"
                   type="password"
+                  autoComplete="off"
                   value={searchKey}
                   onChange={(e) => { setSearchKey(e.target.value); setSearchTestResult(null); }}
                   className={inputClass}
@@ -541,6 +543,7 @@ export default function SettingsPage() {
               <input
                 id="currentPassword"
                 type="password"
+                autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(null); setPasswordMessage(null); }}
                 className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
@@ -553,6 +556,7 @@ export default function SettingsPage() {
               <input
                 id="newPassword"
                 type="password"
+                autoComplete="new-password"
                 minLength={6}
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null); setPasswordMessage(null); }}

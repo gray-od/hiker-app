@@ -206,6 +206,7 @@ export default function ForgotPasswordPage() {
                   <input
                     id="newPassword"
                     type="password"
+                    autoComplete="new-password"
                     required
                     minLength={6}
                     value={newPassword}
