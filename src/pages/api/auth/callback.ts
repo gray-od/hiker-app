@@ -7,9 +7,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const host = req.headers.host || 'localhost:3000';
   const origin = `${protocol}://${host}`;
 
-  const { searchParams } = new URL(req.url!, origin);
+  const { searchParams } = new URL(req.url || '/', origin);
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/';
+  // Validate redirect target to prevent open redirect
+  const safeNext = next.startsWith('/') ? next : '/';
 
   if (code) {
     const supabase = createServerClient(
@@ -47,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (!error) {
-        res.redirect(302, `${origin}${next}`);
+        res.redirect(302, `${origin}${safeNext}`);
         return;
       }
     } catch {

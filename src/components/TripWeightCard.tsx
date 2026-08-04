@@ -47,7 +47,9 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
 
   useEffect(() => {
     if (!mounted) return;
-    localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId, weight: myWeight }));
+    try {
+      localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId, weight: myWeight }));
+    } catch {}
   }, [selectedListId, myWeight, mounted]);
 
   const selectedList = lists.find(l => l.id === selectedListId);

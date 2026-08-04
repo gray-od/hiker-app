@@ -229,11 +229,11 @@ export async function createGearItem(
     .insert({ user_id: userId, ...payload })
     .select()
     .single();
-  invalidateCache(cacheKeys.gear(userId));
   if (error) {
     await enqueue('gear_items', 'insert', { user_id: userId, ...payload }, userId);
     return { data: null, error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.gear(userId));
   return { data: data as GearItem, error: null };
 }
 
@@ -243,11 +243,11 @@ export async function updateGearItem(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_items').update(payload).eq('id', id);
-  invalidateCache(cacheKeys.gear(userId));
   if (error) {
     await enqueue('gear_items', 'update', { id, ...payload }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.gear(userId));
   return { error: null };
 }
 
@@ -256,11 +256,11 @@ export async function deleteGearItem(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_items').delete().eq('id', id);
-  invalidateCache(cacheKeys.gear(userId));
   if (error) {
     await enqueue('gear_items', 'delete', { id }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.gear(userId));
   return { error: null };
 }
 
@@ -276,11 +276,11 @@ export async function createFoodItem(
     .insert({ user_id: userId, ...payload })
     .select()
     .single();
-  invalidateCache(cacheKeys.foodItems(userId));
   if (error) {
     await enqueue('user_food_items', 'insert', { user_id: userId, ...payload }, userId);
     return { data: null, error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.foodItems(userId));
   return { data: data as UserFoodItem, error: null };
 }
 
@@ -290,11 +290,11 @@ export async function updateFoodItem(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('user_food_items').update(payload).eq('id', id);
-  invalidateCache(cacheKeys.foodItems(userId));
   if (error) {
     await enqueue('user_food_items', 'update', { id, ...payload }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.foodItems(userId));
   return { error: null };
 }
 
@@ -303,11 +303,11 @@ export async function deleteFoodItem(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('user_food_items').delete().eq('id', id);
-  invalidateCache(cacheKeys.foodItems(userId));
   if (error) {
     await enqueue('user_food_items', 'delete', { id }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.foodItems(userId));
   return { error: null };
 }
 
@@ -323,11 +323,11 @@ export async function createList(
     .insert({ user_id: userId, ...payload })
     .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
     .single();
-  invalidateCache(cacheKeys.lists(userId));
   if (error) {
     await enqueue('gear_lists', 'insert', { user_id: userId, ...payload }, userId);
     return { data: null, error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.lists(userId));
   return { data: data as unknown as GearListWithTotalWeight, error: null };
 }
 
@@ -336,13 +336,13 @@ export async function deleteList(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_lists').delete().eq('id', id);
-  invalidateCache(cacheKeys.lists(userId));
-  invalidateCache(cacheKeys.listDetail(id));
-  invalidateCache(cacheKeys.listItems(id));
   if (error) {
     await enqueue('gear_lists', 'delete', { id }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.lists(userId));
+  invalidateCache(cacheKeys.listDetail(id));
+  invalidateCache(cacheKeys.listItems(id));
   return { error: null };
 }
 
@@ -355,12 +355,12 @@ export async function updateList(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_lists').update(payload).eq('id', id);
-  invalidateCache(cacheKeys.lists(userId));
-  invalidateCache(cacheKeys.listDetail(id));
   if (error) {
     await enqueue('gear_lists', 'update', { id, ...payload }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.lists(userId));
+  invalidateCache(cacheKeys.listDetail(id));
   return { error: null };
 }
 
@@ -379,12 +379,12 @@ export async function addListItems(
     consumable: false,
   }));
   const { error } = await supabase.from('list_items').insert(inserts);
-  invalidateCache(cacheKeys.listItems(listId));
-  invalidateCache(cacheKeys.lists(userId));
   if (error) {
     await enqueue('list_items', 'insert', { list_id: listId, items: inserts }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.listItems(listId));
+  invalidateCache(cacheKeys.lists(userId));
   return { error: null };
 }
 
@@ -395,12 +395,12 @@ export async function updateListItem(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('list_items').update(payload).eq('id', id);
-  invalidateCache(cacheKeys.listItems(listId));
-  invalidateCache(cacheKeys.lists(userId));
   if (error) {
     await enqueue('list_items', 'update', { id, ...payload }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.listItems(listId));
+  invalidateCache(cacheKeys.lists(userId));
   return { error: null };
 }
 
@@ -410,12 +410,12 @@ export async function deleteListItem(
 ): Promise<{ error: Error | null }> {
   const supabase = createClient();
   const { error } = await supabase.from('list_items').delete().eq('id', id);
-  invalidateCache(cacheKeys.listItems(listId));
-  invalidateCache(cacheKeys.lists(userId));
   if (error) {
     await enqueue('list_items', 'delete', { id }, userId);
     return { error: new Error(error.message) };
   }
+  invalidateCache(cacheKeys.listItems(listId));
+  invalidateCache(cacheKeys.lists(userId));
   return { error: null };
 }
 
@@ -439,7 +439,8 @@ export async function syncPendingMutations(): Promise<number> {
           break;
       }
       return true;
-    } catch {
+    } catch (err) {
+      console.error('Offline queue error (syncPendingMutations):', err);
       return false;
     }
   });

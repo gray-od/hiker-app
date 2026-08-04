@@ -131,11 +131,14 @@ export default function LoginPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer }),
           });
+          router.push('/');
+          return;
         } catch {
           console.error('[login] failed to save security question, session exists');
+          setError(t('fill_security_fields'));
+          setEmailLoading(false);
+          return;
         }
-        router.push('/');
-        return;
       }
       setSignUpSuccess(true);
       setEmailLoading(false);

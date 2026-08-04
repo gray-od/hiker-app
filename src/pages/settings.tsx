@@ -56,6 +56,7 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
 
     const cookieLocale = document.cookie
@@ -68,6 +69,7 @@ export default function SettingsPage() {
     }
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (cancelled) return;
       if (!user) {
         router.push('/login');
         return;
@@ -77,6 +79,7 @@ export default function SettingsPage() {
       setName(user.user_metadata?.full_name || '');
 
       const { data } = await fetchUserProfile(user.id);
+      if (cancelled) return;
       if (data) {
         if (data.name) setName(data.name);
         if (!cookieLocale && data.lang) {
@@ -85,6 +88,7 @@ export default function SettingsPage() {
       }
       setLoading(false);
     });
+    return () => { cancelled = true; };
   }, [router]);
 
   useEffect(() => {

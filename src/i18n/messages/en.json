@@ -58,6 +58,7 @@
     "security_answer": "Answer",
     "security_question": "Security question",
     "security_warning": "Save your answer — without it you cannot reset your password",
+    "deleting": "Deleting…",
     "enter_name": "Enter a name to continue",
     "select_product": "Select a product to continue",
     "select_items": "Select at least one item"

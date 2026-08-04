@@ -43,9 +43,11 @@ export default function GearPage() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
       if (!user) {
         router.push('/login');
         return;
@@ -55,6 +57,7 @@ export default function GearPage() {
       setLoading(true);
 
       fetchUserGear(user.id).then(({ data, error }) => {
+        if (cancelled) return;
         if (error) {
           console.error('Failed to load gear:', error);
           setError(tCommon('error_loading'));
@@ -64,9 +67,11 @@ export default function GearPage() {
         setLoading(false);
       });
     }).catch((err) => {
+      if (cancelled) return;
       console.error(err);
       setLoading(false);
     });
+    return () => { cancelled = true; };
   }, [router]);
 
   function openAddModal() {
@@ -522,7 +527,7 @@ export default function GearPage() {
                 {deleting ? (
                   <>
                     <LoadingSpinner size="sm" />
-                    Deleting...
+                    {tCommon('deleting')}
                   </>
                 ) : tCommon('delete')}
               </button>

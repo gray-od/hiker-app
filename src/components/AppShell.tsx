@@ -11,7 +11,7 @@ const ChatWidget = dynamic(() => import('@/components/ChatWidget'), {
   loading: () => null,
 });
 
-const PUBLIC_ROUTES = ['/login', '/privacy'];
+const PUBLIC_ROUTES = ['/login', '/privacy', '/forgot-password'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();

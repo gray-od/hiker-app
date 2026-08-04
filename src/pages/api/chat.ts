@@ -24,9 +24,9 @@ function sanitizeLog(msg: string, secrets: string[] = []): string {
   );
 }
 
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
-});
+const google = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  ? createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
+  : null;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select('message_count')
         .eq('user_id', user.id)
         .eq('date', new Date().toISOString().split('T')[0])
-        .single();
+        .maybeSingle();
 
       todayCount = usage?.message_count || 0;
 
@@ -189,7 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       locale === 'uk' || locale === 'ru' ? (locale as 'uk' | 'ru') : ('en' as const);
 
     const result = streamText({
-      model: userModel ?? google('gemma-4-26b-a4b-it'),
+      model: userModel ?? google!('gemma-4-26b-a4b-it'),
       system: systemPrompt,
       messages,
       tools: {
@@ -205,6 +205,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
             if (!process.env.EXA_API_KEY) return 'Search is unavailable right now';
             try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 10000);
               const exaRes = await fetch('https://api.exa.ai/search', {
                 method: 'POST',
                 headers: {
@@ -217,7 +219,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   numResults: 5,
                   contents: { highlights: true },
                 }),
+                signal: controller.signal,
               });
+              clearTimeout(timeout);
               const data = await exaRes.json();
               const results = data.results || [];
               if (results.length === 0) return 'No search results found';
@@ -249,15 +253,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               return runUserSearch(search, 'weather forecast 7 day ' + location);
             }
             try {
+              const geoController = new AbortController();
+              const geoTimeout = setTimeout(() => geoController.abort(), 10000);
               const geoRes = await fetch(
                 `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`,
+                { signal: geoController.signal },
               );
+              clearTimeout(geoTimeout);
               const geo = await geoRes.json();
               const place = geo.results?.[0];
               if (!place) return `Location "${location}" not found`;
+              const wController = new AbortController();
+              const wTimeout = setTimeout(() => wController.abort(), 10000);
               const wRes = await fetch(
                 `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,weather_code&forecast_days=7&timezone=auto`,
+                { signal: wController.signal },
               );
+              clearTimeout(wTimeout);
               const w = await wRes.json();
               const wmo: Record<number, string> = {
                 0: 'Clear',

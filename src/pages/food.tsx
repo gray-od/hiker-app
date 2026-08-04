@@ -42,9 +42,11 @@ export default function FoodPage() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
       if (!user) {
         router.push('/login');
         return;
@@ -54,6 +56,7 @@ export default function FoodPage() {
       setLoading(true);
 
       fetchUserFoodItems(user.id).then(({ data, error }) => {
+        if (cancelled) return;
         if (error) {
           console.error('Failed to load food items:', error);
           setError(tCommon('error_loading'));
@@ -63,9 +66,11 @@ export default function FoodPage() {
         setLoading(false);
       });
     }).catch((err) => {
+      if (cancelled) return;
       console.error(err);
       setLoading(false);
     });
+    return () => { cancelled = true; };
   }, [router]);
 
   function openAddModal() {
@@ -569,7 +574,7 @@ export default function FoodPage() {
                 {deleting ? (
                   <>
                     <LoadingSpinner size="sm" />
-                    Deleting...
+                    {tCommon('deleting')}
                   </>
                 ) : tCommon('delete')}
               </button>

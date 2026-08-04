@@ -51,9 +51,11 @@ export default function MealsPage() {
   });
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
       if (!user) {
         router.push('/login');
         return;
@@ -62,6 +64,7 @@ export default function MealsPage() {
       setLoading(true);
 
       fetchUserMealPlans(user.id).then(({ data, error: fetchError }) => {
+        if (cancelled) return;
         if (fetchError) {
           console.error('Failed to load meals:', fetchError);
           setError(tCommon('error_loading'));
@@ -71,9 +74,11 @@ export default function MealsPage() {
         setLoading(false);
       });
     }).catch((err) => {
+      if (cancelled) return;
       console.error(err);
       setLoading(false);
     });
+    return () => { cancelled = true; };
   }, [router]);
 
   function getTotalCalories(plan: MealPlanWithDays): number {
@@ -663,7 +668,7 @@ export default function MealsPage() {
                   {deleting ? (
                     <>
                       <LoadingSpinner size="sm" />
-                      Deleting...
+                      {tCommon('deleting')}
                     </>
                   ) : tCommon('delete')}
                 </button>

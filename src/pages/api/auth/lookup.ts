@@ -30,12 +30,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       p_email: email.toLowerCase(),
     });
 
-    if (lookupError || !records || records.length === 0) {
-      res.status(404).json({ error: 'Email not found or no recovery record' });
-      return;
-    }
+    // Always return a question — never reveal whether email exists
+    const question =
+      !lookupError && records && records.length > 0
+        ? records[0].question
+        : 'What is your favorite color?';
 
-    res.status(200).json({ question: records[0].question });
+    res.status(200).json({ question });
   } catch {
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -58,6 +58,7 @@
     "security_answer": "Відповідь",
     "security_question": "Контрольне питання",
     "security_warning": "Збережіть відповідь — без неї неможливо відновити пароль",
+    "deleting": "Видалення…",
     "enter_name": "Введіть назву",
     "select_product": "Виберіть продукт",
     "select_items": "Виберіть хоча б один предмет"

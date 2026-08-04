@@ -37,8 +37,8 @@ export async function enqueue(
   try {
     const db = await getDB();
     await db.add('mutations', { table, action, payload, userId, timestamp: Date.now() });
-  } catch {
-    // Silently fail — queue is best-effort
+  } catch (err) {
+    console.error('Offline queue error (enqueue):', err);
   }
 }
 
@@ -62,7 +62,8 @@ export async function syncQueue(
     }
 
     return remaining;
-  } catch {
+  } catch (err) {
+    console.error('Offline queue error (syncQueue):', err);
     return -1;
   }
 }
@@ -72,7 +73,8 @@ export async function pendingCount(userId: string): Promise<number> {
   try {
     const db = await getDB();
     return await db.countFromIndex('mutations', 'userId', userId);
-  } catch {
+  } catch (err) {
+    console.error('Offline queue error (pendingCount):', err);
     return 0;
   }
 }

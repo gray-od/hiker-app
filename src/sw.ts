@@ -31,10 +31,11 @@ const runtimeCaching: RuntimeCaching[] = [
     matcher: ({ request }) => request.mode === "navigate",
     handler: new NetworkFirst({
       cacheName: "pages",
+      networkTimeoutSeconds: 3,
       plugins: [
         new ExpirationPlugin({
           maxEntries: 30,
-          maxAgeSeconds: 60 * 10, // 10 minutes
+          maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
         }),
       ],
     }),

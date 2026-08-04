@@ -43,9 +43,11 @@ export default function ListsPage() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
       if (!user) {
         router.push('/login');
         return;
@@ -55,6 +57,7 @@ export default function ListsPage() {
       setLoading(true);
 
       fetchUserLists(user.id).then(({ data, error }) => {
+        if (cancelled) return;
         if (error) {
           console.error('Failed to load lists:', error);
           setError(tCommon('error_loading'));
@@ -65,12 +68,15 @@ export default function ListsPage() {
       });
 
       fetchUserMealPlansLight(user.id).then(({ data }) => {
+        if (cancelled) return;
         if (data) setMealPlans(data);
       });
     }).catch((err) => {
+      if (cancelled) return;
       console.error(err);
       setLoading(false);
     });
+    return () => { cancelled = true; };
   }, [router]);
 
   function getItemsCount(list: GearListWithTotalWeight): number {
@@ -423,7 +429,7 @@ export default function ListsPage() {
                 {deleting ? (
                   <>
                     <LoadingSpinner size="sm" />
-                    Deleting...
+                    {tCommon('deleting')}
                   </>
                 ) : tCommon('delete')}
               </button>

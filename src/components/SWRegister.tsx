@@ -33,6 +33,13 @@ export default function SWRegister() {
         window.location.reload();
       }
     });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'RELOAD_ON_ONLINE' && !refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
   }, []);
 
   return null;

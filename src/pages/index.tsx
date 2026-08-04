@@ -60,7 +60,7 @@ export default function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, []);
 
   if (loading) return <LoadingSpinner fullPage />;
 

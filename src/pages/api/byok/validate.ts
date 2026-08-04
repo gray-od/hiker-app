@@ -31,16 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  let body: { kind?: string; config?: Record<string, unknown> };
   try {
-    body = req.body;
-  } catch {
-    res.status(400).json({ error: 'Invalid JSON' });
-    return;
-  }
-
-  try {
-    const { kind, config } = body;
+    const { kind, config } = req.body;
 
     let result: { ok: boolean; error?: string };
 
@@ -54,6 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json(result);
   } catch {
-    res.status(200).json({ ok: false, error: 'server error' });
+    res.status(500).json({ ok: false, error: 'server error' });
   }
 }
