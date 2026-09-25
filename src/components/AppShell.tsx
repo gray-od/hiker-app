@@ -20,10 +20,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isPublic = PUBLIC_ROUTES.includes(pathname);
 
   useEffect(() => {
-    syncPendingMutations();
-    const handleOnline = () => syncPendingMutations();
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+    // Never replay while the device is offline: without connectivity every queued
+    // request can only fail, and a failed entry stays queued for the next reconnect.
+    const syncIfOnline = () => {
+      if (navigator.onLine) syncPendingMutations();
+    };
+    syncIfOnline();
+    window.addEventListener('online', syncIfOnline);
+    return () => window.removeEventListener('online', syncIfOnline);
   }, []);
 
   // Keyed on `isPublic`: signing in navigates client-side, so the shell survives

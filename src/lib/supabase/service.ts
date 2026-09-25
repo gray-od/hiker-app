@@ -380,7 +380,9 @@ export async function addListItems(
   }));
   const { error } = await supabase.from('list_items').insert(inserts);
   if (error) {
-    await enqueue('list_items', 'insert', { list_id: listId, items: inserts }, userId);
+    // One queue entry per row: the replay executor inserts a single payload object,
+    // and list_items has no `items` column for a bulk payload to ever apply against.
+    await Promise.all(inserts.map((row) => enqueue('list_items', 'insert', row, userId)));
     return { error: new Error(error.message) };
   }
   invalidateCache(cacheKeys.listItems(listId));
@@ -425,18 +427,38 @@ export async function syncPendingMutations(): Promise<number> {
 
   return syncQueue(async (m) => {
     try {
+      // supabase-js resolves network/RLS failures as `{ error }` instead of throwing;
+      // treating them as success would delete the queued mutation and lose it.
       switch (m.action) {
-        case 'insert':
-          await supabase.from(m.table).insert(m.payload);
-          break;
-        case 'update': {
-          const { id, ...rest } = m.payload;
-          if (id) await supabase.from(m.table).update(rest).eq('id', id as string);
+        case 'insert': {
+          const { error } = await supabase.from(m.table).insert(m.payload);
+          if (error) {
+            console.error('Offline queue error (syncPendingMutations): insert into', m.table, '-', error.message);
+            return false;
+          }
           break;
         }
-        case 'delete':
-          await supabase.from(m.table).delete().eq('id', m.payload.id as string);
+        case 'update': {
+          const { id, ...rest } = m.payload;
+          if (!id) {
+            console.error('Offline queue error (syncPendingMutations): update without id on', m.table);
+            return false;
+          }
+          const { error } = await supabase.from(m.table).update(rest).eq('id', id as string);
+          if (error) {
+            console.error('Offline queue error (syncPendingMutations): update on', m.table, '-', error.message);
+            return false;
+          }
           break;
+        }
+        case 'delete': {
+          const { error } = await supabase.from(m.table).delete().eq('id', m.payload.id as string);
+          if (error) {
+            console.error('Offline queue error (syncPendingMutations): delete on', m.table, '-', error.message);
+            return false;
+          }
+          break;
+        }
       }
       return true;
     } catch (err) {
