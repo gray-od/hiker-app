@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchUserProfile } from '@/lib/supabase/service';
 import { inputClass, cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
@@ -57,7 +58,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createClient();
 
     const cookieLocale = document.cookie
       .split('; ')
@@ -68,7 +68,7 @@ export default function SettingsPage() {
       setCurrentLocale(cookieLocale);
     }
 
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    resolveUser().then(async (user) => {
       if (cancelled) return;
       if (!user) {
         router.push('/login');

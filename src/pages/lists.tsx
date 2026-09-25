@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import Head from 'next/head';
 import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import { formatDate, formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
 import { fetchUserLists, fetchUserMealPlansLight, createList, deleteList } from '@/lib/supabase/service';
@@ -44,9 +45,8 @@ export default function ListsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    resolveUser().then((user) => {
       if (cancelled) return;
       if (!user) {
         router.push('/login');

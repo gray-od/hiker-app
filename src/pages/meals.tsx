@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import type { MealPlan } from '@/lib/types';
 import { fetchUserMealPlans } from '@/lib/supabase/service';
 import { getPlanTypeBadgeClass } from '@/lib/badges';
@@ -52,9 +53,8 @@ export default function MealsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    resolveUser().then((user) => {
       if (cancelled) return;
       if (!user) {
         router.push('/login');

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import Head from 'next/head';
-import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchListItems, fetchUserListDetail } from '@/lib/supabase/service';
 import type { GearList, ListItemWithGear } from '@/lib/types';
 import { formatWeight, formatDate } from '@/lib/format';
@@ -21,9 +21,8 @@ export default function PrintListPage() {
 
   useEffect(() => {
     if (!router.isReady || typeof id !== 'string') return;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    resolveUser().then(async (user) => {
       if (!user) {
         router.push('/login');
         return;

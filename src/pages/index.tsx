@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslations, useLocale } from 'next-intl';
 import Head from 'next/head';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchUserProfile, fetchUserLists, fetchUserMealPlans } from '@/lib/supabase/service';
 import type { GearList, MealPlan, Profile } from '@/lib/types';
 import type { GearListWithTotalWeight } from '@/lib/supabase/service';
@@ -28,9 +28,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    resolveUser().then((user) => {
       if (!user) {
         router.push('/login');
         return;

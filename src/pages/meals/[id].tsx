@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchMealPlanDetail, fetchUserFoodItems } from '@/lib/supabase/service';
 import type { MealPlan, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
@@ -85,9 +86,8 @@ export default function MealPlanDetailPage() {
 
   useEffect(() => {
     if (!router.isReady || typeof id !== 'string') return;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    resolveUser().then(async (user) => {
       if (!user) {
         router.push('/login');
         return;

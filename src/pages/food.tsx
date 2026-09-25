@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import type { UserFoodItem } from '@/lib/types';
 import { formatKbju } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
@@ -43,9 +43,8 @@ export default function FoodPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    resolveUser().then((user) => {
       if (cancelled) return;
       if (!user) {
         router.push('/login');

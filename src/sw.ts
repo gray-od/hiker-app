@@ -80,36 +80,50 @@ const runtimeCaching: RuntimeCaching[] = [
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
+  // Built-in cleanup deletes only outdated `serwist-*-precache-*` caches from
+  // previous library versions (same scope, excluding the current precache).
+  // The custom activate handler below must not do this itself — it only
+  // removes caches that belong to no SW version of this project.
+  precacheOptions: { cleanupOutdatedCaches: true },
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: false,
   runtimeCaching,
 });
 
-// Offline fallback: when navigation fails (offline + not in cache),
-// serve cached homepage or inline HTML instead of browser error page
+// Offline fallback for navigations: serve the document cached for this exact
+// URL, or the same URL without its query string. Anything else must fail:
+// returning `undefined` lets the fetch reject so the browser shows its own
+// offline error. Serving another route's document (e.g. the homepage) would
+// render a page that does not belong to the requested URL.
 serwist.setCatchHandler(async ({ request }) => {
-  if (request.mode === 'navigate') {
-    const cache = await caches.open('pages');
-    const cached = await cache.match('/');
+  if (request.mode === "navigate") {
+    const cache = await caches.open("pages");
+    const cached = await cache.match(request);
     if (cached) return cached;
-    return new Response(
-      '<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#0a0a0a;color:#fff"><div style="text-align:center"><h1 style="color:#75a93a">ProHikes</h1><p>You are offline</p><p style="color:#888">Check your connection and try again</p></div></body></html>',
-      { headers: { 'Content-Type': 'text/html' } }
-    );
+    // NetworkFirst's own cache lookup is exact-only; retry ignoring search.
+    // No document for this URL: resolve with `undefined` so `respondWith`
+    // fails and the browser reports the network error. The cast only satisfies
+    // Serwist's types, which require a Response value.
+    return (await cache.match(request, { ignoreSearch: true })) as Response;
   }
   return Response.error();
 });
 
 serwist.addEventListeners();
 
-// Clean up orphaned caches from previous SW versions on activate
-self.addEventListener('activate', (event) => {
+// Remove caches left behind by earlier SW versions that this project no longer
+// uses. Serwist's own caches (`serwist-*` / `workbox-*`, including the
+// precache) and the four named runtime caches are kept; outdated Serwist
+// precaches are handled by `precacheOptions.cleanupOutdatedCaches` above.
+const keepCacheNames = new Set(["pages", "static-assets", "images", "fonts"]);
+
+self.addEventListener("activate", (event) => {
   (event as ExtendableEvent).waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => !key.startsWith('workbox-') && key !== 'pages' && key !== 'static-assets' && key !== 'images' && key !== 'fonts')
+          .filter((key) => !key.startsWith("serwist-") && !key.startsWith("workbox-") && !keepCacheNames.has(key))
           .map((key) => caches.delete(key))
       )
     )

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchMealPlanDetail } from '@/lib/supabase/service';
 import type { MealPlan, MealDayWithEntries, MealEntry } from '@/lib/types';
 
@@ -27,9 +27,8 @@ export default function MealPlanPrintPage() {
 
   useEffect(() => {
     if (!router.isReady || typeof id !== 'string') return;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    resolveUser().then(async (user) => {
       if (!user) {
         router.push('/login');
         return;
