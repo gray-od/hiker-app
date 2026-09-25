@@ -112,23 +112,27 @@ export default function ListsPage() {
     setSaving(true);
     setError(null);
 
-    const { data, error: insertError } = await createList(userId, {
+    const { data, error: insertError, queued } = await createList(userId, {
       name: formData.name,
       season: formData.season,
       trip_date: formData.trip_date || null,
       meal_plan_id: formData.meal_plan_id || null,
     });
 
-    if (insertError) {
+    if (insertError && !queued) {
       toast.error(insertError.message || tCommon('error_occurred'));
       setError(insertError.message);
       setSaving(false);
       return;
     }
 
-    toast.success(t('created'));
-    if (data) {
-      setLists((prev) => [data, ...prev]);
+    if (queued) {
+      toast.info(tCommon('saved_offline'));
+    } else {
+      toast.success(t('created'));
+      if (data) {
+        setLists((prev) => [data, ...prev]);
+      }
     }
 
     setSaving(false);
@@ -149,9 +153,9 @@ export default function ListsPage() {
 
     setDeleting(true);
 
-    const { error: deleteError } = await deleteList(id, userId);
+    const { error: deleteError, queued } = await deleteList(id, userId);
 
-    if (deleteError) {
+    if (deleteError && !queued) {
       toast.error(deleteError.message || tCommon('error_occurred'));
       setError(deleteError.message);
       setConfirmDelete(null);
@@ -159,7 +163,11 @@ export default function ListsPage() {
       return;
     }
 
-    toast.success(t('deleted'));
+    if (queued) {
+      toast.info(tCommon('saved_offline'));
+    } else {
+      toast.success(t('deleted'));
+    }
     setLists((prev) => prev.filter((l) => l.id !== id));
     setConfirmDelete(null);
     setDeleting(false);

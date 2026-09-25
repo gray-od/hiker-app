@@ -108,16 +108,20 @@ export default function GearPage() {
     };
 
     if (editingItem) {
-      const { error: updateError } = await updateGearItem(editingItem.id, userId, payload);
+      const { error: updateError, queued: updateQueued } = await updateGearItem(editingItem.id, userId, payload);
 
-      if (updateError) {
+      if (updateError && !updateQueued) {
         toast.error(updateError.message || tCommon('error_occurred'));
         setError(updateError.message);
         setSaving(false);
         return;
       }
 
-      toast.success(tGear('updated'));
+      if (updateQueued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(tGear('updated'));
+      }
       setItems(prev =>
         prev.map(i =>
           i.id === editingItem.id
@@ -126,18 +130,22 @@ export default function GearPage() {
         ),
       );
     } else {
-      const { data, error: insertError } = await createGearItem(userId, payload);
+      const { data, error: insertError, queued: insertQueued } = await createGearItem(userId, payload);
 
-      if (insertError) {
+      if (insertError && !insertQueued) {
         toast.error(insertError.message || tCommon('error_occurred'));
         setError(insertError.message);
         setSaving(false);
         return;
       }
 
-      toast.success(tGear('created'));
-      if (data) {
-        setItems(prev => [data, ...prev]);
+      if (insertQueued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(tGear('created'));
+        if (data) {
+          setItems(prev => [data, ...prev]);
+        }
       }
     }
 
@@ -158,9 +166,9 @@ export default function GearPage() {
 
     setDeleting(true);
 
-    const { error: deleteError } = await deleteGearItem(id, userId);
+    const { error: deleteError, queued: deleteQueued } = await deleteGearItem(id, userId);
 
-    if (deleteError) {
+    if (deleteError && !deleteQueued) {
       toast.error(deleteError.message || tCommon('error_occurred'));
       setError(deleteError.message);
       setConfirmDelete(null);
@@ -168,7 +176,11 @@ export default function GearPage() {
       return;
     }
 
-    toast.success(tGear('deleted'));
+    if (deleteQueued) {
+      toast.info(tCommon('saved_offline'));
+    } else {
+      toast.success(tGear('deleted'));
+    }
     setItems(prev => prev.filter(i => i.id !== id));
     setConfirmDelete(null);
     setDeleting(false);

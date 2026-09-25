@@ -222,7 +222,7 @@ export function invalidateCache(key: string): Promise<void> {
 export async function createGearItem(
   userId: string,
   payload: { name: string; category: string; weight_g: number; season: string; notes?: string | null },
-): Promise<{ data: GearItem | null; error: Error | null }> {
+): Promise<{ data: GearItem | null; error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('gear_items')
@@ -231,7 +231,7 @@ export async function createGearItem(
     .single();
   if (error) {
     await enqueue('gear_items', 'insert', { user_id: userId, ...payload }, userId);
-    return { data: null, error: new Error(error.message) };
+    return { data: null, error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.gear(userId));
   return { data: data as GearItem, error: null };
@@ -240,12 +240,12 @@ export async function createGearItem(
 export async function updateGearItem(
   id: string, userId: string,
   payload: Record<string, unknown>,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_items').update(payload).eq('id', id);
   if (error) {
     await enqueue('gear_items', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.gear(userId));
   return { error: null };
@@ -253,12 +253,12 @@ export async function updateGearItem(
 
 export async function deleteGearItem(
   id: string, userId: string,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_items').delete().eq('id', id);
   if (error) {
     await enqueue('gear_items', 'delete', { id }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.gear(userId));
   return { error: null };
@@ -269,7 +269,7 @@ export async function deleteGearItem(
 export async function createFoodItem(
   userId: string,
   payload: Record<string, unknown>,
-): Promise<{ data: UserFoodItem | null; error: Error | null }> {
+): Promise<{ data: UserFoodItem | null; error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('user_food_items')
@@ -278,7 +278,7 @@ export async function createFoodItem(
     .single();
   if (error) {
     await enqueue('user_food_items', 'insert', { user_id: userId, ...payload }, userId);
-    return { data: null, error: new Error(error.message) };
+    return { data: null, error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.foodItems(userId));
   return { data: data as UserFoodItem, error: null };
@@ -287,12 +287,12 @@ export async function createFoodItem(
 export async function updateFoodItem(
   id: string, userId: string,
   payload: Record<string, unknown>,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('user_food_items').update(payload).eq('id', id);
   if (error) {
     await enqueue('user_food_items', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.foodItems(userId));
   return { error: null };
@@ -300,12 +300,12 @@ export async function updateFoodItem(
 
 export async function deleteFoodItem(
   id: string, userId: string,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('user_food_items').delete().eq('id', id);
   if (error) {
     await enqueue('user_food_items', 'delete', { id }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.foodItems(userId));
   return { error: null };
@@ -316,7 +316,7 @@ export async function deleteFoodItem(
 export async function createList(
   userId: string,
   payload: { name: string; season: string; trip_date: string | null; meal_plan_id: string | null },
-): Promise<{ data: GearListWithTotalWeight | null; error: Error | null }> {
+): Promise<{ data: GearListWithTotalWeight | null; error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('gear_lists')
@@ -325,7 +325,7 @@ export async function createList(
     .single();
   if (error) {
     await enqueue('gear_lists', 'insert', { user_id: userId, ...payload }, userId);
-    return { data: null, error: new Error(error.message) };
+    return { data: null, error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.lists(userId));
   return { data: data as unknown as GearListWithTotalWeight, error: null };
@@ -333,12 +333,12 @@ export async function createList(
 
 export async function deleteList(
   id: string, userId: string,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_lists').delete().eq('id', id);
   if (error) {
     await enqueue('gear_lists', 'delete', { id }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.lists(userId));
   invalidateCache(cacheKeys.listDetail(id));
@@ -352,12 +352,12 @@ export async function deleteList(
 export async function updateList(
   id: string, userId: string,
   payload: Record<string, unknown>,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('gear_lists').update(payload).eq('id', id);
   if (error) {
     await enqueue('gear_lists', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.lists(userId));
   invalidateCache(cacheKeys.listDetail(id));
@@ -368,7 +368,7 @@ export async function updateList(
 export async function addListItems(
   listId: string, userId: string,
   gearItemIds: string[],
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const inserts = gearItemIds.map(gearItemId => ({
     list_id: listId,
@@ -383,7 +383,7 @@ export async function addListItems(
     // One queue entry per row: the replay executor inserts a single payload object,
     // and list_items has no `items` column for a bulk payload to ever apply against.
     await Promise.all(inserts.map((row) => enqueue('list_items', 'insert', row, userId)));
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.listItems(listId));
   invalidateCache(cacheKeys.lists(userId));
@@ -394,12 +394,12 @@ export async function addListItems(
 export async function updateListItem(
   id: string, userId: string, listId: string,
   payload: Record<string, unknown>,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('list_items').update(payload).eq('id', id);
   if (error) {
     await enqueue('list_items', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.listItems(listId));
   invalidateCache(cacheKeys.lists(userId));
@@ -409,12 +409,12 @@ export async function updateListItem(
 /** Removes a single item from a list. */
 export async function deleteListItem(
   id: string, userId: string, listId: string,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await supabase.from('list_items').delete().eq('id', id);
   if (error) {
     await enqueue('list_items', 'delete', { id }, userId);
-    return { error: new Error(error.message) };
+    return { error: new Error(error.message), queued: true };
   }
   invalidateCache(cacheKeys.listItems(listId));
   invalidateCache(cacheKeys.lists(userId));

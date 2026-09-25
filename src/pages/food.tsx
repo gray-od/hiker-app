@@ -111,16 +111,20 @@ export default function FoodPage() {
     };
 
     if (editingItem) {
-      const { error: updateError } = await updateFoodItem(editingItem.id, userId, payload);
+      const { error: updateError, queued: updateQueued } = await updateFoodItem(editingItem.id, userId, payload);
 
-      if (updateError) {
+      if (updateError && !updateQueued) {
         toast.error(updateError.message || tCommon('error_occurred'));
         setError(updateError.message);
         setSaving(false);
         return;
       }
 
-      toast.success(tFood('updated'));
+      if (updateQueued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(tFood('updated'));
+      }
       setItems(prev =>
         prev.map(i =>
           i.id === editingItem.id
@@ -129,18 +133,22 @@ export default function FoodPage() {
         ),
       );
     } else {
-      const { data, error: insertError } = await createFoodItem(userId, payload);
+      const { data, error: insertError, queued: insertQueued } = await createFoodItem(userId, payload);
 
-      if (insertError) {
+      if (insertError && !insertQueued) {
         toast.error(insertError.message || tCommon('error_occurred'));
         setError(insertError.message);
         setSaving(false);
         return;
       }
 
-      toast.success(tFood('created'));
-      if (data) {
-        setItems(prev => [data, ...prev]);
+      if (insertQueued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(tFood('created'));
+        if (data) {
+          setItems(prev => [data, ...prev]);
+        }
       }
     }
 
@@ -161,9 +169,9 @@ export default function FoodPage() {
 
     setDeleting(true);
 
-    const { error: deleteError } = await deleteFoodItem(id, userId);
+    const { error: deleteError, queued: deleteQueued } = await deleteFoodItem(id, userId);
 
-    if (deleteError) {
+    if (deleteError && !deleteQueued) {
       toast.error(deleteError.message || tCommon('error_occurred'));
       setError(deleteError.message);
       setConfirmDelete(null);
@@ -171,7 +179,11 @@ export default function FoodPage() {
       return;
     }
 
-    toast.success(tFood('deleted'));
+    if (deleteQueued) {
+      toast.info(tCommon('saved_offline'));
+    } else {
+      toast.success(tFood('deleted'));
+    }
     setItems(prev => prev.filter(i => i.id !== id));
     setConfirmDelete(null);
     setDeleting(false);

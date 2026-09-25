@@ -145,20 +145,24 @@ export default function ListDetailPage() {
       setSaving(true);
       setError(null);
 
-      const { error: updateError } = await updateList(id, userId, {
+      const { error: updateError, queued } = await updateList(id, userId, {
         name: editForm.name,
         season: editForm.season,
         trip_date: editForm.trip_date || null,
       });
 
-      if (updateError) {
+      if (updateError && !queued) {
         setError(updateError.message);
         toast.error(updateError.message);
         setSaving(false);
         return;
       }
 
-      toast.success(t('updated'));
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(t('updated'));
+      }
       setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
       if (editForm.trip_date && list?.gpx_data?.points?.length && editForm.trip_date !== list.trip_date) {
         fetchRouteWeather(list.gpx_data.points[0][0], list.gpx_data.points[0][1], editForm.trip_date).then(weather => {
@@ -207,12 +211,16 @@ export default function ListDetailPage() {
 
       const newPacked = !item.is_packed;
 
-      const { error: updateError } = await updateListItem(itemId, userId, id, { is_packed: newPacked });
+      const { error: updateError, queued } = await updateListItem(itemId, userId, id, { is_packed: newPacked });
 
-      if (updateError) {
+      if (updateError && !queued) {
         setError(updateError.message);
         toast.error(updateError.message);
         return;
+      }
+
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, is_packed: newPacked } : li));
@@ -238,12 +246,16 @@ export default function ListDetailPage() {
         updates.consumable = false;
       }
 
-      const { error: updateError } = await updateListItem(itemId, userId, id, updates);
+      const { error: updateError, queued } = await updateListItem(itemId, userId, id, updates);
 
-      if (updateError) {
+      if (updateError && !queued) {
         setError(updateError.message);
         toast.error(updateError.message);
         return;
+      }
+
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
@@ -269,12 +281,16 @@ export default function ListDetailPage() {
         updates.worn = false;
       }
 
-      const { error: updateError } = await updateListItem(itemId, userId, id, updates);
+      const { error: updateError, queued } = await updateListItem(itemId, userId, id, updates);
 
-      if (updateError) {
+      if (updateError && !queued) {
         setError(updateError.message);
         toast.error(updateError.message);
         return;
+      }
+
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, ...updates } : li));
@@ -296,12 +312,16 @@ export default function ListDetailPage() {
       const newQuantity = Math.max(1, item.quantity + delta);
       if (newQuantity === item.quantity) return;
 
-      const { error: updateError } = await updateListItem(itemId, userId, id, { quantity: newQuantity });
+      const { error: updateError, queued } = await updateListItem(itemId, userId, id, { quantity: newQuantity });
 
-      if (updateError) {
+      if (updateError && !queued) {
         setError(updateError.message);
         toast.error(updateError.message);
         return;
+      }
+
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: newQuantity } : li));
@@ -319,12 +339,16 @@ export default function ListDetailPage() {
       const item = listItems.find(li => li.id === itemId);
       if (!item || q === item.quantity || !userId) return;
 
-      const { error: updateError } = await updateListItem(itemId, userId, id, { quantity: q });
+      const { error: updateError, queued } = await updateListItem(itemId, userId, id, { quantity: q });
 
-      if (updateError) {
+      if (updateError && !queued) {
         setError(updateError.message);
         toast.error(updateError.message);
         return;
+      }
+
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
       }
 
       setListItems(prev => prev.map(li => li.id === itemId ? { ...li, quantity: q } : li));
@@ -341,15 +365,19 @@ export default function ListDetailPage() {
       const userId = userIdRef.current;
       if (!userId) return;
 
-      const { error: deleteError } = await deleteListItem(itemId, userId, id);
+      const { error: deleteError, queued } = await deleteListItem(itemId, userId, id);
 
-      if (deleteError) {
+      if (deleteError && !queued) {
         setError(deleteError.message);
         toast.error(deleteError.message);
         return;
       }
 
-      toast.success(t('removed'));
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(t('removed'));
+      }
       setListItems(prev => prev.filter(li => li.id !== itemId));
       setConfirmRemoveItem(null);
     } catch (err) {
@@ -368,22 +396,29 @@ export default function ListDetailPage() {
       const userId = userIdRef.current;
       if (!userId) return;
 
-      const { error: insertError } = await addListItems(id, userId, Array.from(selectedGearIds));
+      const { error: insertError, queued } = await addListItems(id, userId, Array.from(selectedGearIds));
 
-      if (insertError) {
+      if (insertError && !queued) {
         toast.error(tCommon('error'));
         setError(insertError.message);
         return;
+      }
+
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
       }
 
       setAddItemsModalOpen(false);
       setSelectedGearIds(new Set());
       setSearchQuery('');
 
-      const { data: itemsData } = await fetchListItems(id);
+      // Queued rows are not on the server yet, so a refetch would only re-render the unchanged list.
+      if (!queued) {
+        const { data: itemsData } = await fetchListItems(id);
 
-      if (itemsData) {
-        setListItems(itemsData);
+        if (itemsData) {
+          setListItems(itemsData);
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to add items';
@@ -418,9 +453,13 @@ export default function ListDetailPage() {
       };
 
       // Save GPX first — weather is non-critical and must not block the save
-      const { error: updateError } = await updateList(id, userId, { gpx_data: gpxData });
+      const { error: updateError, queued } = await updateList(id, userId, { gpx_data: gpxData });
 
-      if (updateError) throw updateError;
+      if (updateError && !queued) throw updateError;
+
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
+      }
 
       setList((prev) => prev ? { ...prev, gpx_data: gpxData } as GearList : null);
 
@@ -480,13 +519,17 @@ export default function ListDetailPage() {
       const userId = userIdRef.current;
       if (!userId) return;
 
-      const { error } = await updateList(id, userId, { gpx_data: null });
-      if (error) {
+      const { error, queued } = await updateList(id, userId, { gpx_data: null });
+      if (error && !queued) {
         setError(error.message);
         toast.error(error.message);
         return;
       }
-      toast.success(t('gpx_removed'));
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(t('gpx_removed'));
+      }
       setList((prev) => prev ? { ...prev, gpx_data: null } as GearList : null);
       setConfirmRemoveGpx(false);
     } catch (err) {
@@ -641,9 +684,13 @@ export default function ListDetailPage() {
                     try {
                       const userId = userIdRef.current;
                       if (!userId) return;
-                      const { error } = await updateList(list?.id ?? '', userId, { meal_plan_id: planId || null });
-                      if (error) throw error;
-                      if (planId) toast.success(t('linked'));
+                      const { error, queued } = await updateList(list?.id ?? '', userId, { meal_plan_id: planId || null });
+                      if (error && !queued) throw error;
+                      if (queued) {
+                        toast.info(tCommon('saved_offline'));
+                      } else if (planId) {
+                        toast.success(t('linked'));
+                      }
                       setList((prev) => prev ? { ...prev, meal_plan_id: planId || null } : null);
                     } catch {
                       e.target.value = prevId;
