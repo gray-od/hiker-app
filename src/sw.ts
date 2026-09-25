@@ -22,10 +22,10 @@ declare const self: WorkerGlobalScope & {
   clients: Clients;
 };
 
-// Navigation (HTML): NetworkFirst, short TTL, no IDB — in-memory only
-// JS/CSS: CacheFirst (webpack revisions), long TTL
-// Images: StaleWhileRevalidate
-// Fonts: CacheFirst, very long TTL
+// Precache only: the file never changes except on deploy, and a revision
+// change in public/ is enough for Serwist to fetch it again.
+const OFFLINE_URL = "/offline.html";
+
 const runtimeCaching: RuntimeCaching[] = [
   {
     matcher: ({ request }) => request.mode === "navigate",
@@ -57,11 +57,7 @@ const runtimeCaching: RuntimeCaching[] = [
     matcher: ({ request }) => request.destination === "image",
     handler: new StaleWhileRevalidate({
       cacheName: "images",
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 50,
-        }),
-      ],
+      plugins: [new ExpirationPlugin({ maxEntries: 50 })],
     }),
   },
   {
@@ -80,10 +76,6 @@ const runtimeCaching: RuntimeCaching[] = [
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  // Built-in cleanup deletes only outdated `serwist-*-precache-*` caches from
-  // previous library versions (same scope, excluding the current precache).
-  // The custom activate handler below must not do this itself — it only
-  // removes caches that belong to no SW version of this project.
   precacheOptions: { cleanupOutdatedCaches: true },
   skipWaiting: true,
   clientsClaim: true,
@@ -91,31 +83,39 @@ const serwist = new Serwist({
   runtimeCaching,
 });
 
-// Offline fallback for navigations: serve the document cached for this exact
-// URL, or the same URL without its query string. Anything else must fail:
-// returning `undefined` lets the fetch reject so the browser shows its own
-// offline error. Serving another route's document (e.g. the homepage) would
-// render a page that does not belong to the requested URL.
+// Last resort if even the Cache API is unusable. A navigation must never be
+// answered with `undefined` (ERR_FAILED) or `Response.error()` (also ERR_FAILED).
+const INLINE_OFFLINE_HTML =
+  '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
+  '<body style="font-family:sans-serif;background:#0a0a0a;color:#fff;text-align:center;padding-top:20vh">' +
+  '<h1 style="color:#75a93a">ProHikes</h1><p>You are offline</p></body>';
+
+// Order for navigations: this URL's document -> the same URL without query ->
+// the precached /offline.html -> inline HTML. Never `undefined`.
 serwist.setCatchHandler(async ({ request }) => {
-  if (request.mode === "navigate") {
-    const cache = await caches.open("pages");
-    const cached = await cache.match(request);
-    if (cached) return cached;
-    // NetworkFirst's own cache lookup is exact-only; retry ignoring search.
-    // No document for this URL: resolve with `undefined` so `respondWith`
-    // fails and the browser reports the network error. The cast only satisfies
-    // Serwist's types, which require a Response value.
-    return (await cache.match(request, { ignoreSearch: true })) as Response;
+  if (request.mode !== "navigate") {
+    return Response.error();
   }
-  return Response.error();
+  try {
+    const cache = await caches.open("pages");
+    const cached =
+      (await cache.match(request)) ??
+      (await cache.match(request, { ignoreSearch: true }));
+    if (cached) return cached;
+
+    const offlinePage = await serwist.matchPrecache(OFFLINE_URL);
+    if (offlinePage) return offlinePage;
+  } catch {
+    // Cache Storage unavailable: fall through to the inline page.
+  }
+  return new Response(INLINE_OFFLINE_HTML, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 });
 
 serwist.addEventListeners();
 
-// Remove caches left behind by earlier SW versions that this project no longer
-// uses. Serwist's own caches (`serwist-*` / `workbox-*`, including the
-// precache) and the four named runtime caches are kept; outdated Serwist
-// precaches are handled by `precacheOptions.cleanupOutdatedCaches` above.
 const keepCacheNames = new Set(["pages", "static-assets", "images", "fonts"]);
 
 self.addEventListener("activate", (event) => {
@@ -123,9 +123,14 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => !key.startsWith("serwist-") && !key.startsWith("workbox-") && !keepCacheNames.has(key))
-          .map((key) => caches.delete(key))
-      )
-    )
+          .filter(
+            (key) =>
+              !key.startsWith("serwist-") &&
+              !key.startsWith("workbox-") &&
+              !keepCacheNames.has(key),
+          )
+          .map((key) => caches.delete(key)),
+      ),
+    ),
   );
 });
