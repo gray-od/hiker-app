@@ -10,7 +10,7 @@ AI-first hiking planner — gear, packing lists, meals, and an AI partner that a
 - **Backend:** Supabase (PostgreSQL, Auth, RLS)
 - **i18n:** next-intl v4 (uk/ru/en)
 - **AI:** Gemma 4 26B via AI SDK v4 + Exa search + Open-Meteo weather
-- **Offline:** Service Worker (Serwist) + IndexedDB cache + mutation queue
+- **Offline:** Service Worker (Serwist) + IndexedDB
 - **Auth:** Google OAuth + email/password with security-question recovery
 - **Hosting:** Vercel
 
@@ -20,25 +20,41 @@ AI-first hiking planner — gear, packing lists, meals, and an AI partner that a
 - Food products database
 - Packing lists with GPX route import + weather
 - Meal plans with day-by-day calories, templates, shopping list
-- AI chat (8 tools: weather, search, gear, food, lists, meals, mountaineering standards, trail knowledge)
+- AI chat with live weather, web search, hiking knowledge, and full access to your gear, food, lists, and meals
 - Dark/light theme, 3 languages (UA/RU/EN)
 
 ### Auth & Registration
 
-- **Google OAuth** — instant sign in
-- **Email + password** — instant registration (autoconfirm), no email verification needed
-- **Password recovery** — security question (PBKDF2-hashed) set at signup. No SMTP required
-- **Google fallback** — if recovery unavailable, sign in with Google (same email) then change password in Settings
-- **Password change** — in `/settings` for authenticated users
+- **Google OAuth** — sign in with Google in one click
+- **Email + password** — sign up and sign in with your email address
+- **Password recovery** — answer the security question you set at signup to reset a forgotten password
+- **Google fallback** — if you can't answer your security question, sign in with Google using the same email and change your password in Settings
+- **Password change** — available in `/settings` for signed-in users
 
 ### Offline (PWA)
 
-- **Offline pages** — SW runtime caching for page documents plus a prewarm list (no full precache)
-- **IndexedDB data cache** — 5-minute TTL, cache-first with background refresh
-- **Mutation queue** — 12 CRUD operations (gear, food, lists, list items) are queued when offline and sync automatically
-- **F5 resistant** — full page refresh works offline via the SW document cache
+- **Offline pages** — pages you have already visited stay available without a connection
+- **Offline data** — gear, food, lists, and meals stay accessible offline and refresh in the background once you are back online
+- **Offline edits** — changes made offline are queued and synced automatically when the connection returns
+- **Page reload** — refreshing while offline works as expected
+
+## Getting started
+
+Prerequisites: **Node.js 22+** and npm.
+
+```bash
+npm install
+npm run dev     # start the development server at http://localhost:3000
+npm run build   # create a production build
+npm run start   # serve the production build
+```
+
+Copy `.env.example` to `.env.local` and fill in your own values — the file lists the variable names only. Never commit real keys.
 
 ## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, architecture, and contribution guide.
-See [wiki_map_project.md](wiki_map_project.md) for stack details and known issues.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, architecture, project structure, and contribution guide.
+
+## License
+
+The source code is publicly available for viewing and reference. The project is not open for reuse or derivative works — see [LICENSE](LICENSE) for the full terms.
