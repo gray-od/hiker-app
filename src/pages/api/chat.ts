@@ -457,6 +457,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             if (planError || !plan) return { error: 'Failed to create plan' };
 
+            // meal_days and meal_entries cascade from the plan row, so one delete undoes everything.
+            const rollbackPlan = async () => {
+              const { error: cleanupErr } = await supabase
+                .from('meal_plans')
+                .delete()
+                .eq('id', plan.id);
+              if (cleanupErr) {
+                console.error('[chat] createMealPlan rollback failed:', cleanupErr);
+              }
+            };
+
             let totalEntries = 0;
             let totalWeight = 0;
 
@@ -522,7 +533,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               .insert(daysToInsert)
               .select('id');
 
-            if (daysErr) return { error: 'Failed to create meal plan days' };
+            if (daysErr) {
+              console.error('[chat] createMealPlan days insert failed:', daysErr);
+              await rollbackPlan();
+              return { success: false, error: 'Failed to create the meal plan' };
+            }
 
             if (insertedDays && template) {
               const allEntries = insertedDays.flatMap((day, i) =>
@@ -534,12 +549,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   .insert(allEntries);
                 if (entriesErr) {
                   console.error('[chat] createMealPlan entries insert failed:', entriesErr);
-                  return {
-                    success: true,
-                    id: plan.id,
-                    name: plan.name,
-                    warning: 'Some entries could not be added',
-                  };
+                  await rollbackPlan();
+                  return { success: false, error: 'Failed to create the meal plan' };
                 }
               }
             }
