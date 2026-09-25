@@ -39,7 +39,36 @@ const BUILD_ID =
 const PAGES_CACHE = `pages-${BUILD_ID}`;
 const OFFLINE_URL = "/offline.html";
 
+// Next issues /_next/data/<buildId>/<path>.json on every client navigation while a
+// middleware is configured (next/dist/shared/lib/router/router.js:1382, 1391-1392).
+// A failed fetch there is treated as an asset error (:388-393) and degrades the SPA
+// transition into a hard navigation (:1304-1317) — offline that means a full document
+// load, which is why dynamic routes ended up on /offline.html. No page here loads props
+// (no getStaticProps/getServerSideProps), so an empty payload keeps the SPA alive and
+// skips the network wait. Abort keeps a dead-but-"online" link (lie-fi) from holding
+// the navigation for tens of seconds.
+const DATA_FALLBACK_TIMEOUT_MS = 4000;
+const DATA_FALLBACK_BODY = '{"pageProps":{}}';
+
 const runtimeCaching: RuntimeCaching[] = [
+  {
+    matcher: ({ request, sameOrigin, url }) =>
+      sameOrigin &&
+      request.method === "GET" &&
+      url.pathname.startsWith("/_next/data/"),
+    handler: async ({ request }) => {
+      try {
+        return await fetch(request, {
+          signal: AbortSignal.timeout(DATA_FALLBACK_TIMEOUT_MS),
+        });
+      } catch {
+        return new Response(DATA_FALLBACK_BODY, {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    },
+  },
   {
     // Navigations and the client's prewarm fetches (src/lib/prewarmRoutes.ts) both
     // have to end up in the document cache; the header is their only distinction.
@@ -57,7 +86,7 @@ const runtimeCaching: RuntimeCaching[] = [
       matchOptions: { ignoreSearch: true },
       plugins: [
         new ExpirationPlugin({
-          maxEntries: 30,
+          maxEntries: 50,
           maxAgeSeconds: 60 * 60 * 24 * 7,
         }),
       ],

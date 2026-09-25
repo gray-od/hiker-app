@@ -72,6 +72,17 @@ export async function removeCache(key: string): Promise<void> {
  */
 export const invalidateCache = removeCache;
 
+/** Keys currently stored in the offline cache; dynamic-route prewarm enumerates ids from them. */
+export async function listCachedKeys(): Promise<string[]> {
+  try {
+    const db = await getDB();
+    return (await db.getAllKeys('cache')) as string[];
+  } catch {
+    // Silently fail — no keys means dynamic documents simply are not prewarmed.
+    return [];
+  }
+}
+
 const NETWORK_TIMEOUT_MS = 5000;
 
 /**
