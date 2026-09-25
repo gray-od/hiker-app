@@ -87,6 +87,25 @@ function withNetworkTimeout<T>(promise: Promise<T>): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// Lie-fi: the device reports `online` while the network is dead, so every read would
+// pay NETWORK_TIMEOUT_MS before failing. The fuse makes that price one-time — reads
+// inside the window use the cache without touching the network at all.
+const NETWORK_FAILURE_FUSE_MS = 30_000;
+let lastNetworkFailureAt = 0;
+
+// Connectivity failures arrive in browser-specific shapes ("Failed to fetch",
+// "Load failed", "NetworkError..."), plus undici's "fetch failed" and this module's own
+// timeout. An application error (permission denied, HTTP 4xx) says nothing about the
+// link and must not trip the fuse.
+const NETWORK_FAILURE_RE =
+  /Failed to fetch|NetworkError|Network request timed out|fetch failed|Load failed|ERR_NETWORK/;
+
+function noteNetworkFailure(error: unknown): void {
+  if (error instanceof Error && NETWORK_FAILURE_RE.test(error.message)) {
+    lastNetworkFailureAt = Date.now();
+  }
+}
+
 /**
  * Wraps a fetch function with cache-first strategy.
  * Returns cached data immediately if available, then updates in background from network.
@@ -99,6 +118,23 @@ export async function withCache<T>(
 ): Promise<{ data: T | null; error: Error | null; fromCache: boolean }> {
   const { maxAge = 5 * 60 * 1000, skipCache } = options || {};
 
+  // Offline: cache only. A doomed fetch adds latency and returns the same cached
+  // value, so the network is never attempted. No TTL check — a stale copy beats a
+  // spinner, mirroring the post-failure fallback below (getCached without maxAge).
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    const cached = await getCached<T>(key);
+    if (cached) return { data: cached, error: null, fromCache: true };
+    return { data: null, error: new Error('Offline'), fromCache: false };
+  }
+
+  // Recent connectivity failure: serve any cached copy (no TTL check) instead of
+  // paying for the dead network again. The window is bounded, so the network is
+  // retried soon. Without a cached value there is nothing to serve — fall through.
+  if (Date.now() - lastNetworkFailureAt < NETWORK_FAILURE_FUSE_MS) {
+    const cached = await getCached<T>(key);
+    if (cached) return { data: cached, error: null, fromCache: true };
+  }
+
   // Return cached data immediately
   if (!skipCache) {
     const cached = await getCached<T>(key, maxAge);
@@ -108,7 +144,11 @@ export async function withCache<T>(
         if (fresh.data && !fresh.error) {
           setCache(key, fresh.data);
         }
-      }).catch((err) => { console.error('Background cache refresh failed:', err); });
+        noteNetworkFailure(fresh.error);
+      }).catch((err) => {
+        noteNetworkFailure(err);
+        console.error('Background cache refresh failed:', err);
+      });
       return { data: cached, error: null, fromCache: true };
     }
   }
@@ -119,8 +159,10 @@ export async function withCache<T>(
     if (fresh.data && !fresh.error) {
       await setCache(key, fresh.data);
     }
+    noteNetworkFailure(fresh.error);
     return { ...fresh, fromCache: false };
   } catch (err) {
+    noteNetworkFailure(err);
     // Network failed or timed out — try cache as fallback (skip TTL check — stale is better than nothing)
     const cached = await getCached<T>(key);
     if (cached) {

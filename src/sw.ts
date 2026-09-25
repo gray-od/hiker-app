@@ -4,7 +4,6 @@ import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
   Serwist,
   ExpirationPlugin,
-  NetworkFirst,
   CacheFirst,
   StaleWhileRevalidate,
 } from "serwist";
@@ -44,19 +43,22 @@ const runtimeCaching: RuntimeCaching[] = [
   {
     // Navigations and the client's prewarm fetches (src/lib/prewarmRoutes.ts) both
     // have to end up in the document cache; the header is their only distinction.
+    // StaleWhileRevalidate, not NetworkFirst: an offline navigation must never wait
+    // on the network. The cache name carries the build id (see BUILD_ID), so a
+    // document from a previous build can never be served, and the HTML carries no
+    // data (no page defines getStaticProps/getServerSideProps).
     matcher: ({ request, sameOrigin }) =>
       request.mode === "navigate" ||
       (sameOrigin &&
         request.method === "GET" &&
         request.headers.get("x-prohikes-prewarm") === "1"),
-    handler: new NetworkFirst({
+    handler: new StaleWhileRevalidate({
       cacheName: PAGES_CACHE,
-      networkTimeoutSeconds: 3,
       matchOptions: { ignoreSearch: true },
       plugins: [
         new ExpirationPlugin({
           maxEntries: 30,
-          maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+          maxAgeSeconds: 60 * 60 * 24 * 7,
         }),
       ],
     }),
