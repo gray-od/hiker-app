@@ -42,7 +42,13 @@ const OFFLINE_URL = "/offline.html";
 
 const runtimeCaching: RuntimeCaching[] = [
   {
-    matcher: ({ request }) => request.mode === "navigate",
+    // Navigations and the client's prewarm fetches (src/lib/prewarmRoutes.ts) both
+    // have to end up in the document cache; the header is their only distinction.
+    matcher: ({ request, sameOrigin }) =>
+      request.mode === "navigate" ||
+      (sameOrigin &&
+        request.method === "GET" &&
+        request.headers.get("x-prohikes-prewarm") === "1"),
     handler: new NetworkFirst({
       cacheName: PAGES_CACHE,
       networkTimeoutSeconds: 3,

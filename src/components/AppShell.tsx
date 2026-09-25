@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import SWRegister from '@/components/SWRegister';
 import OfflineBanner from '@/components/OfflineBanner';
 import { syncPendingMutations } from '@/lib/supabase/service';
+import { prewarmRoutes } from '@/lib/prewarmRoutes';
 
 const ChatWidget = dynamic(() => import('@/components/ChatWidget'), {
   ssr: false,
@@ -24,6 +25,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
   }, []);
+
+  // Keyed on `isPublic`: signing in navigates client-side, so the shell survives
+  // the switch from a public route to a private one and the cold-load effect above
+  // never sees it. Only private pages are warmed — public ones carry no session data.
+  useEffect(() => {
+    if (!isPublic) prewarmRoutes();
+  }, [isPublic]);
 
   if (isPublic) {
     return <main className="min-h-screen">{children}</main>;

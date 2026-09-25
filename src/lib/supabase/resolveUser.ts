@@ -1,4 +1,4 @@
-import { isAuthRetryableFetchError, type User } from '@supabase/supabase-js';
+import { isAuthRetryableFetchError, type User, type UserResponse } from '@supabase/supabase-js';
 import { createClient } from './client';
 
 // Дефолтный storageKey supabase-js: sb-<project-ref>-auth-token (src/SupabaseClient.ts:324).
@@ -59,16 +59,12 @@ function userFromCookie(): User | null {
 const GET_USER_TIMEOUT_MS = 3500;
 
 /**
- * Офлайн — сессия из cookie без refresh: getSession() офлайн ждёт initialize и вызывает
- * обречённый _callRefreshToken (GoTrueClient.js:2334, 2458-2486). Онлайн источник истины —
- * getUser(); retryable-ошибка (сеть/5xx) — тот же cookie-фолбэк.
+ * getUser() с ограничением ожидания: navigator.onLine живой, но сеть может быть «чёрной дырой»
+ * (Wi-Fi без выхода) — тогда getUser() не резолвится вовсе, и guard'ы страниц навсегда остаются
+ * со спиннером. null — таймаут или сбой создания клиента; опоздавший ответ уже не нужен, а его
+ * reject не должен всплыть как unhandled.
  */
-export async function resolveUser(): Promise<User | null> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return userFromCookie();
-
-  // navigator.onLine живой, но сеть может быть «чёрной дырой» (Wi-Fi без выхода): getUser()
-  // тогда не резолвится вовсе, и guard'ы страниц навсегда остаются со спиннером. Ограничиваем
-  // ожидание; опоздавший ответ уже не нужен, а его reject не должен всплыть как unhandled.
+async function getUserWithTimeout(): Promise<UserResponse | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), GET_USER_TIMEOUT_MS);
@@ -76,15 +72,57 @@ export async function resolveUser(): Promise<User | null> {
 
   try {
     const getUser = createClient().auth.getUser().catch(() => null);
-    const response = await Promise.race([getUser, timeout]);
-    if (!response) return userFromCookie();
-    if (response.data.user) return response.data.user;
-    if (response.error && isAuthRetryableFetchError(response.error)) return userFromCookie();
-    return null;
+    return await Promise.race([getUser, timeout]);
   } catch {
-    // createClient бросает при отсутствии env — guard должен получить ответ, а не reject.
-    return userFromCookie();
+    // createClient бросает при отсутствии env — считаем проверку недоступной.
+    return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Фоновая liveness-проверка cookie-сессии: никогда не reject'ит и не влияет на то, что вернул
+ * resolveUser(). Таймаут и retryable-ошибка означают лишь недоступность сети. Не-retryable
+ * ошибка без пользователя — сессия отозвана: снимаем её, чтобы guard'ы не держались за мёртвую
+ * cookie, и уходим на /login полной навигацией (middleware решает по cookie).
+ */
+async function revalidateCookieSession(): Promise<void> {
+  try {
+    const response = await getUserWithTimeout();
+    if (!response || response.data.user) return;
+    if (!response.error || isAuthRetryableFetchError(response.error)) return;
+
+    try {
+      await createClient().auth.signOut();
+    } catch {
+      // signOut может не дойти по сети — сессию всё равно считаем недействительной.
+    }
+    if (typeof window !== 'undefined') window.location.replace('/login');
+  } catch {
+    // Фоновая проверка не должна ронять страницу: её сбои остаются здесь.
+  }
+}
+
+/**
+ * Офлайн — сессия из cookie без refresh: чтение сохранённой сессии офлайн ждёт initialize и
+ * вызывает обречённый _callRefreshToken (GoTrueClient.js:2334, 2458-2486). Cookie-сессия онлайн
+ * отдаётся сразу, а getUser() проверяет её живость фоном: иначе «онлайн»-телефон без реальной
+ * сети ждал таймаут, guard'ы висели со спиннером, и тап уходил в полную навигацию. Онлайн без
+ * cookie — источник истины getUser(); retryable-ошибка (сеть/5xx) — тот же cookie-фолбэк.
+ */
+export async function resolveUser(): Promise<User | null> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return userFromCookie();
+
+  const cookieUser = userFromCookie();
+  if (cookieUser) {
+    void revalidateCookieSession();
+    return cookieUser;
+  }
+
+  const response = await getUserWithTimeout();
+  if (!response) return userFromCookie();
+  if (response.data.user) return response.data.user;
+  if (response.error && isAuthRetryableFetchError(response.error)) return userFromCookie();
+  return null;
 }
