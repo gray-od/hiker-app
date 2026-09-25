@@ -2,6 +2,13 @@
   "name": "prohikes",
   "version": "0.1.0",
   "private": true,
+  "description": "AI-first hiking planner: gear, packing lists, meal plans, and an AI assistant with offline support.",
+  "repository": "https://github.com/gray-od/hiker-app",
+  "homepage": "https://hiker-app.vercel.app",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",

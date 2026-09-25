@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - npm 9+
 
 ## Setup
@@ -56,7 +56,7 @@ src/
 
 ## Architecture
 
-See [wiki_map_project.md](wiki_map_project.md) for full stack details, known issues, and gotchas.
+See the [README](README.md) for the stack overview.
 
 ## Offline data flow
 
