@@ -22,16 +22,31 @@ declare const self: WorkerGlobalScope & {
   clients: Clients;
 };
 
-// Precache only: the file never changes except on deploy, and a revision
-// change in public/ is enough for Serwist to fetch it again.
+// `self.__SW_MANIFEST` must remain the only occurrence of the injection point:
+// @serwist/build rejects a SW source with more than one ("multiple-injection-points").
+// Hoisting it once keeps the manifest readable by the rest of the worker.
+const precacheEntries = self.__SW_MANIFEST ?? [];
+
+// Next embeds the build id into the precached path /_next/static/<buildId>/_buildManifest.js.
+// Deriving the documents cache name from it means a document from a previous build can
+// never be served: serwist deletes every stale precache entry on activate, so the old
+// document's chunks are already gone by the time we would have served it.
+const BUILD_ID =
+  precacheEntries
+    .map((entry) => (typeof entry === "string" ? entry : entry.url))
+    .map((url) => /\/_next\/static\/([^/]+)\/(?:_buildManifest|_ssgManifest)\.js$/.exec(url)?.[1])
+    .find((id): id is string => !!id) ?? "dev";
+
+const PAGES_CACHE = `pages-${BUILD_ID}`;
 const OFFLINE_URL = "/offline.html";
 
 const runtimeCaching: RuntimeCaching[] = [
   {
     matcher: ({ request }) => request.mode === "navigate",
     handler: new NetworkFirst({
-      cacheName: "pages",
+      cacheName: PAGES_CACHE,
       networkTimeoutSeconds: 3,
+      matchOptions: { ignoreSearch: true },
       plugins: [
         new ExpirationPlugin({
           maxEntries: 30,
@@ -75,7 +90,7 @@ const runtimeCaching: RuntimeCaching[] = [
 ];
 
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries,
   precacheOptions: { cleanupOutdatedCaches: true },
   skipWaiting: true,
   clientsClaim: true,
@@ -90,14 +105,14 @@ const INLINE_OFFLINE_HTML =
   '<body style="font-family:sans-serif;background:#0a0a0a;color:#fff;text-align:center;padding-top:20vh">' +
   '<h1 style="color:#75a93a">ProHikes</h1><p>You are offline</p></body>';
 
-// Order for navigations: this URL's document -> the same URL without query ->
+// Order for navigations: this build's document -> the same URL without query ->
 // the precached /offline.html -> inline HTML. Never `undefined`.
 serwist.setCatchHandler(async ({ request }) => {
   if (request.mode !== "navigate") {
     return Response.error();
   }
   try {
-    const cache = await caches.open("pages");
+    const cache = await caches.open(PAGES_CACHE);
     const cached =
       (await cache.match(request)) ??
       (await cache.match(request, { ignoreSearch: true }));
@@ -116,19 +131,21 @@ serwist.setCatchHandler(async ({ request }) => {
 
 serwist.addEventListeners();
 
-const keepCacheNames = new Set(["pages", "static-assets", "images", "fonts"]);
+// Runtime caches owned by this version; everything else (legacy "pages",
+// "pages-<older build>", foreign caches) is dropped so no stale document survives.
+const keepCacheNames = new Set(["static-assets", "images", "fonts"]);
 
 self.addEventListener("activate", (event) => {
   (event as ExtendableEvent).waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter(
-            (key) =>
-              !key.startsWith("serwist-") &&
-              !key.startsWith("workbox-") &&
-              !keepCacheNames.has(key),
-          )
+          .filter((key) => {
+            if (key === PAGES_CACHE) return false;
+            if (key.startsWith("serwist-") || key.startsWith("workbox-")) return false;
+            if (keepCacheNames.has(key)) return false;
+            return true;
+          })
           .map((key) => caches.delete(key)),
       ),
     ),

@@ -29,7 +29,8 @@ export async function getCached<T>(key: string, maxAge?: number): Promise<T | nu
     const entry = await db.get('cache', key) as CacheEntry<T> | undefined;
     if (!entry) return null;
     if (maxAge && Date.now() - entry.timestamp > maxAge) {
-      await db.delete('cache', key);
+      // Просроченная запись не удаляется: withCache держит её резервом, пока не получит
+      // свежие данные. Удаление здесь теряло копию до запроса — при висящей сети fallback пуст.
       return null;
     }
     return entry.data;
@@ -71,9 +72,25 @@ export async function removeCache(key: string): Promise<void> {
  */
 export const invalidateCache = removeCache;
 
+const NETWORK_TIMEOUT_MS = 5000;
+
+/**
+ * Ограничивает ожидание сетевого промиса. Fetch в «чёрной дыре» (TCP висит) не резолвится
+ * и не отклоняется — без таймаута вызывающая страница навсегда остаётся со спиннером.
+ * По таймауту отклоняемся, чтобы сработал fallback на устаревший кэш. Таймер всегда очищается.
+ */
+function withNetworkTimeout<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error('Network request timed out')), NETWORK_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Wraps a fetch function with cache-first strategy.
  * Returns cached data immediately if available, then updates in background from network.
+ * Network waits are bounded: no call to fetcher can hang the caller past NETWORK_TIMEOUT_MS.
  */
 export async function withCache<T>(
   key: string,
@@ -87,7 +104,7 @@ export async function withCache<T>(
     const cached = await getCached<T>(key, maxAge);
     if (cached) {
       // Update in background
-      fetcher().then((fresh) => {
+      withNetworkTimeout(fetcher()).then((fresh) => {
         if (fresh.data && !fresh.error) {
           setCache(key, fresh.data);
         }
@@ -98,13 +115,13 @@ export async function withCache<T>(
 
   // No cache — fetch fresh
   try {
-    const fresh = await fetcher();
+    const fresh = await withNetworkTimeout(fetcher());
     if (fresh.data && !fresh.error) {
       await setCache(key, fresh.data);
     }
     return { ...fresh, fromCache: false };
   } catch (err) {
-    // Network failed — try cache as fallback (skip TTL check — stale is better than nothing)
+    // Network failed or timed out — try cache as fallback (skip TTL check — stale is better than nothing)
     const cached = await getCached<T>(key);
     if (cached) {
       return { data: cached, error: null, fromCache: true };

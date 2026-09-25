@@ -56,6 +56,8 @@ function userFromCookie(): User | null {
   }
 }
 
+const GET_USER_TIMEOUT_MS = 3500;
+
 /**
  * Офлайн — сессия из cookie без refresh: getSession() офлайн ждёт initialize и вызывает
  * обречённый _callRefreshToken (GoTrueClient.js:2334, 2458-2486). Онлайн источник истины —
@@ -64,8 +66,25 @@ function userFromCookie(): User | null {
 export async function resolveUser(): Promise<User | null> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return userFromCookie();
 
-  const { data, error } = await createClient().auth.getUser();
-  if (data.user) return data.user;
-  if (error && isAuthRetryableFetchError(error)) return userFromCookie();
-  return null;
+  // navigator.onLine живой, но сеть может быть «чёрной дырой» (Wi-Fi без выхода): getUser()
+  // тогда не резолвится вовсе, и guard'ы страниц навсегда остаются со спиннером. Ограничиваем
+  // ожидание; опоздавший ответ уже не нужен, а его reject не должен всплыть как unhandled.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), GET_USER_TIMEOUT_MS);
+  });
+
+  try {
+    const getUser = createClient().auth.getUser().catch(() => null);
+    const response = await Promise.race([getUser, timeout]);
+    if (!response) return userFromCookie();
+    if (response.data.user) return response.data.user;
+    if (response.error && isAuthRetryableFetchError(response.error)) return userFromCookie();
+    return null;
+  } catch {
+    // createClient бросает при отсутствии env — guard должен получить ответ, а не reject.
+    return userFromCookie();
+  } finally {
+    clearTimeout(timer);
+  }
 }
