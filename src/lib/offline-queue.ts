@@ -67,14 +67,3 @@ export async function syncQueue(
     return -1;
   }
 }
-
-/** Get count of pending mutations for a user */
-export async function pendingCount(userId: string): Promise<number> {
-  try {
-    const db = await getDB();
-    return await db.countFromIndex('mutations', 'userId', userId);
-  } catch (err) {
-    console.error('Offline queue error (pendingCount):', err);
-    return 0;
-  }
-}

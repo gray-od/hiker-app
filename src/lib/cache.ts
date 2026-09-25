@@ -48,15 +48,6 @@ export async function setCache<T>(key: string, data: T): Promise<void> {
   }
 }
 
-export async function clearCache(): Promise<void> {
-  try {
-    const db = await getDB();
-    await db.clear('cache');
-  } catch {
-    // Silently fail
-  }
-}
-
 export async function removeCache(key: string): Promise<void> {
   try {
     const db = await getDB();

@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import Head from 'next/head';
-import { createClient } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { formatDate, formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
@@ -91,17 +90,6 @@ export default function ListsPage() {
     const total = getItemsCount(list);
     if (total === 0) return 0;
     return Math.round((getPackedCount(list) / total) * 100);
-  }
-
-  async function fetchLists() {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await fetchUserLists(user.id);
-    if (!error && data) {
-      setLists(data);
-    }
   }
 
   async function handleCreate() {

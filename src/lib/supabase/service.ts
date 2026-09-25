@@ -1,5 +1,5 @@
 import { createClient } from './client';
-import { withCache, cacheKeys, clearCache as clearIDBCache, removeCache } from '@/lib/cache';
+import { withCache, cacheKeys, removeCache } from '@/lib/cache';
 import { enqueue, syncQueue } from '@/lib/offline-queue';
 import type {
   Profile,
@@ -205,11 +205,6 @@ export async function fetchUserMealPlansLight(
     if (error) return { data: null, error: new Error(error.message) };
     return { data: data as MealPlanLight[], error: null };
   });
-}
-
-/** Clears all cached data (entire IndexedDB cache store). */
-export function clearAllCache(): Promise<void> {
-  return clearIDBCache();
 }
 
 /** Invalidates a specific cache key — call after mutations. */

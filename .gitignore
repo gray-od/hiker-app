@@ -46,3 +46,9 @@ prohiker_*.md
 # serwist build artifacts
 /public/sw.js
 /public/swe-worker-*.js
+
+# Sync buffer (pending SQL writes when server is down)
+pending_sync.jsonl
+
+# Local opencode tooling (config/telemetry, not part of the app)
+.opencode/

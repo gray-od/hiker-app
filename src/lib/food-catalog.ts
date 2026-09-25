@@ -157,7 +157,3 @@ export function calculateNutrition(item: FoodItem, portionG: number) {
 export function getFoodItem(id: string): FoodItem | undefined {
   return FOOD_CATALOG.find((item) => item.id === id);
 }
-
-export function getFoodsByCategory(category: FoodCategory): FoodItem[] {
-  return FOOD_CATALOG.filter((item) => item.category === category);
-}
