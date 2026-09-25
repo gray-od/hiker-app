@@ -126,16 +126,27 @@ export default function MealPlanDetailPage() {
     });
   }, [id, router]);
 
-  async function recalculateTotals() {
+  async function recalculateTotals(): Promise<boolean> {
     const supabase = createClient();
+
+    // supabase-js resolves PostgREST failures as `{ error }` instead of throwing, so each
+    // statement is checked explicitly; the boolean lets callers gate their success toasts.
+    const failTotals = (step: string, table: string, message: string): false => {
+      console.error('Recalculate totals:', step, 'failed on', table, '-', message);
+      toast.error(tCommon('error_occurred'));
+      return false;
+    };
+
     try {
-      const { data: currentDays } = await supabase
+      const { data: currentDays, error: daysReadError } = await supabase
         .from('meal_days')
         .select('*, meal_entries(*)')
         .eq('plan_id', id)
         .order('day_number');
 
-      if (!currentDays) return;
+      if (daysReadError || !currentDays) {
+        return failTotals('select meal_days', 'meal_days', daysReadError?.message ?? 'no rows returned');
+      }
 
       const typedDays = currentDays as MealDayWithEntries[];
 
@@ -143,10 +154,15 @@ export default function MealPlanDetailPage() {
         const entries = day.meal_entries || [];
         const totalCalories = entries.reduce((sum, e) => sum + e.calories, 0);
         const totalWeight = entries.reduce((sum, e) => sum + e.weight_g, 0);
-        await supabase
+        const { error: dayUpdateError } = await supabase
           .from('meal_days')
           .update({ total_calories: totalCalories, total_weight_g: totalWeight })
           .eq('id', day.id);
+
+        if (dayUpdateError) {
+          return failTotals(`update meal_days totals (day ${day.day_number})`, 'meal_days', dayUpdateError.message);
+        }
+
         day.total_calories = totalCalories;
         day.total_weight_g = totalWeight;
       }
@@ -154,15 +170,22 @@ export default function MealPlanDetailPage() {
       const planTotalWeight = typedDays.reduce((sum, d) => sum + d.total_weight_g, 0);
       const planDaysCount = typedDays.length;
 
-      await supabase
+      const { error: planUpdateError } = await supabase
         .from('meal_plans')
         .update({ total_weight_g: planTotalWeight, days_count: planDaysCount })
         .eq('id', id);
 
+      if (planUpdateError) {
+        return failTotals('update meal_plans totals', 'meal_plans', planUpdateError.message);
+      }
+
       setDays(typedDays);
       setPlan(prev => prev ? { ...prev, total_weight_g: planTotalWeight, days_count: planDaysCount } : null);
+      return true;
     } catch (err) {
-      toast.error(tCommon('error'));
+      console.error('Recalculate totals: unexpected failure -', err);
+      toast.error(tCommon('error_occurred'));
+      return false;
     }
   }
 
@@ -340,9 +363,14 @@ export default function MealPlanDetailPage() {
 
     setEntryModalOpen(false);
     setSaving(false);
-    await recalculateTotals();
+    const totalsOk = await recalculateTotals();
     await invalidateCache(cacheKeys.mealPlanDetail(id));
     await invalidateCache(cacheKeys.mealPlans(userId));
+    if (!totalsOk) {
+      // The entry itself was saved; re-read so it is not hidden by stale local state.
+      await refreshPlanFromServer();
+      return;
+    }
     toast.success(editEntryId ? t('updated') : t('added'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
@@ -371,11 +399,16 @@ export default function MealPlanDetailPage() {
       return;
     }
 
-    toast.success(t('entry_deleted'));
-    await recalculateTotals();
+    const totalsOk = await recalculateTotals();
     await invalidateCache(cacheKeys.mealPlanDetail(id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     setConfirmDeleteEntry(null);
+    if (!totalsOk) {
+      // The entry is already gone; re-read so stale local state does not keep showing it.
+      await refreshPlanFromServer();
+      return;
+    }
+    toast.success(t('entry_deleted'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
       setError(msg);
@@ -421,12 +454,27 @@ export default function MealPlanDetailPage() {
       const templateId = `${editForm.plan_type}_3day`;
       setSaving(false);
       setEditPlanModalOpen(false);
-      await handleApplyTemplate(templateId, editForm.people_count);
-      const supabase2 = createClient();
-      await supabase2.from('meal_plans').update({
-        name: editForm.name.trim(),
-        people_count: editForm.people_count,
-      }).eq('id', id);
+      const applied = await handleApplyTemplate(templateId, editForm.people_count);
+      // The apply handler already reported the failure and reloaded the plan; adopting the
+      // new name/type here would present a half-applied plan as a successful update.
+      if (!applied) return;
+
+      const { error: renameError } = await supabase
+        .from('meal_plans')
+        .update({
+          name: editForm.name.trim(),
+          people_count: editForm.people_count,
+        })
+        .eq('id', id);
+
+      if (renameError) {
+        console.error('Apply template: update meal_plans (name/people_count) failed -', renameError.message);
+        setError(renameError.message);
+        toast.error(renameError.message);
+        await refreshPlanFromServer();
+        return;
+      }
+
       setPlan(prev => prev ? { ...prev, name: editForm.name.trim(), people_count: editForm.people_count } : null);
       return;
     }
@@ -435,13 +483,24 @@ export default function MealPlanDetailPage() {
       const pRatio = editForm.people_count / oldPeople;
       for (const day of days) {
         for (const e of (day.meal_entries || [])) {
-          await supabase.from('meal_entries').update({
+          const { error: rescaleError } = await supabase.from('meal_entries').update({
             weight_g: Math.round(e.weight_g * pRatio),
             calories: Math.round(e.calories * pRatio),
             protein_g: Math.round(e.protein_g * pRatio * 10) / 10,
             fat_g: Math.round(e.fat_g * pRatio * 10) / 10,
             carbs_g: Math.round(e.carbs_g * pRatio * 10) / 10,
           }).eq('id', e.id);
+
+          if (rescaleError) {
+            console.error('Update plan:', `rescale meal_entries (day ${day.day_number})`, 'failed on', 'meal_entries', '-', rescaleError.message);
+            setSaving(false);
+            setEditPlanModalOpen(false);
+            setError(rescaleError.message);
+            toast.error(rescaleError.message);
+            await invalidateCache(cacheKeys.mealPlans(userId));
+            await refreshPlanFromServer();
+            return;
+          }
         }
       }
     }
@@ -456,9 +515,14 @@ export default function MealPlanDetailPage() {
       target_calories: editForm.target_calories,
       target_weight_g: editForm.target_weight_g,
     } : null);
-    await recalculateTotals();
+    const totalsOk = await recalculateTotals();
     await invalidateCache(cacheKeys.mealPlanDetail(id));
     await invalidateCache(cacheKeys.mealPlans(userId));
+    if (!totalsOk) {
+      // The plan row and entries were written; re-read so the page shows the server's totals.
+      await refreshPlanFromServer();
+      return;
+    }
     toast.success(t('plan_updated'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
@@ -516,10 +580,15 @@ export default function MealPlanDetailPage() {
       return;
     }
 
-    toast.success(t('created'));
-    await recalculateTotals();
+    const totalsOk = await recalculateTotals();
     await invalidateCache(cacheKeys.mealPlanDetail(id));
     await invalidateCache(cacheKeys.mealPlans(userId));
+    if (!totalsOk) {
+      // The day row exists; re-read so it is not hidden by stale local state.
+      await refreshPlanFromServer();
+      return;
+    }
+    toast.success(t('created'));
     } catch (err) {
       toast.error(tCommon('error'));
       setError(err instanceof Error ? err.message : 'Operation failed');
@@ -548,11 +617,16 @@ export default function MealPlanDetailPage() {
       return;
     }
 
-    toast.success(t('day_deleted'));
-    await recalculateTotals();
+    const totalsOk = await recalculateTotals();
     await invalidateCache(cacheKeys.mealPlanDetail(id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     setConfirmRemoveDay(false);
+    if (!totalsOk) {
+      // The day is already gone; re-read so stale local state does not keep showing it.
+      await refreshPlanFromServer();
+      return;
+    }
+    toast.success(t('day_deleted'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
       setError(msg);
@@ -575,23 +649,55 @@ export default function MealPlanDetailPage() {
     setActionError(null);
   }
 
-  async function handleApplyTemplate(templateId: string, peopleCountOverride?: number) {
+  async function refreshPlanFromServer() {
+    // Drop the cached detail first: fetchMealPlanDetail is cache-first, so a stale entry
+    // would otherwise be returned as the post-failure server state.
+    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    const { data, error: reloadError } = await fetchMealPlanDetail(id);
+    if (reloadError || !data) {
+      console.error('Failed to reload meal plan from server:', reloadError?.message ?? 'no plan data');
+      return;
+    }
+    setPlan(data.plan);
+    setDays(data.days);
+  }
+
+  async function handleApplyTemplate(templateId: string, peopleCountOverride?: number): Promise<boolean> {
     const template = getMealTemplate(templateId);
-    if (!template || !plan) return;
+    if (!template || !plan) return false;
 
     const userId = userIdRef.current;
-    if (!userId) { toast.error(tCommon('error_loading')); return; }
+    if (!userId) { toast.error(tCommon('error_loading')); return false; }
 
     setApplyingTemplate(true);
     const supabase = createClient();
+
+    // supabase-js resolves PostgREST failures as `{ error }` instead of throwing, so every
+    // mutation below is checked explicitly. The first failure stops the sequence — earlier
+    // deletes may already have been applied, so the caller must not treat this as success.
+    const failApply = async (step: string, table: string, message: string): Promise<false> => {
+      console.error('Apply template:', step, 'failed on', table, '-', message);
+      setConfirmTemplate(null);
+      setError(tCommon('template_apply_error'));
+      toast.error(tCommon('error_occurred'));
+      await invalidateCache(cacheKeys.mealPlans(userId));
+      await refreshPlanFromServer();
+      return false;
+    };
 
     try {
       const existingDayIds = days.map(d => d.id);
       if (existingDayIds.length > 0) {
         for (const dayId of existingDayIds) {
-          await supabase.from('meal_entries').delete().eq('day_id', dayId);
+          const { error: entriesDeleteError } = await supabase.from('meal_entries').delete().eq('day_id', dayId);
+          if (entriesDeleteError) {
+            return await failApply('delete meal_entries', 'meal_entries', entriesDeleteError.message);
+          }
         }
-        await supabase.from('meal_days').delete().eq('plan_id', plan.id);
+        const { error: daysDeleteError } = await supabase.from('meal_days').delete().eq('plan_id', plan.id);
+        if (daysDeleteError) {
+          return await failApply('delete meal_days', 'meal_days', daysDeleteError.message);
+        }
       }
 
       const templatePlanType = template.planType;
@@ -599,7 +705,7 @@ export default function MealPlanDetailPage() {
       const peopleCount = peopleCountOverride ?? plan.people_count ?? 1;
       const daysCount = plan.days_count || 3;
 
-      await supabase
+      const { error: planUpdateError } = await supabase
         .from('meal_plans')
         .update({
           plan_type: templatePlanType,
@@ -607,6 +713,10 @@ export default function MealPlanDetailPage() {
           target_weight_g: planTypeConfig.targetWeight.default,
         })
         .eq('id', plan.id);
+
+      if (planUpdateError) {
+        return await failApply('update meal_plans', 'meal_plans', planUpdateError.message);
+      }
 
       setPlan(prev => prev ? { ...prev, plan_type: templatePlanType, target_calories: planTypeConfig.targetCalories.default, target_weight_g: planTypeConfig.targetWeight.default } : null);
 
@@ -616,13 +726,15 @@ export default function MealPlanDetailPage() {
         const patternIndex = i % template.dayPatterns.length;
         const pattern = template.dayPatterns[patternIndex];
 
-        const { data: dayData } = await supabase
+        const { data: dayData, error: dayInsertError } = await supabase
           .from('meal_days')
           .insert({ plan_id: plan.id, day_number: i + 1, total_calories: 0, total_weight_g: 0 })
           .select()
           .single();
 
-        if (!dayData) continue;
+        if (dayInsertError || !dayData) {
+          return await failApply(`insert meal_days (day ${i + 1})`, 'meal_days', dayInsertError?.message ?? 'no row returned');
+        }
 
         let dayCalories = 0;
         let dayWeight = 0;
@@ -635,7 +747,7 @@ export default function MealPlanDetailPage() {
           const portionG = Math.round(foodItem.defaultPortion[templatePlanType] * portionMultiplier * peopleCount);
           const nutrition = calculateNutrition(foodItem, portionG);
 
-          await supabase.from('meal_entries').insert({
+          const { error: entryInsertError } = await supabase.from('meal_entries').insert({
             day_id: dayData.id,
             meal_type: entry.mealType,
             name: foodItem.name[loc],
@@ -646,26 +758,45 @@ export default function MealPlanDetailPage() {
             carbs_g: nutrition.carbs,
           });
 
+          if (entryInsertError) {
+            return await failApply(`insert meal_entries (day ${i + 1}, ${entry.mealType})`, 'meal_entries', entryInsertError.message);
+          }
+
           dayCalories += nutrition.calories;
           dayWeight += portionG;
         }
 
-        await supabase
+        const { error: totalsError } = await supabase
           .from('meal_days')
           .update({ total_calories: dayCalories, total_weight_g: dayWeight })
           .eq('id', dayData.id);
+
+        if (totalsError) {
+          return await failApply(`update meal_days totals (day ${i + 1})`, 'meal_days', totalsError.message);
+        }
       }
 
       setConfirmTemplate(null);
       setTemplateModalOpen(false);
-      await recalculateTotals();
+      const totalsOk = await recalculateTotals();
       await invalidateCache(cacheKeys.mealPlanDetail(id));
       await invalidateCache(cacheKeys.mealPlans(userId));
+      if (!totalsOk) {
+        // The template is applied, but recalculateTotals failed and already logged/toasted;
+        // surface the error state and re-read instead of reporting success.
+        setError(tCommon('template_apply_error'));
+        await refreshPlanFromServer();
+        return false;
+      }
       toast.success(t('template_applied'));
+      return true;
     } catch (err) {
+      console.error('Apply template: unexpected failure -', err);
       setConfirmTemplate(null);
       setError(tCommon('template_apply_error'));
-      toast.error(tCommon('error'));
+      toast.error(tCommon('error_occurred'));
+      await refreshPlanFromServer();
+      return false;
     } finally {
       setApplyingTemplate(false);
     }

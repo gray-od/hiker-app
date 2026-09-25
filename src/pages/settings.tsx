@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchUserProfile } from '@/lib/supabase/service';
+import { invalidateCache, cacheKeys } from '@/lib/cache';
 import { inputClass, cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -497,16 +498,24 @@ export default function SettingsPage() {
                       setSavingName(true);
                       const supabase = createClient();
                       const { data: { user } } = await supabase.auth.getUser();
-                      if (user) {
-                        await supabase.from('profiles').update({ name: nameInput }).eq('id', user.id);
+                      if (!user) {
+                        toast.error(t('error_saving'));
+                        return;
                       }
+                      const { error } = await supabase.from('profiles').update({ name: nameInput }).eq('id', user.id);
+                      if (error) {
+                        toast.error(t('error_saving'));
+                        return;
+                      }
+                      await invalidateCache(cacheKeys.profile(user.id));
                       setName(nameInput);
                       toast.success(t('name_saved'));
                       setEditingName(false);
                       } catch (err) {
                         toast.error(t('error_saving'));
+                      } finally {
+                        setSavingName(false);
                       }
-                      setSavingName(false);
                     }}
                     disabled={savingName}
                     className="px-3 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"

@@ -102,6 +102,7 @@ export default function MealsPage() {
 
   async function handleCreate() {
     let planId: string | null = null;
+    let totalsFailure: string | null = null;
     try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -204,20 +205,36 @@ export default function MealsPage() {
               throw new Error(entriesError.message || tCommon('error_occurred'));
             }
 
-            const { data: daysWithEntries } = await supabase
+            const { data: daysWithEntries, error: totalsReadError } = await supabase
               .from('meal_days')
               .select('id, meal_entries(calories, weight_g)')
               .eq('plan_id', plan.id);
 
-            if (daysWithEntries) {
+            if (totalsReadError) {
+              console.error('Create plan:', 'select meal_days', 'failed on', 'meal_days', '-', totalsReadError.message);
+              totalsFailure = totalsReadError.message;
+            } else if (daysWithEntries) {
               let planTotalWeight = 0;
               for (const day of daysWithEntries) {
                 const dayCalories = (day.meal_entries || []).reduce((s: number, e: { calories: number }) => s + e.calories, 0);
                 const dayWeight = (day.meal_entries || []).reduce((s: number, e: { weight_g: number }) => s + e.weight_g, 0);
                 planTotalWeight += dayWeight;
-                await supabase.from('meal_days').update({ total_calories: dayCalories, total_weight_g: dayWeight }).eq('id', day.id);
+                const { error: dayTotalsError } = await supabase.from('meal_days').update({ total_calories: dayCalories, total_weight_g: dayWeight }).eq('id', day.id);
+
+                if (dayTotalsError) {
+                  console.error('Create plan:', `update meal_days totals (day ${day.id})`, 'failed on', 'meal_days', '-', dayTotalsError.message);
+                  totalsFailure = dayTotalsError.message;
+                  break;
+                }
               }
-              await supabase.from('meal_plans').update({ total_weight_g: planTotalWeight }).eq('id', plan.id);
+              if (!totalsFailure) {
+                const { error: planTotalsError } = await supabase.from('meal_plans').update({ total_weight_g: planTotalWeight }).eq('id', plan.id);
+
+                if (planTotalsError) {
+                  console.error('Create plan:', 'update meal_plans totals', 'failed on', 'meal_plans', '-', planTotalsError.message);
+                  totalsFailure = planTotalsError.message;
+                }
+              }
             }
           }
         }
@@ -226,7 +243,13 @@ export default function MealsPage() {
       await fetchPlans();
     }
 
-    toast.success(t('created'));
+    if (totalsFailure) {
+      // The plan row exists; only the totals write failed, so do not report success.
+      toast.error(totalsFailure || tCommon('error_occurred'));
+      setError(totalsFailure);
+    } else {
+      toast.success(t('created'));
+    }
     setSaving(false);
     setModalOpen(false);
     setFormData(EMPTY_FORM);
