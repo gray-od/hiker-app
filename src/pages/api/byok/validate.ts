@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createServerClient } from '@supabase/ssr';
 import { validateAiKey } from '@/lib/ai-providers';
 import { validateSearchKey } from '@/lib/search-providers';
+import { getRouteUser } from '@/lib/supabase/routeAuth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,24 +9,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return Object.entries(req.cookies).map(([name, value]) => ({
-            name,
-            value: value as string,
-          }));
-        },
-        setAll() {},
-      },
-    },
-  );
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
+  const user = await getRouteUser(req, res);
+  if (!user) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }

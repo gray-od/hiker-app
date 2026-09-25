@@ -15,6 +15,7 @@
     "share": "Share",
     "export": "Export",
     "logout": "Log out",
+    "logout_failed": "Could not log out. You are still signed in — try again.",
     "login": "Log in",
     "sign_in_with_google": "Sign in with Google",
     "weight_g": "g",
@@ -57,8 +58,10 @@
     "reset_password": "Reset password",
     "security_answer": "Answer",
     "security_question": "Security question",
+    "security_save_failed": "Your account was created, but the security question was not saved. Without it you cannot reset your password.",
     "security_warning": "Save your answer — without it you cannot reset your password",
     "deleting": "Deleting…",
+    "saved_offline": "Saved on this device — it will be sent when the connection returns",
     "enter_name": "Enter a name to continue",
     "select_product": "Select a product to continue",
     "select_items": "Select at least one item"

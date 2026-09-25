@@ -13,6 +13,8 @@ import {
   Apple,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { toast } from '@/lib/toast';
 
 const locales = [
   { code: 'uk', label: 'UA' },
@@ -37,6 +39,33 @@ const bottomNavItems = [
   { href: '/food', icon: Apple, labelKey: 'food' as const },
 ];
 
+// supabase-js' signOut() removes the stored session only after the auth
+// server answers: even `{ scope: 'local' }` POSTs /logout first and
+// GoTrueClient._signOut returns on a network error before _removeSession
+// runs. Clear the session through the client's own storage adapter — the
+// same removal _removeSession performs — so a failed sign-out cannot leave
+// a valid session behind.
+async function clearStoredSession(client: SupabaseClient): Promise<boolean> {
+  try {
+    const { storage, storageKey } = client.auth as unknown as {
+      storage: {
+        getItem: (key: string) => Promise<string | null> | string | null;
+        removeItem: (key: string) => Promise<void> | void;
+      };
+      storageKey: string;
+    };
+    if (typeof storageKey !== 'string' || storageKey.length === 0) {
+      return false;
+    }
+    await storage.removeItem(storageKey);
+    await storage.removeItem(`${storageKey}-code-verifier`);
+    return !(await storage.getItem(storageKey));
+  } catch {
+    // Report the failure to the caller instead of pretending it worked.
+    return false;
+  }
+}
+
 export default function Navbar() {
   const tnav = useTranslations('nav');
   const tcommon = useTranslations('common');
@@ -58,9 +87,34 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
-    const { createClient } = await import('@/lib/supabase/client');
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    let supabase: SupabaseClient;
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      supabase = createClient();
+    } catch {
+      // Client chunk failed to load (offline); nothing was cleared.
+      toast.error(tcommon('logout_failed'));
+      return;
+    }
+
+    let sessionCleared = false;
+    try {
+      const { error } = await supabase.auth.signOut();
+      sessionCleared = !error;
+    } catch {
+      // signOut threw instead of resolving; fall through to clearing the
+      // stored session directly rather than navigating away as signed out.
+    }
+
+    if (!sessionCleared) {
+      sessionCleared = await clearStoredSession(supabase);
+    }
+
+    if (!sessionCleared) {
+      toast.error(tcommon('logout_failed'));
+      return;
+    }
+
     router.push('/login');
   };
 

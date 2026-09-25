@@ -62,20 +62,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const lockedUntil = attempts >= 5
         ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         : null;
-      await adminClient.rpc('update_security_attempts', {
+      const { error: attemptsError } = await adminClient.rpc('update_security_attempts', {
         p_user_id: record.user_id,
         p_attempts: attempts,
         p_locked_until: lockedUntil,
       });
+      if (attemptsError) {
+        // The counter is the only brute-force guard; if it cannot be written the lockout is
+        // silently off, so this must not pass as a normal wrong answer.
+        console.error('[auth/recover] failed to record failed attempt:', attemptsError.message);
+        res.status(500).json({ error: 'Failed to record recovery attempt' });
+        return;
+      }
       res.status(403).json({ error: 'wrong_answer' });
       return;
     }
 
-    await adminClient.rpc('update_security_attempts', {
+    const { error: resetError } = await adminClient.rpc('update_security_attempts', {
       p_user_id: record.user_id,
       p_attempts: 0,
       p_locked_until: null,
     });
+    if (resetError) {
+      // Asymmetric on purpose: unlike the increment, a failed reset must not fail the request —
+      // the password change below is the user's real goal and still succeeds.
+      console.error('[auth/recover] failed to reset attempt counter:', resetError.message);
+    }
 
     const { error: updateError } = await adminClient.auth.admin.updateUserById(
       record.user_id,

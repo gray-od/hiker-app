@@ -42,6 +42,7 @@ const features = [
 export default function LoginPage() {
   const t = useTranslations('common');
   const lt = useTranslations('landing');
+  const te = useTranslations('errors');
   const router = useRouter();
   const locale = useLocale();
 
@@ -60,6 +61,8 @@ export default function LoginPage() {
   const [securityQuestion, setSecurityQuestion] = useState('');
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
+  const [securitySaveFailed, setSecuritySaveFailed] = useState(false);
+  const [securityRetrying, setSecurityRetrying] = useState(false);
 
   const securityQuestions = [
     { value: 'mother_maiden', key: 'question_mother_maiden' },
@@ -90,6 +93,31 @@ export default function LoginPage() {
       setError(authError.message);
       setGoogleLoading(false);
     }
+  };
+
+  // Used by sign-up and by the retry button: the account already exists in both cases,
+  // so a retry only re-sends the security question/answer over the active session.
+  const saveSecurityRecord = async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/security', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer }),
+      });
+      return res.ok;
+    } catch {
+      // A network failure leaves the same state as a rejected response: nothing was saved.
+      return false;
+    }
+  };
+
+  const handleRetrySecuritySave = async () => {
+    setSecurityRetrying(true);
+    if (await saveSecurityRecord()) {
+      router.push('/');
+      return;
+    }
+    setSecurityRetrying(false);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -125,20 +153,14 @@ export default function LoginPage() {
         return;
       }
       if (data?.session) {
-        try {
-          await fetch('/api/auth/security', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer }),
-          });
+        if (await saveSecurityRecord()) {
           router.push('/');
           return;
-        } catch {
-          console.error('[login] failed to save security question, session exists');
-          setError(t('fill_security_fields'));
-          setEmailLoading(false);
-          return;
         }
+        console.error('[login] failed to save security question, session exists');
+        setSecuritySaveFailed(true);
+        setEmailLoading(false);
+        return;
       }
       setSignUpSuccess(true);
       setEmailLoading(false);
@@ -220,6 +242,24 @@ export default function LoginPage() {
             {signUpSuccess && (
               <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-400">
                 {t('check_email')}
+              </div>
+            )}
+
+            {securitySaveFailed && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+                <p>{t('security_save_failed')}</p>
+                <button
+                  type="button"
+                  onClick={handleRetrySecuritySave}
+                  disabled={securityRetrying}
+                  className="mt-3 w-full flex items-center justify-center gap-3 px-6 py-3 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-zinc-900 font-medium rounded-xl transition-colors focus:ring-2 focus:ring-[var(--color-brand)] min-h-[44px]"
+                >
+                  {securityRetrying ? (
+                    <span className="inline-block w-5 h-5 border-2 border-white dark:border-zinc-900 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    te('try_again')
+                  )}
+                </button>
               </div>
             )}
 
@@ -357,7 +397,7 @@ export default function LoginPage() {
                   {t('no_account')}{' '}
                   <button
                     type="button"
-                    onClick={() => { setAuthMode('signup'); setError(null); setSignUpSuccess(false); }}
+                    onClick={() => { setAuthMode('signup'); setError(null); setSignUpSuccess(false); setSecuritySaveFailed(false); setSecurityRetrying(false); }}
                     className="text-[var(--color-brand)] hover:underline font-medium focus:ring-2 focus:ring-[var(--color-brand)] rounded"
                   >
                     {t('sign_up_with_email')}
@@ -368,7 +408,7 @@ export default function LoginPage() {
                   {t('have_account')}{' '}
                   <button
                     type="button"
-                    onClick={() => { setAuthMode('signin'); setError(null); setSignUpSuccess(false); }}
+                    onClick={() => { setAuthMode('signin'); setError(null); setSignUpSuccess(false); setSecuritySaveFailed(false); setSecurityRetrying(false); }}
                     className="text-[var(--color-brand)] hover:underline font-medium focus:ring-2 focus:ring-[var(--color-brand)] rounded"
                   >
                     {t('sign_in_with_email')}

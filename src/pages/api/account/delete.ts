@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
+import { getRouteUser } from '@/lib/supabase/routeAuth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
@@ -12,25 +12,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return Object.entries(req.cookies).map(([name, value]) => ({
-              name,
-              value: value as string,
-            }));
-          },
-          setAll() {},
-        },
-      },
-    );
+    const user = await getRouteUser(req, res);
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    if (!user) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
