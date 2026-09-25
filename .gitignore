@@ -52,3 +52,8 @@ pending_sync.jsonl
 
 # Local opencode tooling (config/telemetry, not part of the app)
 .opencode/
+
+# Internal working docs (kept locally, not published)
+/AGENTS.md
+/PLAN.md
+/wiki_map_project.md
