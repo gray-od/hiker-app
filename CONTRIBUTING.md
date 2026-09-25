@@ -45,7 +45,7 @@ src/
 ├── components/     # 22 shared components
 │   ├── meals/      # Meal plan components
 │   └── lists/      # Packing list components
-├── lib/            # 18 utility modules
+├── lib/            # 21 utility modules
 │   ├── supabase/   # Supabase client + data service
 │   ├── cache.ts    # IndexedDB cache layer (TTL 5min)
 │   ├── offline-queue.ts  # Mutation queue for offline

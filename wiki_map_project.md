@@ -5,7 +5,7 @@
 Migrated from `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) to Pages Router.
 
 **GitHub:** https://github.com/gray-od/hiker-app (public, branch `main`)
-**Supabase:** проект `lcqsbjflososfglajydw` (тот же что и hiker-app)
+**Supabase:** проект `lcqsbjflososfglajydw` (в дашборде — `hiker-app`) — ПРОД-БД ProHikes; других живых приложений на этой БД нет
 
 ## Why Pages Router
 
@@ -17,7 +17,7 @@ App Router RSC-навигация требует сервер при каждо�
 |---|---|
 | Роутер | Next.js 16 Pages Router |
 | Стили | Tailwind v4 |
-| БД + Auth | Supabase (тот же проект что и hiker-app) |
+| БД + Auth | Supabase (проект `lcqsbjflososfglajydw`, в дашборде — `hiker-app`) |
 | i18n | next-intl v4 (uk/ru/en, middleware-based) |
 | Темы | next-themes |
 | AI | Gemma 4 26B (`ai@4.3.19` + `@ai-sdk/google@1.2.22`) + Exa + Open-Meteo |
@@ -28,7 +28,7 @@ App Router RSC-навигация требует сервер при каждо�
 
 ## Current State
 
-**Код готов (R1–R22). Деплой: `hiker-app.vercel.app`**
+**Деплой: `hiker-app.vercel.app`. Актуальное состояние — `AGENTS.md` (Current State, Round History); оставшаяся работа — `PLAN.md`.**
 
 ### Что работает
 
@@ -41,7 +41,7 @@ App Router RSC-навигация требует сервер при каждо�
 | Смена пароля в настройках | ✅ |
 | AI-чат (Gemma 4, BYOK, 8 инструментов) | ✅ |
 | CRUD gear/food/lists/meals | ✅ |
-| Офлайн: SW (precache всех страниц) + IndexedDB (TTL 5мин) + mutation queue | ✅ |
+| Офлайн: SW (runtime-кэш документов + prewarm list) + IndexedDB (TTL 5мин) + mutation queue | ✅ |
 | i18n (uk/ru/en), тёмная тема | ✅ |
 | favicon, robots.txt, SEO meta на всех страницах | ✅ |
 
@@ -71,5 +71,4 @@ App Router RSC-навигация требует сервер при каждо�
 - **`ENVIRONMENT_FALLBACK`** — безвредная ошибка сборки, баг next-intl v4 + Next.js 16
 - **`ai@4` vs `ai@7`** — используется `ai@4.3.19`. Обновление до v7 было ошибкой — откат в R13
 - **Vercel собирает без `--webpack` → SW нет** — исправлено: build script = `next build --webpack`
-- **Офлайн страницы** — добавлен `additionalPrecacheEntries` для всех URL страниц в next.config.ts
 - **Google Cloud Console для входа НЕ нужен** — `signInWithOAuth` через Supabase-callback

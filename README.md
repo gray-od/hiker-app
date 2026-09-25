@@ -33,12 +33,12 @@ AI-first hiking planner — gear, packing lists, meals, and an AI partner that a
 
 ### Offline (PWA)
 
-- **All pages precached** — install once, all pages work offline immediately
+- **Offline pages** — SW runtime caching for page documents plus a prewarm list (no full precache)
 - **IndexedDB data cache** — 5-minute TTL, cache-first with background refresh
 - **Mutation queue** — 12 CRUD operations (gear, food, lists, list items) are queued when offline and sync automatically
-- **F5 resistant** — full page refresh works offline via precached HTML
+- **F5 resistant** — full page refresh works offline via the SW document cache
 
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, architecture, and contribution guide.
-See [ARCHITECTURE.md](wiki_map_project.md) for stack details and known issues.
+See [wiki_map_project.md](wiki_map_project.md) for stack details and known issues.

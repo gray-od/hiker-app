@@ -11,7 +11,7 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 ## Stack
 
 - **Frontend:** Next.js 16 Pages Router + TypeScript + Tailwind v4
-- **Backend:** Supabase (PostgreSQL, Auth, RLS) — same project as hiker-app
+- **Backend:** Supabase (PostgreSQL, Auth, RLS) — проект `lcqsbjflososfglajydw` (в дашборде — `hiker-app`), ПРОД-БД самого ProHikes; тот же проект использовала архивная App Router версия, других живых приложений на этой БД нет.
 - **i18n:** next-intl v4 (uk/ru/en)
 - **Theme:** next-themes (class-based dark mode)
 - **AI:** Google Gemma 4 26B A4B (free via AI Studio) + Exa (web search) + Open-Meteo (weather)
@@ -19,15 +19,17 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 - **SW:** `@serwist/next` + webpack (`next build --webpack`)
 - **Offline data:** IndexedDB (`idb`) cache-first in `src/lib/supabase/service.ts`
 - **BYOK:** опц. свой ключ AI/поиска через `localStorage` (`prohikes.ai`/`prohikes.search`)
-- **Hosting:** Vercel (new project `prohikes`, same env vars)
+- **Hosting:** Vercel проект `hiker-app` → https://hiker-app.vercel.app, авто-деплой из GitHub `gray-od/hiker-app` (main). Локальный remote `origin` (`gray-od/prohikes`) — архивное репо, push туда не деплоится; рабочий remote — `hiker-app` (`https://github.com/gray-od/hiker-app.git`).
 
 ## Current State
 
 Деплой: `https://hiker-app.vercel.app` (Vercel, авто-деплой из GitHub `gray-od/hiker-app` main).
 
-**Работает:** Google-вход, email/пароль регистрация, сброс пароля (контрольный вопрос), смена пароля, AI-чат, CRUD gear/food/lists/meals, офлайн (SW precache + IndexedDB cache + mutation queue), i18n, темы, SEO.
+**Работает:** Google-вход, email/пароль регистрация, сброс пароля (контрольный вопрос), смена пароля, AI-чат, CRUD gear/food/lists/meals, офлайн (SW: runtime-кэш документов + prewarm list, IndexedDB cache, mutation queue; навигация и F5 офлайн проверены владельцем на десктопе и Android), i18n, темы, SEO.
 
 **НЕ работает:** подтверждение email при регистрации (SMTP). Workaround: `autoconfirm: true`. Сброс пароля — через контрольный вопрос (PBKDF2) без SMTP.
+
+**Аудит R26 (2026-09-24):** C1–C3, M2, M4 и «ложные успехи» записи исправлены и задеплоены в R27–R33; офлайн-тест владельца (десктоп, Android) пройден. M1 (лимит AI 15/день) по-прежнему не работает: у `ai_usage` нет `GRANT` — нужна миграция. Оставшиеся дефекты и порядок работ — в `PLAN.md` (источник правды).
 
 ## Round History
 
@@ -57,6 +59,15 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 | R22 | 2026-08-01 | Remaining bugfixes: userId guards + IndexedDB cache invalidation in 7 meals mutations, name.trim() on save, i18n for ConfirmDeleteModal, GPX error message fix, middleware auth redirect, meals handleCreate rollback. Supabase anti-pause scheduled task. | meals/[id].tsx, meals.tsx, gear.tsx, food.tsx, ConfirmDeleteModal.tsx, lists/[id].tsx, middleware.ts, cache.ts |
 | R23 | 2026-08-01 | UX: validation hints below form inputs — 8 locations show why save button is disabled (i18n: enter_name, select_product, select_items). Docs: CONTRIBUTING.md added, README simplified. | meals.tsx, lists.tsx, gear.tsx, food.tsx, EditPlanModal.tsx, EntryModal.tsx, EditListModal.tsx, AddItemsModal.tsx, i18n×3, README.md, CONTRIBUTING.md |
 | R24 | 2026-08-04 | Mobile fix + deep audit: viewport meta, SW rewrite (no IndexedDB, explicit runtime caching, catchHandler, 7d TTL), removed additionalPrecacheEntries (root cause of stale SW), cache invalidation order fix (12 funcs), open redirect fix, email enumeration fix, API guards (AbortController, .maybeSingle, null guard), 5 pages useEffect cleanup, i18n Deleting, offline-queue logging, manifest icons, 22 bugs total in 27 files | _document.tsx, manifest.json, sw.ts, next.config.ts, SWRegister.tsx, AppShell.tsx, service.ts, offline-queue.ts, cache.ts, gpx-weather.ts, callback.ts, lookup.ts, recover.ts, byok/validate.ts, chat.ts, index.tsx, login.tsx, gear.tsx, food.tsx, lists.tsx, meals.tsx, settings.tsx, TripWeightCard.tsx, _error.tsx, i18n×3 |
+| R25 | 2026-09-24 | Разбор письма Supabase про explicit grants для новых таблиц public с 30.10.2026 (аудит только чтением: ProHikes уже на строгих default privileges, у `service_role` нет DML на таблицах public) + добавлен раздел Supabase Grants + исправлена идентичность проекта в документации (репо `gray-od/hiker-app`, локальный remote `origin` архивный, БД не «shared»). | AGENTS.md |
+| R26 | 2026-09-24 | Аудит кода (только чтение, 4 способа: SQL по прод-БД, два независимых прохода по коду, эмпирическая проба supabase-js без сети) + создан `PLAN.md`: подтверждённые дефекты C1–C3 / M1–M5 и порядок исправлений; исправлена ошибочная запись про отсутствие `supabase/migrations` (папка есть, 9 файлов, в git). Код не менялся, деплоя не было. | PLAN.md, AGENTS.md |
+| R27 | 2026-09-25 | Офлайн-сага, часть 1: сессия офлайн из cookie (`resolveUser`), middleware без сетевого вызова, реальный offline-fallback SW (вместо ERR_FAILED); деплой + офлайн-тесты владельца (десктоп, Android) | `src/middleware.ts`, `src/lib/supabase/resolveUser.ts`, `src/sw.ts`, `public/offline.html`, 13 страниц |
+| R28 | 2026-09-25 | Офлайн-сага, часть 2: версионный кэш документов (`pages-<buildId>`), prewarm статических и динамических маршрутов, stale-while-revalidate документов, локальный ответ `/_next/data`; C1/C2 закрыты (replay проверяет `{error}`, `addListItems` — построчно в очередь) | `src/sw.ts`, `src/lib/cache.ts`, `src/lib/prewarmRoutes.ts`, `AppShell.tsx`, `SWRegister.tsx`, `service.ts` |
+| R29 | 2026-09-25 | Миграции БД (MCP, записаны в историю миграций): `restrict_security_question_rpcs` — EXECUTE на RPC контрольного вопроса только у `service_role`, `search_path` зафиксирован; удалён оставшийся `public.verify_and_reset` | Supabase (история миграций) |
+| R30 | 2026-09-25 | Запись без «ложных успехов»: `meals`/`settings` проверяют результат записи в БД и показывают ошибку вместо успеха; профиль инвалидируется после сохранения (M2) | `meals.tsx`, `meals/[id].tsx`, `settings.tsx` |
+| R31 | 2026-09-26 | Сессия/логаут/регистрация: освежённая сессия в серверных роутах (`routeAuth.ts`), настоящий logout офлайн, проверка контрольного вопроса при регистрации, счётчик попыток восстановления | `routeAuth.ts`, `api/account/delete.ts`, `api/byok/validate.ts`, `api/auth/{recover,security}.ts`, `login.tsx`, `Navbar.tsx` |
+| R32 | 2026-09-26 | Честная офлайн-очередь: queued-мутация сообщается как «в очереди», а не как ошибка | `service.ts`, `food.tsx`, `gear.tsx`, `lists.tsx`, `lists/[id].tsx` |
+| R33 | 2026-09-26 | AI-план питания откатывается, если его содержимое не сохранилось | `api/chat.ts` |
 
 ## What's Done So Far
 
@@ -65,7 +76,7 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 - [x] All shared files copied (components, lib, hooks, i18n, public, supabase, .env.local)
 - [x] Pages Router foundation (_app.tsx, _document.tsx, middleware.ts)
 - [x] Globals CSS copied from hiker-app
-- [x] next.config.ts (withSerwistInit + webpack build, no precache pages — runtime NetworkFirst)
+- [x] next.config.ts (withSerwistInit + webpack build; без precache страниц — SW кэширует документы в runtime + prewarm)
 - [x] SW file created (`src/sw.ts`) — Serwist with precache + runtime caching
 - [x] IndexedDB cache layer (`src/lib/cache.ts`) + wired to service.ts (R15) + TTL (R20)
 - [x] OfflineBanner component
@@ -81,15 +92,28 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 - [x] 7 API routes (account/delete, byok/validate, chat, auth/callback, auth/security, auth/recover, auth/lookup)
 - [x] Vercel deploy: `https://hiker-app.vercel.app` (auto-deploy from GitHub main)
 - [x] AI chat working (Gemma 4, BYOK, 8 tools)
-- [x] Full offline: SW precache all pages + IndexedDB data cache + mutation queue
+- [x] Full offline: SW runtime-кэш документов + prewarm list + IndexedDB data cache + mutation queue (R20, R27–R28). Очередь покрывает gear/food/lists/list_items (replay проверяет `{error}`, пачка `addListItems` — построчно); `meals.tsx`/`settings.tsx` пишут напрямую, но больше не показывают ложный успех (R30)
 - [x] SEO: favicon, robots.txt, meta descriptions, manifest.json
 - [x] Full parity audit vs original hiker-app (R17)
 - [x] Deep security audit + bug fixes (R19)
 - [x] Supabase user_security table + SECURITY DEFINER functions
+- [x] Аудит кода 2026-09-24 (R26, только чтение) + план исправлений `PLAN.md`
+- [x] Офлайн-сага R27–R28: сессия офлайн (`resolveUser`), middleware без сети, SW offline-fallback, версионный кэш + prewarm + SWR документов; офлайн-тест владельца пройден (десктоп, Android)
+- [x] Миграции БД R29: RPC контрольного вопроса — только `service_role` (+ `search_path`), удалён `verify_and_reset`
+- [x] Запись без «ложных успехов» R30 и честная офлайн-очередь R32 (queued-запись сообщается как «в очереди»)
+- [x] Сессия/логаут/регистрация R31: `routeAuth.ts`, настоящий logout офлайн, проверка контрольного вопроса при регистрации, счётчик попыток восстановления
+- [x] AI R33: откат созданного плана питания, если содержимое не сохранилось
 
 ## Open Issues
 
 - [ ] **SMTP:** email confirmation blocked — requires custom domain. All free options checked (Resend/Brevo/Gmail/Supabase-built-in). Workaround: `autoconfirm: true`. Password reset via security question (PBKDF2).
+- [ ] **M1 — лимит AI 15/день:** у `ai_usage` нет `GRANT` — включается миграцией и только по отдельному явному подтверждению владельца.
+- [ ] **Оставшиеся дефекты:** C1–C3, M2, M4 закрыты (R27–R33); актуальный список и порядок работ — в `PLAN.md`.
+- [ ] **Не закоммичено:** актуализация документации (`AGENTS.md`, `README.md`, `wiki_map_project.md`, `CONTRIBUTING.md`) и `PLAN.md` — в рабочем дереве (там же незакоммиченные правки другой сессии). Коммит/push — только по отдельной просьбе (push в `hiker-app` запускает деплой Vercel).
+
+## Как продолжать
+
+Точка входа для новой сессии: `AGENTS.md` (этот файл) → `PLAN.md` (оставшиеся дефекты, порядок работ) → память проекта (`ProHikes:last_context`). Состояние кода — R27–R33 (Round History выше); в рабочем дереве, кроме этих docs и `PLAN.md`, — незакоммиченные правки другой сессии (`.gitignore`, код) — перед коммитом сверяться с `git status`.
 
 ## Page Migration Map
 
@@ -134,7 +158,7 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 
 - All components remain unchanged — only page wrappers change
 - `getServerSideProps` can be used for online SSR, but for offline we rely on `useEffect` + IndexedDB (same as current App Router pattern)
-- SW caches static assets (CacheFirst), doesn't touch HTML/RSC (not needed — Pages Router navigation is client-side)
+- SW: статика — CacheFirst; документы страниц — stale-while-revalidate в `pages-<buildId>` + prewarm (`src/lib/prewarmRoutes.ts`) + offline catchHandler; `/_next/data` отвечается локально
 - IndexedDB cache (cache-first, network-update) wraps all 9 service.ts functions
 - `next build --webpack` forces webpack for production (Serwist webpack plugin compatible)
 
@@ -147,11 +171,27 @@ Migration of `D:\Projects\hiker-app` (Next.js 16 App Router + Supabase PWA) → 
 
 ## Supabase MCP (since R9)
 
-- Global MCP server `supabase` (opencode.json) → Management API, scoped to project `lcqsbjflososfglajydw` (prod DB, shared with live hiker-app)
+- Global MCP server `supabase` (opencode.json) → Management API, scoped to project `lcqsbjflososfglajydw` (в дашборде Supabase — проект `hiker-app`) — это ПРОД-БД самого ProHikes. Отдельного живого приложения, делящего эту БД, нет: старая App Router версия выведена из эксплуатации, её репозиторий заархивирован (ссылка Vercel сохранена), поэтому БД никто, кроме ProHikes, не использует.
 - **Rule: DDL via `apply_migration`/`execute_sql` — ONLY after explicit user confirmation per migration**
+
+## Supabase Grants (правило с 30 октября 2026)
+
+- **Что меняется:** с 30.10.2026 Supabase прекращает автоматически выдавать права Data API (`anon` / `authenticated` / `service_role`) на НОВЫЕ таблицы схемы `public` в существующих проектах. Существующие таблицы права сохраняют — ничего не ломается. Новая таблица без явного GRANT → Data API отвечает `permission denied` (SQLSTATE 42501). Касается миграций, SQL-редактора Dashboard, preview-веток и локального `supabase db reset`.
+- **Обязательный блок для любого нового DDL**, создающего таблицу в `public` (grants — в том же скрипте/миграции, что создаёт таблицу):
+
+  ```sql
+  grant select on public.<table> to anon;            -- только если анонимный доступ реально нужен
+  grant select, insert, update, delete on public.<table> to authenticated;
+  grant select, insert, update, delete on public.<table> to service_role;
+  ```
+
+  Затем включить RLS и написать политики — grant без RLS не защищает данные.
+- **Текущее состояние (проверено SQL, сентябрь 2026):** ProHikes УЖЕ на строгих default privileges (`pg_default_acl`, схема public, grantor `postgres` = `postgres=arwdDxtm, anon=Dxtm, authenticated=Dxtm, service_role=Dxtm` — DML никому). Доказательство: таблицы, созданные в июле (`user_security`, `ai_usage`, `keepalive`), не имеют DML ни у одной роли; старые таблицы (`gear_items`, `gear_lists`, `list_items`, `meal_*`, `profiles`, `user_food_items`) имеют `authenticated=arwdDxtm`, а `anon` — только `SELECT` на `profiles`. Значит, для ProHikes 30 октября ничего не меняет — правило действует с июля, новые таблицы нужно грантить явно.
+- **Важное следствие:** у `service_role` в ProHikes нет прав SELECT/INSERT/UPDATE/DELETE ни на одной таблице `public` (подтверждено тремя способами). Серверный код не должен обращаться к таблицам сервисным ключом напрямую — только через `SECURITY DEFINER` RPC или GoTrue admin HTTP API; иначе `permission denied`.
+- **Миграции и гранты в репозитории:** локальная папка `supabase/migrations` есть — 9 файлов (`00001`–`00009`), они в git. Практика уже смешанная: `00002_grant_authenticated.sql:2-11` выдаёт явные `GRANT` семи таблицам (+ `SELECT` на `profiles` для `anon`), а `00005_ai_usage_rate_limit.sql` создаёт `ai_usage` с RLS и тремя политиками, но БЕЗ единого GRANT — из-за этого таблица недоступна через Data API (это и есть причина неработающего лимита AI, см. `PLAN.md`). Файлов с такими именами в истории миграций проекта (`supabase_migrations.schema_migrations`) нет — часть DDL применялась вручную через SQL-редактор, отдельные изменения — через MCP `apply_migration` (под ролью `postgres`).
 
 ## Verification
 
 - `npx tsc --noEmit` — must be clean
 - `npx next build --webpack` — must succeed, SW must be generated (`public/sw.js`)
-- Offline test: browse pages online → go offline → navigate between pages → should work
+- Offline test: browse pages online → go offline → navigate between pages and reload (F5) → should work. **Статус:** пройден владельцем на десктопе и Android после R27–R28; C3 закрыт (cookie-сессия через `src/lib/supabase/resolveUser.ts`).
