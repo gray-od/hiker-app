@@ -61,29 +61,42 @@ export default function MealPlanPrintPage() {
     setToday(new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US'));
   }, [locale]);
 
+  const head = (
+    <Head>
+      <title>{`ProHikes — ${plan?.name ?? 'Meal Plan'} — ${tCommon('print')}`}</title>
+      <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
+    </Head>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="w-8 h-8 border-4 border-zinc-200 border-t-[var(--color-brand)] rounded-full animate-spin" />
-      </div>
+      <>
+        {head}
+        <div className="flex items-center justify-center min-h-screen bg-white">
+          <div className="w-8 h-8 border-4 border-zinc-200 border-t-[var(--color-brand)] rounded-full animate-spin" />
+        </div>
+      </>
     );
   }
 
   if (!plan && !loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center p-12">
-          <h3 className="text-base font-medium text-zinc-700 mb-2">
-            {error || tCommon('empty')}
-          </h3>
-          <button
-            onClick={() => router.push('/meals')}
-            className="mt-4 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
-          >
-            {t('back_to_plans')}
-          </button>
+      <>
+        {head}
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center p-12">
+            <h3 className="text-base font-medium text-zinc-700 mb-2">
+              {error || tCommon('empty')}
+            </h3>
+            <button
+              onClick={() => router.push('/meals')}
+              className="mt-4 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+            >
+              {t('back_to_plans')}
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -109,10 +122,7 @@ export default function MealPlanPrintPage() {
 
   return (
     <>
-      <Head>
-        <title>ProHikes — {plan?.name ?? 'Meal Plan'} — {tCommon('print')}</title>
-        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
-      </Head>
+      {head}
       <style>{`
         @page { margin: 1cm; }
         @media print {

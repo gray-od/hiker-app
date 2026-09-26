@@ -44,11 +44,20 @@ export default function PrintFoodPage() {
     });
   }, [router]);
 
+  const head = (
+    <Head>
+      <title>{`ProHikes — ${tFood('title')}`}</title>
+    </Head>
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-zinc-200 border-t-[var(--color-brand)] rounded-full animate-spin" />
-      </div>
+      <>
+        {head}
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-zinc-200 border-t-[var(--color-brand)] rounded-full animate-spin" />
+        </div>
+      </>
     );
   }
 
@@ -57,9 +66,7 @@ export default function PrintFoodPage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      <Head>
-        <title>ProHikes — {tFood('title')}</title>
-      </Head>
+      {head}
 
       <div className="print:hidden flex items-center justify-between p-4 border-b border-zinc-200">
         <button

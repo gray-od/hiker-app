@@ -202,7 +202,7 @@ export default function FoodPage() {
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
       <Head>
-        <title>ProHikes — {tFood('title')}</title>
+        <title>{`ProHikes — ${tFood('title')}`}</title>
         <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
       </Head>
 

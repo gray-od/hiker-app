@@ -265,22 +265,29 @@ export default function SettingsPage() {
     setNewPassword('');
   };
 
+  const head = (
+    <Head>
+      <title>{`ProHikes — ${t('title')}`}</title>
+      <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
+    </Head>
+  );
+
   if (loading) {
     return (
-      <div className="flex-1 p-4 md:p-8 max-w-2xl mx-auto w-full">
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
+      <>
+        {head}
+        <div className="flex-1 p-4 md:p-8 max-w-2xl mx-auto w-full">
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
     <div className="flex-1 p-4 md:p-8 max-w-2xl mx-auto w-full">
-      <Head>
-        <title>ProHikes — {t('title')}</title>
-        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
-      </Head>
+      {head}
 
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
         {t('title')}

@@ -595,29 +595,42 @@ export default function ListDetailPage() {
     });
   }
 
+  const head = (
+    <Head>
+      <title>{`ProHikes — ${list?.name ?? t('title')}`}</title>
+      <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
+    </Head>
+  );
+
   if (loading) {
     return (
-      <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
-      </div>
+      <>
+        {head}
+        <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-4 border-zinc-200 dark:border-zinc-700 border-t-[var(--color-brand)] rounded-full animate-spin" />
+        </div>
+      </>
     );
   }
 
   if (!list && !loading) {
     return (
-      <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
-          <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            {error || tCommon('empty')}
-          </h3>
-          <button
-            onClick={() => router.push('/lists')}
-            className="mt-4 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
-          >
-            {t('back_to_lists')}
-          </button>
+      <>
+        {head}
+        <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
+            <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              {error || tCommon('empty')}
+            </h3>
+            <button
+              onClick={() => router.push('/lists')}
+              className="mt-4 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+            >
+              {t('back_to_lists')}
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -625,10 +638,7 @@ export default function ListDetailPage() {
 
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
-      <Head>
-        <title>ProHikes — {list?.name ?? t('title')}</title>
-        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
-      </Head>
+      {head}
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">

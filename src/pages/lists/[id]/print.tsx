@@ -62,25 +62,38 @@ export default function PrintListPage() {
     setToday(new Date().toLocaleDateString('uk-UA'));
   }, []);
 
+  const head = (
+    <Head>
+      <title>{`ProHikes — ${tCommon('print')} — ${list?.name ?? t('title')}`}</title>
+      <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
+    </Head>
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-zinc-200 border-t-[var(--color-brand)] rounded-full animate-spin" />
-      </div>
+      <>
+        {head}
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-zinc-200 border-t-[var(--color-brand)] rounded-full animate-spin" />
+        </div>
+      </>
     );
   }
 
   if (!list) {
     return (
-      <div className="min-h-screen bg-white p-8 text-center">
-        <p className="text-zinc-500 mb-4">{error || tCommon('empty')}</p>
-        <button
-          onClick={() => router.push('/lists')}
-          className="text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
-        >
-          {t('back_to_lists')}
-        </button>
-      </div>
+      <>
+        {head}
+        <div className="min-h-screen bg-white p-8 text-center">
+          <p className="text-zinc-500 mb-4">{error || tCommon('empty')}</p>
+          <button
+            onClick={() => router.push('/lists')}
+            className="text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+          >
+            {t('back_to_lists')}
+          </button>
+        </div>
+      </>
     );
   }
 
@@ -113,10 +126,7 @@ export default function PrintListPage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      <Head>
-        <title>ProHikes — {t('print')} — {list.name}</title>
-        <meta name="description" content="ProHikes — plan your hikes, manage gear and meals" />
-      </Head>
+      {head}
 
       <div className="print:hidden flex items-center justify-between p-4 border-b border-zinc-200">
         <button

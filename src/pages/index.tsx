@@ -61,7 +61,21 @@ export default function Dashboard() {
     };
   }, []);
 
-  if (loading) return <LoadingSpinner fullPage />;
+  const head = (
+    <Head>
+      <title>ProHikes — Dashboard</title>
+      <meta name="description" content="ProHikes hiking gear and meal planner dashboard" />
+    </Head>
+  );
+
+  if (loading) {
+    return (
+      <>
+        {head}
+        <LoadingSpinner fullPage />
+      </>
+    );
+  }
 
   const recentLists = (lists as GearList[]).slice(0, 3);
   const recentMeals = (plans as (MealPlan & { meal_days?: { total_weight_g: number }[] })[]).slice(0, 3);
@@ -93,10 +107,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <Head>
-        <title>ProHikes — Dashboard</title>
-        <meta name="description" content="ProHikes hiking gear and meal planner dashboard" />
-      </Head>
+      {head}
 
       <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
         {/* Welcome section */}
