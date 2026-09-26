@@ -39,33 +39,6 @@ const bottomNavItems = [
   { href: '/food', icon: Apple, labelKey: 'food' as const },
 ];
 
-// supabase-js' signOut() removes the stored session only after the auth
-// server answers: even `{ scope: 'local' }` POSTs /logout first and
-// GoTrueClient._signOut returns on a network error before _removeSession
-// runs. Clear the session through the client's own storage adapter — the
-// same removal _removeSession performs — so a failed sign-out cannot leave
-// a valid session behind.
-async function clearStoredSession(client: SupabaseClient): Promise<boolean> {
-  try {
-    const { storage, storageKey } = client.auth as unknown as {
-      storage: {
-        getItem: (key: string) => Promise<string | null> | string | null;
-        removeItem: (key: string) => Promise<void> | void;
-      };
-      storageKey: string;
-    };
-    if (typeof storageKey !== 'string' || storageKey.length === 0) {
-      return false;
-    }
-    await storage.removeItem(storageKey);
-    await storage.removeItem(`${storageKey}-code-verifier`);
-    return !(await storage.getItem(storageKey));
-  } catch {
-    // Report the failure to the caller instead of pretending it worked.
-    return false;
-  }
-}
-
 export default function Navbar() {
   const tnav = useTranslations('nav');
   const tcommon = useTranslations('common');
@@ -88,9 +61,11 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     let supabase: SupabaseClient;
+    let clearStoredSession: (client: SupabaseClient) => Promise<boolean>;
     try {
-      const { createClient } = await import('@/lib/supabase/client');
-      supabase = createClient();
+      const client = await import('@/lib/supabase/client');
+      supabase = client.createClient();
+      clearStoredSession = client.clearStoredSession;
     } catch {
       // Client chunk failed to load (offline); nothing was cleared.
       toast.error(tcommon('logout_failed'));

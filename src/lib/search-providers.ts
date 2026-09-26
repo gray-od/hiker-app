@@ -22,6 +22,25 @@ interface SearchResult {
   url: string;
 }
 
+export type SearchErrorKind = 'key' | 'unavailable';
+
+// Typed so the chat API can tell "your key is bad" from "provider is down"
+// and show a translated message instead of a fake empty result.
+export class SearchError extends Error {
+  readonly kind: SearchErrorKind;
+
+  constructor(kind: SearchErrorKind) {
+    super(kind === 'key' ? 'search key rejected' : 'search provider unavailable');
+    this.name = 'SearchError';
+    this.kind = kind;
+  }
+}
+
+function ensureOk(res: Response, keyStatuses: number[] = [401, 403]): void {
+  if (res.ok) return;
+  throw new SearchError(keyStatuses.includes(res.status) ? 'key' : 'unavailable');
+}
+
 function formatResults(results: SearchResult[]): string {
   if (results.length === 0) return 'No search results found';
   return results
@@ -34,6 +53,7 @@ async function braveSearch(query: string, apiKey: string): Promise<string> {
     `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`,
     { headers: { 'X-Subscription-Token': apiKey } },
   );
+  ensureOk(res);
   const data = await res.json();
   const raw = data.web?.results || [];
   return formatResults(
@@ -51,6 +71,7 @@ async function tavilySearch(query: string, apiKey: string): Promise<string> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ api_key: apiKey, query, max_results: 5 }),
   });
+  ensureOk(res);
   const data = await res.json();
   const raw = data.results || [];
   return formatResults(
@@ -68,6 +89,7 @@ async function serperSearch(query: string, apiKey: string): Promise<string> {
     headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
     body: JSON.stringify({ q: query, num: 5 }),
   });
+  ensureOk(res);
   const data = await res.json();
   const raw = data.organic || [];
   return formatResults(
@@ -85,6 +107,7 @@ async function exaSearch(query: string, apiKey: string): Promise<string> {
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
     body: JSON.stringify({ query, type: 'auto', numResults: 5, contents: { highlights: true } }),
   });
+  ensureOk(res);
   const data = await res.json();
   const raw = data.results || [];
   return formatResults(
@@ -102,6 +125,7 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<string> {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ query, limit: 5 }),
   });
+  ensureOk(res);
   const data = await res.json();
   const raw = data.data || [];
   return formatResults(
@@ -122,6 +146,7 @@ async function perplexitySearch(query: string, apiKey: string): Promise<string> 
       messages: [{ role: 'user', content: query }],
     }),
   });
+  ensureOk(res);
   const data = await res.json();
   return data.choices?.[0]?.message?.content || 'No search results found';
 }
@@ -130,6 +155,8 @@ async function googleCseSearch(query: string, apiKey: string, cx: string): Promi
   const res = await fetch(
     `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&num=5`,
   );
+  // Google reports both an invalid key and an invalid cx as HTTP 400.
+  ensureOk(res, [400, 403]);
   const data = await res.json();
   const raw = data.items || [];
   return formatResults(
@@ -162,11 +189,12 @@ export async function runUserSearch(
       case 'perplexity':
         return await perplexitySearch(query, search.apiKey);
       case 'google_cse':
-        if (!search.cx) return 'Search misconfigured';
+        if (!search.cx) throw new SearchError('key');
         return await googleCseSearch(query, search.apiKey, search.cx);
     }
-  } catch {
-    return 'Search temporarily unavailable';
+  } catch (error) {
+    if (error instanceof SearchError) throw error;
+    throw new SearchError('unavailable');
   }
 }
 

@@ -160,6 +160,12 @@ export default function PrintListPage() {
           )}
         </div>
 
+        {list.gpx_data?.weather && (
+          <div className="text-sm text-zinc-600 mb-6">
+            {t('gpx_weather')}: {list.gpx_data.weather}
+          </div>
+        )}
+
         {sortedItems.length === 0 ? (
           <p className="text-sm text-zinc-400 py-8">{t('no_items')}</p>
         ) : (

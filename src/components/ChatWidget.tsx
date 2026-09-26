@@ -5,6 +5,7 @@ import { Sparkles, X, Send, Loader2, Maximize2, Minimize2, Copy, Check, Papercli
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createClient } from '@/lib/supabase/client';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 
 function stripThoughts(text: string): string {
   return text
@@ -77,7 +78,7 @@ export default function ChatWidget() {
   useEffect(() => {
     if (!open) return;
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    resolveUser().then(async (user) => {
       if (!user) return;
       const stored = readByok();
       if (stored.ai?.apiKey) {
@@ -87,12 +88,18 @@ export default function ChatWidget() {
       }
       setByokActive(false);
       const today = new Date().toISOString().split('T')[0];
-      const { data } = await supabase
+      const { data, error: usageError } = await supabase
         .from('ai_usage')
         .select('message_count')
         .eq('user_id', user.id)
         .eq('date', today)
-        .single();
+        .maybeSingle();
+      if (usageError) {
+        // Hide the badge instead of showing "0/15" when the counter could not be read.
+        console.warn('[chat] usage read failed:', usageError.message);
+        setTodayUsage(null);
+        return;
+      }
       setTodayUsage(data?.message_count ?? 0);
     });
   }, [open]);
@@ -287,6 +294,10 @@ export default function ChatWidget() {
                     </a>
                   )}
                 </div>
+              ) : error.message?.includes('USAGE_CHECK_FAILED') ? (
+                <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm">
+                  <p className="text-amber-700 dark:text-amber-400 font-medium">{t('usage_check_failed')}</p>
+                </div>
               ) : error.message?.includes('MODEL_NO_TOOLS') ? (
                 <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm">
                   <p className="text-amber-700 dark:text-amber-400 font-medium">{t('model_no_tools')}</p>
@@ -294,6 +305,14 @@ export default function ChatWidget() {
               ) : error.message?.includes('BYOK_FAILED') ? (
                 <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm">
                   <p className="text-amber-700 dark:text-amber-400 font-medium">{t('byok_key_failed')}</p>
+                </div>
+              ) : error.message?.includes('SEARCH_KEY_INVALID') ? (
+                <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm">
+                  <p className="text-amber-700 dark:text-amber-400 font-medium">{t('search_key_invalid')}</p>
+                </div>
+              ) : error.message?.includes('SEARCH_UNAVAILABLE') ? (
+                <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm">
+                  <p className="text-amber-700 dark:text-amber-400 font-medium">{t('search_unavailable')}</p>
                 </div>
               ) : (
                 <div className="px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-400">

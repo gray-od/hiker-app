@@ -137,6 +137,37 @@ export default function ListDetailPage() {
     setEditModalOpen(true);
   }
 
+  /** Fetches the forecast for the trip date and persists it into gpx_data.weather. Never throws, never blocks the list save. */
+  async function refreshStoredWeather(gpxData: NonNullable<GearList['gpx_data']>, tripDate: string) {
+    const userId = userIdRef.current;
+    if (!userId) return;
+
+    try {
+      const points = gpxData.points;
+      const weather = points?.length
+        ? await fetchRouteWeather(points[0][0], points[0][1], tripDate)
+        : null;
+      const nextGpx = { ...gpxData, weather };
+
+      // The stored value already matches the forecast lookup result — nothing to persist.
+      if ((gpxData.weather ?? null) === (nextGpx.weather ?? null)) return;
+
+      const { error: saveError, queued } = await updateList(id, userId, { gpx_data: nextGpx });
+
+      if (saveError && !queued) {
+        toast.error(saveError.message);
+        return;
+      }
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
+      }
+      setList(prev => prev ? { ...prev, gpx_data: nextGpx } as GearList : null);
+    } catch (err) {
+      console.error('Failed to fetch route weather:', err);
+      toast.error(tCommon('error'));
+    }
+  }
+
   async function handleUpdateList() {
     try {
       const userId = userIdRef.current;
@@ -145,10 +176,16 @@ export default function ListDetailPage() {
       setSaving(true);
       setError(null);
 
+      const tripDateChanged = editForm.trip_date !== (list?.trip_date || '');
+      // Stored weather belongs to the old trip date — clear it in the same write that changes the date.
+      const currentGpx = list?.gpx_data ?? null;
+      const nextGpx = tripDateChanged && currentGpx ? { ...currentGpx, weather: null } : currentGpx;
+
       const { error: updateError, queued } = await updateList(id, userId, {
         name: editForm.name,
         season: editForm.season,
         trip_date: editForm.trip_date || null,
+        ...(tripDateChanged && nextGpx ? { gpx_data: nextGpx } : {}),
       });
 
       if (updateError && !queued) {
@@ -163,14 +200,19 @@ export default function ListDetailPage() {
       } else {
         toast.success(t('updated'));
       }
-      setList(prev => prev ? { ...prev, name: editForm.name, season: editForm.season, trip_date: editForm.trip_date } : null);
-      if (editForm.trip_date && list?.gpx_data?.points?.length && editForm.trip_date !== list.trip_date) {
-        fetchRouteWeather(list.gpx_data.points[0][0], list.gpx_data.points[0][1], editForm.trip_date).then(weather => {
-          if (weather) setList(prev => prev ? { ...prev, gpx_data: { ...prev.gpx_data, weather } as GearList['gpx_data'] } : null);
-        }).catch(() => setError('Failed to load weather'));
-      }
+      setList(prev => prev ? {
+        ...prev,
+        name: editForm.name,
+        season: editForm.season,
+        trip_date: editForm.trip_date,
+        gpx_data: tripDateChanged ? nextGpx : prev.gpx_data,
+      } : null);
       setSaving(false);
       setEditModalOpen(false);
+
+      if (tripDateChanged && editForm.trip_date && nextGpx?.points?.length) {
+        refreshStoredWeather(nextGpx, editForm.trip_date);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to update list';
       setError(msg);
@@ -185,19 +227,25 @@ export default function ListDetailPage() {
       const userId = userIdRef.current;
       if (!userId) return;
 
-      const { error: deleteError } = await deleteList(id, userId);
+      const { error: deleteError, queued } = await deleteList(id, userId);
 
-      if (deleteError) {
+      if (deleteError && !queued) {
         setError(deleteError.message);
+        toast.error(deleteError.message);
         setDeletingList(false);
         return;
       }
 
-      toast.success(t('deleted'));
+      if (queued) {
+        toast.info(tCommon('saved_offline'));
+      } else {
+        toast.success(t('deleted'));
+      }
       router.push('/lists');
     } catch (err) {
-      toast.error(tCommon('error'));
-      setError(err instanceof Error ? err.message : 'Failed to delete list');
+      const msg = err instanceof Error ? err.message : 'Failed to delete list';
+      setError(msg);
+      toast.error(msg);
       setDeletingList(false);
     }
   }
@@ -463,16 +511,10 @@ export default function ListDetailPage() {
 
       setList((prev) => prev ? { ...prev, gpx_data: gpxData } as GearList : null);
 
-      // Fetch weather after GPX is saved — if it fails, GPX data is already persisted
-      if (result.points.length > 0) {
-        try {
-          const weather = await fetchRouteWeather(result.points[0][0], result.points[0][1], list?.trip_date || undefined);
-          if (weather) {
-            setList((prev) => prev ? { ...prev, gpx_data: { ...prev.gpx_data, weather } } as GearList : null);
-          }
-        } catch {
-          // Weather fetch failed — non-critical, GPX is already saved
-        }
+      // Weather is fetched only for a known trip date and persisted afterwards —
+      // a weather failure must never lose the GPX data saved above.
+      if (result.points.length > 0 && list?.trip_date) {
+        refreshStoredWeather(gpxData, list.trip_date);
       }
     } catch (err: any) {
       const isSaveError = err?.code && typeof err.code === 'string';

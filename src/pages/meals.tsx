@@ -2,10 +2,16 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import type { MealPlan } from '@/lib/types';
-import { fetchUserMealPlans } from '@/lib/supabase/service';
+import {
+  addMealDays,
+  addMealEntries,
+  createMealPlan,
+  deleteMealPlan,
+  fetchUserMealPlans,
+} from '@/lib/supabase/service';
+import { invalidateCache, cacheKeys } from '@/lib/cache';
 import { getPlanTypeBadgeClass } from '@/lib/badges';
 import { formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
@@ -90,8 +96,7 @@ export default function MealsPage() {
   }
 
   async function fetchPlans() {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await resolveUser();
     if (!user) return;
 
     const { data, error: fetchError } = await fetchUserMealPlans(user.id);
@@ -102,154 +107,153 @@ export default function MealsPage() {
 
   async function handleCreate() {
     let planId: string | null = null;
-    let totalsFailure: string | null = null;
+    let userId: string | null = null;
     try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await resolveUser();
 
-    if (!user) return;
+    if (!user) {
+      // resolveUser has a bounded wait: null here means dead network or lost session.
+      toast.error(tCommon('connection_error'));
+      setError(tCommon('connection_error'));
+      return;
+    }
+
+    userId = user.id;
 
     setSaving(true);
     setError(null);
 
-    const { data: plan, error: insertError } = await supabase
-      .from('meal_plans')
-      .insert({
+    // Ids exist before the first write attempt: the queue payloads carry them, so the
+    // replay inserts plan, days and entries under the ids the local state already shows.
+    // An explicit-id insert is idempotent — a duplicate attempt comes back as 23505.
+    const newPlanId = crypto.randomUUID();
+    planId = newPlanId;
+    const days = Array.from({ length: formData.days_count }, (_, i) => ({
+      id: crypto.randomUUID(),
+      day_number: i + 1,
+      total_calories: 0,
+      total_weight_g: 0,
+    }));
+
+    const entries: {
+      id: string;
+      day_id: string;
+      meal_type: string;
+      name: string;
+      weight_g: number;
+      calories: number;
+      protein_g: number;
+      fat_g: number;
+      carbs_g: number;
+    }[] = [];
+
+    if (formData.template_id) {
+      const template = getMealTemplate(formData.template_id);
+      if (template) {
+        for (let i = 0; i < days.length; i++) {
+          const day = days[i];
+          const pattern = template.dayPatterns[i % template.dayPatterns.length];
+
+          for (const entry of pattern.entries) {
+            const foodItem = getFoodItem(entry.catalogId);
+            if (!foodItem) continue;
+
+            let portionG = foodItem.defaultPortion[formData.plan_type];
+            if (entry.portionMultiplier) {
+              portionG = Math.round(portionG * entry.portionMultiplier);
+            }
+            portionG = portionG * formData.people_count;
+
+            const nutrition = calculateNutrition(foodItem, portionG);
+            const loc = locale as keyof typeof foodItem.name;
+
+            entries.push({
+              id: crypto.randomUUID(),
+              day_id: day.id,
+              meal_type: entry.mealType,
+              name: (foodItem.name[loc] as string) ?? foodItem.name.uk,
+              weight_g: nutrition.weight_g,
+              calories: nutrition.calories,
+              protein_g: nutrition.protein,
+              fat_g: nutrition.fat,
+              carbs_g: nutrition.carbs,
+            });
+          }
+        }
+      }
+    }
+
+    // Totals are plain client-side columns (no DB triggers): computing them from the rows
+    // being written replaces the old read-back pass and gives a queued payload the same
+    // numbers that pass used to produce.
+    for (const day of days) {
+      const dayEntries = entries.filter((entry) => entry.day_id === day.id);
+      day.total_calories = dayEntries.reduce((sum, entry) => sum + entry.calories, 0);
+      day.total_weight_g = dayEntries.reduce((sum, entry) => sum + entry.weight_g, 0);
+    }
+    const planTotalWeight = days.reduce((sum, day) => sum + day.total_weight_g, 0);
+
+    let hardError: Error | null = null;
+    let anyQueued = false;
+
+    // Sequential awaits keep the replay order: the queue is FIFO, so days can never replay
+    // before the plan they reference. An error without a queue entry (hardError) stops the
+    // chain; an error with one (`queued`) only skips to the next level.
+    const planResult = await createMealPlan(user.id, {
+      id: newPlanId,
+      name: formData.name,
+      days_count: formData.days_count,
+      plan_type: formData.plan_type,
+      people_count: formData.people_count,
+      target_calories: formData.target_calories,
+      target_weight_g: formData.target_weight_g,
+      total_weight_g: planTotalWeight,
+    });
+    if (planResult.error && !planResult.queued) hardError = planResult.error;
+    if (planResult.queued) anyQueued = true;
+
+    if (!hardError) {
+      const daysResult = await addMealDays(user.id, newPlanId, days);
+      if (daysResult.error && !daysResult.queued) hardError = daysResult.error;
+      if (daysResult.queued) anyQueued = true;
+    }
+
+    if (!hardError && entries.length > 0) {
+      const entriesResult = await addMealEntries(user.id, newPlanId, entries);
+      if (entriesResult.error && !entriesResult.queued) hardError = entriesResult.error;
+      if (entriesResult.queued) anyQueued = true;
+    }
+
+    if (hardError) {
+      // Any failure past the plan insert must reach the single rollback in catch.
+      throw hardError;
+    }
+
+    if (anyQueued) {
+      // The queue owns the write and the cache still holds the pre-insert snapshot:
+      // reading it back would overwrite the optimistic row, so the plan is added locally.
+      const localPlan: MealPlanWithDays = {
+        id: newPlanId,
         user_id: user.id,
         name: formData.name,
         days_count: formData.days_count,
+        total_weight_g: planTotalWeight,
         plan_type: formData.plan_type,
         people_count: formData.people_count,
         target_calories: formData.target_calories,
         target_weight_g: formData.target_weight_g,
-      })
-      .select('*, meal_days(total_calories, total_weight_g)')
-      .single();
-
-    if (insertError) {
-      toast.error(insertError.message || tCommon('error_occurred'));
-      setError(insertError.message);
-      setSaving(false);
-      return;
-    }
-
-    if (plan) {
-      planId = plan.id;
-
-      const days = Array.from({ length: formData.days_count }, (_, i) => ({
-        plan_id: plan.id,
-        day_number: i + 1,
-      }));
-
-      const { data: createdDays, error: daysError } = await supabase
-        .from('meal_days')
-        .insert(days)
-        .select('id, day_number')
-        .order('day_number', { ascending: true });
-
-      if (daysError || !createdDays) {
-        throw new Error(daysError?.message ?? 'Failed to create days');
-      }
-
-      if (formData.template_id) {
-        const template = getMealTemplate(formData.template_id);
-        if (template) {
-          const entries: {
-            day_id: string;
-            meal_type: string;
-            name: string;
-            weight_g: number;
-            calories: number;
-            protein_g: number;
-            fat_g: number;
-            carbs_g: number;
-          }[] = [];
-
-          for (let i = 0; i < createdDays.length; i++) {
-            const day = createdDays[i];
-            const patternIndex = i % template.dayPatterns.length;
-            const pattern = template.dayPatterns[patternIndex];
-
-            for (const entry of pattern.entries) {
-              const foodItem = getFoodItem(entry.catalogId);
-              if (!foodItem) continue;
-
-              let portionG = foodItem.defaultPortion[formData.plan_type];
-              if (entry.portionMultiplier) {
-                portionG = Math.round(portionG * entry.portionMultiplier);
-              }
-              portionG = portionG * formData.people_count;
-
-              const nutrition = calculateNutrition(foodItem, portionG);
-              const loc = locale as keyof typeof foodItem.name;
-
-              entries.push({
-                day_id: day.id,
-                meal_type: entry.mealType,
-                name: (foodItem.name[loc] as string) ?? foodItem.name.uk,
-                weight_g: nutrition.weight_g,
-                calories: nutrition.calories,
-                protein_g: nutrition.protein,
-                fat_g: nutrition.fat,
-                carbs_g: nutrition.carbs,
-              });
-            }
-          }
-
-          if (entries.length > 0) {
-            const { error: entriesError } = await supabase
-              .from('meal_entries')
-              .insert(entries);
-
-            if (entriesError) {
-              throw new Error(entriesError.message || tCommon('error_occurred'));
-            }
-
-            const { data: daysWithEntries, error: totalsReadError } = await supabase
-              .from('meal_days')
-              .select('id, meal_entries(calories, weight_g)')
-              .eq('plan_id', plan.id);
-
-            if (totalsReadError) {
-              console.error('Create plan:', 'select meal_days', 'failed on', 'meal_days', '-', totalsReadError.message);
-              totalsFailure = totalsReadError.message;
-            } else if (daysWithEntries) {
-              let planTotalWeight = 0;
-              for (const day of daysWithEntries) {
-                const dayCalories = (day.meal_entries || []).reduce((s: number, e: { calories: number }) => s + e.calories, 0);
-                const dayWeight = (day.meal_entries || []).reduce((s: number, e: { weight_g: number }) => s + e.weight_g, 0);
-                planTotalWeight += dayWeight;
-                const { error: dayTotalsError } = await supabase.from('meal_days').update({ total_calories: dayCalories, total_weight_g: dayWeight }).eq('id', day.id);
-
-                if (dayTotalsError) {
-                  console.error('Create plan:', `update meal_days totals (day ${day.id})`, 'failed on', 'meal_days', '-', dayTotalsError.message);
-                  totalsFailure = dayTotalsError.message;
-                  break;
-                }
-              }
-              if (!totalsFailure) {
-                const { error: planTotalsError } = await supabase.from('meal_plans').update({ total_weight_g: planTotalWeight }).eq('id', plan.id);
-
-                if (planTotalsError) {
-                  console.error('Create plan:', 'update meal_plans totals', 'failed on', 'meal_plans', '-', planTotalsError.message);
-                  totalsFailure = planTotalsError.message;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      await fetchPlans();
-    }
-
-    if (totalsFailure) {
-      // The plan row exists; only the totals write failed, so do not report success.
-      toast.error(totalsFailure || tCommon('error_occurred'));
-      setError(totalsFailure);
+        created_at: new Date().toISOString(),
+        meal_days: days.map((day) => ({ total_calories: day.total_calories, total_weight_g: day.total_weight_g })),
+      };
+      setPlans((prev) => [localPlan, ...prev]);
+      toast.info(tCommon('saved_offline'));
     } else {
+      // fetchUserMealPlans is cache-first: this read must not return the pre-insert snapshot.
+      await invalidateCache(cacheKeys.mealPlans(user.id));
+      await fetchPlans();
       toast.success(t('created'));
     }
+
     setSaving(false);
     setModalOpen(false);
     setFormData(EMPTY_FORM);
@@ -259,13 +263,16 @@ export default function MealsPage() {
       setSaving(false);
       setError(msg);
 
-      // Rollback: delete the orphan plan (cascades to days)
-      if (planId) {
-        try {
-          const supabase = createClient();
-          await supabase.from('meal_plans').delete().eq('id', planId);
-        } catch {
-          // Silently fail — best-effort cleanup
+      // Rollback: delete the orphan plan (meal_days/meal_entries cascade). Every
+      // failure after the plan insert reaches this single path. A queued rollback
+      // reaches the same end state as an immediate one — replay deletes the row the
+      // queued insert creates, and deletes an absent row harmlessly otherwise.
+      if (planId && userId) {
+        const { error: rollbackError, queued: rollbackQueued } = await deleteMealPlan(planId, userId);
+        if (rollbackError && !rollbackQueued) {
+          console.error('Create plan: rollback failed on meal_plans -', rollbackError.message);
+          toast.error(t('rollback_failed'));
+          setError(t('rollback_failed'));
         }
       }
     }
@@ -274,14 +281,19 @@ export default function MealsPage() {
   async function handleDelete(id: string) {
     try {
     setDeleting(true);
-    const supabase = createClient();
+    const user = await resolveUser();
 
-    const { error: deleteError } = await supabase
-      .from('meal_plans')
-      .delete()
-      .eq('id', id);
+    if (!user) {
+      toast.error(tCommon('connection_error'));
+      setError(tCommon('connection_error'));
+      setConfirmDelete(null);
+      setDeleting(false);
+      return;
+    }
 
-    if (deleteError) {
+    const { error: deleteError, queued } = await deleteMealPlan(id, user.id);
+
+    if (deleteError && !queued) {
       toast.error(deleteError.message || tCommon('error_occurred'));
       setError(deleteError.message);
       setConfirmDelete(null);
@@ -289,7 +301,14 @@ export default function MealsPage() {
       return;
     }
 
-    toast.success(t('deleted'));
+    // The service drops the plan list, the light list and the detail key on a confirmed
+    // delete; a queued delete keeps them — offline reads still need the pre-delete snapshot.
+    if (queued) {
+      toast.info(tCommon('saved_offline'));
+    } else {
+      toast.success(t('deleted'));
+    }
+
     setPlans((prev) => prev.filter((p) => p.id !== id));
     setConfirmDelete(null);
     setDeleting(false);

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient } from '@supabase/ssr';
+import { serializeCookie } from '@/lib/supabase/cookieHeader';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return; }
@@ -28,14 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           setAll(cookiesToSet) {
             const setCookies: string[] = [];
             cookiesToSet.forEach(({ name, value, options }) => {
-              const parts = [`${name}=${encodeURIComponent(value)}`];
-              if (options?.maxAge) parts.push(`Max-Age=${options.maxAge}`);
-              if (options?.path) parts.push(`Path=${options.path}`);
-              if (options?.domain) parts.push(`Domain=${options.domain}`);
-              if (options?.secure) parts.push('Secure');
-              if (options?.httpOnly) parts.push('HttpOnly');
-              if (options?.sameSite) parts.push(`SameSite=${options.sameSite}`);
-              setCookies.push(parts.join('; '));
+              setCookies.push(serializeCookie(name, value, options));
             });
             if (setCookies.length > 0) {
               res.setHeader('Set-Cookie', setCookies);

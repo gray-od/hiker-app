@@ -3,6 +3,16 @@ import Head from 'next/head';
 import { useTranslations, useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 
+// Stored questions are codes; a custom question is free text. `favorite_color` is the
+// lookup API's dummy code for emails without a record, translated like the stored ones.
+const securityQuestionKeys: Record<string, string> = {
+  mother_maiden: 'question_mother_maiden',
+  birth_city: 'question_birth_city',
+  first_school: 'question_first_school',
+  pet_name: 'question_pet_name',
+  favorite_color: 'question_favorite_color',
+};
+
 export default function ForgotPasswordPage() {
   const t = useTranslations('common');
   const locale = useLocale();
@@ -91,6 +101,9 @@ export default function ForgotPasswordPage() {
     }
     setLoading(false);
   };
+
+  const questionKey = securityQuestionKeys[question];
+  const questionLabel = questionKey ? t(questionKey as any) : question;
 
   return (
     <>
@@ -183,7 +196,7 @@ export default function ForgotPasswordPage() {
             {step === 2 && (
               <form onSubmit={handleRecover} className="space-y-4">
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-300">
-                  {question}
+                  {questionLabel}
                 </div>
                 <div>
                   <label htmlFor="answer" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">

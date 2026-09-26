@@ -1,4 +1,5 @@
 import { createClient } from './client';
+import { resolveUser } from './resolveUser';
 import { withCache, cacheKeys, removeCache } from '@/lib/cache';
 import { enqueue, syncQueue } from '@/lib/offline-queue';
 import type {
@@ -93,7 +94,8 @@ export async function fetchUserLists(
     const supabase = createClient();
     const { data, error } = await supabase
       .from('gear_lists')
-      .select('*, list_items!inner(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
+      // No !inner: an inner join drops lists without items entirely; a left join returns them with list_items: [].
+      .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -225,8 +227,8 @@ export async function createGearItem(
     .select()
     .single();
   if (error) {
-    await enqueue('gear_items', 'insert', { user_id: userId, ...payload }, userId);
-    return { data: null, error: new Error(error.message), queued: true };
+    const queued = await enqueue('gear_items', 'insert', { user_id: userId, ...payload }, userId);
+    return { data: null, error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.gear(userId));
   return { data: data as GearItem, error: null };
@@ -239,8 +241,8 @@ export async function updateGearItem(
   const supabase = createClient();
   const { error } = await supabase.from('gear_items').update(payload).eq('id', id);
   if (error) {
-    await enqueue('gear_items', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('gear_items', 'update', { id, ...payload }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.gear(userId));
   return { error: null };
@@ -252,8 +254,8 @@ export async function deleteGearItem(
   const supabase = createClient();
   const { error } = await supabase.from('gear_items').delete().eq('id', id);
   if (error) {
-    await enqueue('gear_items', 'delete', { id }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('gear_items', 'delete', { id }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.gear(userId));
   return { error: null };
@@ -272,8 +274,8 @@ export async function createFoodItem(
     .select()
     .single();
   if (error) {
-    await enqueue('user_food_items', 'insert', { user_id: userId, ...payload }, userId);
-    return { data: null, error: new Error(error.message), queued: true };
+    const queued = await enqueue('user_food_items', 'insert', { user_id: userId, ...payload }, userId);
+    return { data: null, error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.foodItems(userId));
   return { data: data as UserFoodItem, error: null };
@@ -286,8 +288,8 @@ export async function updateFoodItem(
   const supabase = createClient();
   const { error } = await supabase.from('user_food_items').update(payload).eq('id', id);
   if (error) {
-    await enqueue('user_food_items', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('user_food_items', 'update', { id, ...payload }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.foodItems(userId));
   return { error: null };
@@ -299,8 +301,8 @@ export async function deleteFoodItem(
   const supabase = createClient();
   const { error } = await supabase.from('user_food_items').delete().eq('id', id);
   if (error) {
-    await enqueue('user_food_items', 'delete', { id }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('user_food_items', 'delete', { id }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.foodItems(userId));
   return { error: null };
@@ -319,8 +321,8 @@ export async function createList(
     .select('*, list_items(id, quantity, is_packed, worn, consumable, gear_item:gear_items(weight_g))')
     .single();
   if (error) {
-    await enqueue('gear_lists', 'insert', { user_id: userId, ...payload }, userId);
-    return { data: null, error: new Error(error.message), queued: true };
+    const queued = await enqueue('gear_lists', 'insert', { user_id: userId, ...payload }, userId);
+    return { data: null, error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.lists(userId));
   return { data: data as unknown as GearListWithTotalWeight, error: null };
@@ -332,8 +334,8 @@ export async function deleteList(
   const supabase = createClient();
   const { error } = await supabase.from('gear_lists').delete().eq('id', id);
   if (error) {
-    await enqueue('gear_lists', 'delete', { id }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('gear_lists', 'delete', { id }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.lists(userId));
   invalidateCache(cacheKeys.listDetail(id));
@@ -351,8 +353,8 @@ export async function updateList(
   const supabase = createClient();
   const { error } = await supabase.from('gear_lists').update(payload).eq('id', id);
   if (error) {
-    await enqueue('gear_lists', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('gear_lists', 'update', { id, ...payload }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.lists(userId));
   invalidateCache(cacheKeys.listDetail(id));
@@ -377,8 +379,12 @@ export async function addListItems(
   if (error) {
     // One queue entry per row: the replay executor inserts a single payload object,
     // and list_items has no `items` column for a bulk payload to ever apply against.
-    await Promise.all(inserts.map((row) => enqueue('list_items', 'insert', row, userId)));
-    return { error: new Error(error.message), queued: true };
+    // A partially persisted batch is reported as not queued — the caller must not
+    // tell the user "saved offline" about rows the queue does not actually hold.
+    const queued = (
+      await Promise.all(inserts.map((row) => enqueue('list_items', 'insert', row, userId)))
+    ).every(Boolean);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.listItems(listId));
   invalidateCache(cacheKeys.lists(userId));
@@ -393,8 +399,8 @@ export async function updateListItem(
   const supabase = createClient();
   const { error } = await supabase.from('list_items').update(payload).eq('id', id);
   if (error) {
-    await enqueue('list_items', 'update', { id, ...payload }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('list_items', 'update', { id, ...payload }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.listItems(listId));
   invalidateCache(cacheKeys.lists(userId));
@@ -408,19 +414,196 @@ export async function deleteListItem(
   const supabase = createClient();
   const { error } = await supabase.from('list_items').delete().eq('id', id);
   if (error) {
-    await enqueue('list_items', 'delete', { id }, userId);
-    return { error: new Error(error.message), queued: true };
+    const queued = await enqueue('list_items', 'delete', { id }, userId);
+    return { error: new Error(error.message), queued };
   }
   invalidateCache(cacheKeys.listItems(listId));
   invalidateCache(cacheKeys.lists(userId));
   return { error: null };
 }
 
-/** Replay all queued offline mutations. Call on app load and when coming back online. */
+// ── Meal mutations ──
+
+/**
+ * Drops every cache key a meal mutation can make stale: the plan list, the light list
+ * (linked-plan selects) and the plan detail when the plan is known. Only called on a
+ * confirmed write — dropping keys while a mutation sits in the queue would break the
+ * offline cache-first reads it can still serve.
+ */
+async function invalidateMealCache(userId: string, planId?: string): Promise<void> {
+  const keys = [cacheKeys.mealPlans(userId), cacheKeys.mealPlansLight(userId)];
+  if (planId) keys.push(cacheKeys.mealPlanDetail(planId));
+  await Promise.all(keys.map((key) => removeCache(key)));
+}
+
+/** Creates a meal plan with a client-generated id, so an offline create can be queued and replayed. */
+export async function createMealPlan(
+  userId: string,
+  plan: {
+    id: string;
+    name: string;
+    days_count: number;
+    plan_type: string;
+    people_count: number;
+    target_calories: number;
+    target_weight_g: number;
+    total_weight_g: number;
+  },
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_plans').insert({ user_id: userId, ...plan });
+  if (error) {
+    const queued = await enqueue('meal_plans', 'insert', { user_id: userId, ...plan }, userId, { planId: plan.id });
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, plan.id);
+  return { error: null };
+}
+
+/** Bulk-inserts plan days; rows carry client-generated ids so the offline replay can insert them as-is. */
+export async function addMealDays(
+  userId: string,
+  planId: string,
+  days: { id: string; day_number: number; total_calories?: number; total_weight_g?: number }[],
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const rows = days.map((day) => ({ plan_id: planId, ...day }));
+  const { error } = await supabase.from('meal_days').insert(rows);
+  if (error) {
+    // One queue entry per row: the replay executor inserts a single payload object.
+    // A partially persisted batch reports queued: false — "saved offline" may not be
+    // claimed while some rows are not actually in the queue.
+    const queued = (
+      await Promise.all(rows.map((row) => enqueue('meal_days', 'insert', row, userId, { planId })))
+    ).every(Boolean);
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+/** Bulk-inserts meal entries; rows carry client-generated ids and day references. */
+export async function addMealEntries(
+  userId: string,
+  planId: string,
+  entries: {
+    id: string;
+    day_id: string;
+    meal_type: string;
+    name: string;
+    weight_g: number;
+    calories: number;
+    protein_g: number;
+    fat_g: number;
+    carbs_g: number;
+  }[],
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_entries').insert(entries);
+  if (error) {
+    const queued = (
+      await Promise.all(entries.map((row) => enqueue('meal_entries', 'insert', row, userId, { planId })))
+    ).every(Boolean);
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+export async function updateMealPlan(
+  id: string, userId: string,
+  payload: Record<string, unknown>,
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_plans').update(payload).eq('id', id);
+  if (error) {
+    const queued = await enqueue('meal_plans', 'update', { id, ...payload }, userId, { planId: id });
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, id);
+  return { error: null };
+}
+
+/** Deletes a plan; its days and entries go with it through the DB cascade. */
+export async function deleteMealPlan(
+  id: string, userId: string,
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_plans').delete().eq('id', id);
+  if (error) {
+    const queued = await enqueue('meal_plans', 'delete', { id }, userId, { planId: id });
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, id);
+  return { error: null };
+}
+
+export async function updateMealDay(
+  id: string, userId: string, planId: string,
+  payload: Record<string, unknown>,
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_days').update(payload).eq('id', id);
+  if (error) {
+    const queued = await enqueue('meal_days', 'update', { id, ...payload }, userId, { planId });
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+/** Deletes a day; its entries go with it through the DB cascade. */
+export async function deleteMealDay(
+  id: string, userId: string, planId: string,
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_days').delete().eq('id', id);
+  if (error) {
+    const queued = await enqueue('meal_days', 'delete', { id }, userId, { planId });
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+export async function updateMealEntry(
+  id: string, userId: string, planId: string,
+  payload: Record<string, unknown>,
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_entries').update(payload).eq('id', id);
+  if (error) {
+    const queued = await enqueue('meal_entries', 'update', { id, ...payload }, userId, { planId });
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+export async function deleteMealEntry(
+  id: string, userId: string, planId: string,
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await supabase.from('meal_entries').delete().eq('id', id);
+  if (error) {
+    const queued = await enqueue('meal_entries', 'delete', { id }, userId, { planId });
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+/** Replay the queued offline mutations of the signed-in user. Call on app load and when coming back online. */
 export async function syncPendingMutations(): Promise<number> {
+  // Queue entries belong to the user who made them. Replaying someone else's entries
+  // under the current session misattributes the write, and RLS turns each attempt into
+  // a failure that stays queued forever. No resolvable user — no replay.
+  const user = await resolveUser();
+  if (!user) return 0;
+
   const supabase = createClient();
 
-  return syncQueue(async (m) => {
+  return syncQueue(user.id, async (m) => {
     try {
       // supabase-js resolves network/RLS failures as `{ error }` instead of throwing;
       // treating them as success would delete the queued mutation and lose it.
@@ -428,8 +611,14 @@ export async function syncPendingMutations(): Promise<number> {
         case 'insert': {
           const { error } = await supabase.from(m.table).insert(m.payload);
           if (error) {
-            console.error('Offline queue error (syncPendingMutations): insert into', m.table, '-', error.message);
-            return false;
+            // 23505 (duplicate key) on a client-generated id means an earlier attempt already
+            // wrote the row and only its response was lost — the desired end state is reached.
+            if (error.code === '23505') {
+              console.info('Offline queue info (syncPendingMutations): insert into', m.table, 'already applied');
+            } else {
+              console.error('Offline queue error (syncPendingMutations): insert into', m.table, '-', error.message);
+              return false;
+            }
           }
           break;
         }
@@ -454,6 +643,11 @@ export async function syncPendingMutations(): Promise<number> {
           }
           break;
         }
+      }
+      // A meal mutation leaves the cache-first reads (plan list, light list, plan detail)
+      // stale; replay runs outside the pages, so the executor owns this invalidation.
+      if (m.table.startsWith('meal_')) {
+        await invalidateMealCache(user.id, m.meta?.planId);
       }
       return true;
     } catch (err) {

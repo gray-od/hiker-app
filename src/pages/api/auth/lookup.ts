@@ -30,11 +30,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       p_email: email.toLowerCase(),
     });
 
-    // Always return a question — never reveal whether email exists
+    // Always return a question — never reveal whether email exists.
+    // The fallback is a question code too, so the client translates it like a stored one.
     const question =
       !lookupError && records && records.length > 0
         ? records[0].question
-        : 'What is your favorite color?';
+        : 'favorite_color';
 
     res.status(200).json({ question });
   } catch {

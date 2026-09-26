@@ -97,6 +97,14 @@ export default function GpxSection({
           <span>{t('gpx_weather')}: {list.gpx_data.weather}</span>
         </div>
       )}
+      {list?.gpx_data && list.trip_date && !list.gpx_data.weather && (
+        <div className="flex items-center gap-2 mb-4 text-sm text-zinc-400 dark:text-zinc-500">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+          </svg>
+          <span>{t('gpx_weather_unavailable')}</span>
+        </div>
+      )}
       {list?.gpx_data && (
         <div className="flex items-center gap-2 mb-4">
           {typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && (

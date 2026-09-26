@@ -3,7 +3,8 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { createClient } from '@/lib/supabase/client';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
+import { createClient, clearStoredSession } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchUserProfile } from '@/lib/supabase/service';
 import { invalidateCache, cacheKeys } from '@/lib/cache';
@@ -119,7 +120,7 @@ export default function SettingsPage() {
     try {
       setCurrentLocale(locale);
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await resolveUser();
       if (user) {
         await supabase.from('profiles').update({ lang: locale }).eq('id', user.id);
       }
@@ -147,8 +148,23 @@ export default function SettingsPage() {
         return;
       }
       const supabase = createClient();
-      await supabase.auth.signOut();
-      window.location.href = '/';
+      let sessionCleared = false;
+      try {
+        const { error } = await supabase.auth.signOut();
+        sessionCleared = !error;
+      } catch {
+        // signOut threw instead of resolving; fall through to clearing the
+        // stored session directly.
+      }
+
+      if (!sessionCleared) {
+        // On a dead network GoTrueClient._signOut returns before _removeSession
+        // and the stored session survives; middleware trusts the cookie, so
+        // landing on /login with it would still look signed in.
+        await clearStoredSession(supabase);
+      }
+
+      window.location.href = '/login';
     } catch {
       const errorMsg = t('delete_error');
       setDeleteError(errorMsg);
@@ -231,12 +247,15 @@ export default function SettingsPage() {
     setPasswordError(null);
     setPasswordMessage(null);
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) { setPasswordError('wrong_password'); return; }
+    const user = await resolveUser();
+    if (!user?.email) { setPasswordError(tCommon('connection_error')); return; }
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: user.email, password: currentPassword
     });
-    if (signInError) { setPasswordError(t('wrong_password')); return; }
+    if (signInError) {
+      setPasswordError(isAuthRetryableFetchError(signInError) ? tCommon('connection_error') : t('wrong_password'));
+      return;
+    }
     setChangingPassword(true);
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
     setChangingPassword(false);
@@ -497,7 +516,7 @@ export default function SettingsPage() {
                       try {
                       setSavingName(true);
                       const supabase = createClient();
-                      const { data: { user } } = await supabase.auth.getUser();
+                      const user = await resolveUser();
                       if (!user) {
                         toast.error(t('error_saving'));
                         return;

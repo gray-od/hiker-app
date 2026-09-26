@@ -51,6 +51,7 @@
     "question_mother_maiden": "Mother's maiden name",
     "question_pet_name": "First pet name",
     "question_custom": "Custom question",
+    "question_favorite_color": "Favorite color",
     "recovery_not_available": "Password recovery is not available for this email",
     "recovery_try_google": "No recovery option? Try signing in with Google (same email) instead:",
     "recovery_too_many_attempts": "Too many attempts. Try again in 24 hours",
@@ -64,7 +65,8 @@
     "saved_offline": "Saved on this device — it will be sent when the connection returns",
     "enter_name": "Enter a name to continue",
     "select_product": "Select a product to continue",
-    "select_items": "Select at least one item"
+    "select_items": "Select at least one item",
+    "connection_error": "No connection. Check your internet and try again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -159,6 +161,7 @@
     "gpx_download": "Download GPX",
     "gpx_remove": "Remove GPX",
     "gpx_weather": "Route weather",
+    "gpx_weather_unavailable": "Weather for the trip date is unavailable",
     "linked_meal_plan": "Meal plan",
     "no_meal_plan": "— none —",
     "food_weight": "Food",
@@ -248,8 +251,11 @@
     "confirm_remove_day_desc": "The last day and all its entries will be removed.",
     "confirm_apply_template": "Apply template?",
     "confirm_apply_template_desc": "This will replace all current days and entries. Continue?",
+    "confirm_change_type": "Change plan type?",
+    "confirm_change_type_desc": "Changing the type rebuilds the plan from a template and deletes the current days and entries. Continue?",
     "added": "Added",
     "created": "Plan created",
+    "rollback_failed": "Could not undo plan creation. Check the list and delete the extra plan manually.",
     "day_deleted": "Day deleted",
     "deleted": "Plan deleted",
     "entry_deleted": "Meal entry deleted",
@@ -371,6 +377,7 @@
     "welcome": "Hi! I'm ProHikes AI — an outdoor and survival specialist. I'll help you prepare for your hike, check your gear, and advise on routes and safety.",
     "send": "Send",
     "limit_reached": "Daily message limit reached (15/day). Support the project for more access!",
+    "usage_check_failed": "Could not check the daily message limit. Please try again in a moment.",
     "donate": "Support the project",
     "copy": "Copy",
     "copied": "Copied",
@@ -383,7 +390,9 @@
     "expand": "Expand",
     "collapse": "Collapse",
     "model_no_tools": "Your model doesn't support tools",
-    "byok_key_failed": "Your key failed (error or quota exhausted). Switch to free mode in Settings."
+    "byok_key_failed": "Your key failed (error or quota exhausted). Switch to free mode in Settings.",
+    "search_key_invalid": "The search key is invalid, expired or exhausted. Check it in Settings or turn off custom search.",
+    "search_unavailable": "Web search is temporarily unavailable. Please try again in a moment."
   },
   "landing": {
     "tagline": "Plan your hike smart",

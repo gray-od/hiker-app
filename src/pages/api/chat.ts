@@ -7,7 +7,8 @@ import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
 import { getMealTemplate } from '@/lib/meal-templates';
 import { resolveUserModel, validateAiKey } from '@/lib/ai-providers';
-import { isValidSearch, runUserSearch } from '@/lib/search-providers';
+import { isValidSearch, runUserSearch, SearchError } from '@/lib/search-providers';
+import { serializeCookie } from '@/lib/supabase/cookieHeader';
 
 function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
@@ -57,14 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               ? (Array.isArray(existing) ? existing.map(String) : [String(existing)])
               : [];
             cookiesToSet.forEach(({ name, value, options }) => {
-              const parts = [`${name}=${encodeURIComponent(value)}`];
-              if (options?.maxAge) parts.push(`Max-Age=${options.maxAge}`);
-              if (options?.path) parts.push(`Path=${options.path}`);
-              if (options?.domain) parts.push(`Domain=${options.domain}`);
-              if (options?.secure) parts.push('Secure');
-              if (options?.httpOnly) parts.push('HttpOnly');
-              if (options?.sameSite) parts.push(`SameSite=${options.sameSite}`);
-              existingCookies.push(parts.join('; '));
+              existingCookies.push(serializeCookie(name, value, options));
             });
             res.setHeader('Set-Cookie', existingCookies);
           },
@@ -102,12 +96,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let todayCount = 0;
 
     if (!usingOwnKey) {
-      const { data: usage } = await supabase
+      const { data: usage, error: usageError } = await supabase
         .from('ai_usage')
         .select('message_count')
         .eq('user_id', user.id)
         .eq('date', new Date().toISOString().split('T')[0])
         .maybeSingle();
+
+      if (usageError) {
+        // Fail closed: an unreadable counter must not silently grant unlimited use.
+        console.error('[chat] ai_usage read failed:', usageError.message);
+        return res.status(503).end('USAGE_CHECK_FAILED');
+      }
 
       todayCount = usage?.message_count || 0;
 
@@ -222,6 +222,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 signal: controller.signal,
               });
               clearTimeout(timeout);
+              if (!exaRes.ok) throw new SearchError('unavailable');
               const data = await exaRes.json();
               const results = data.results || [];
               if (results.length === 0) return 'No search results found';
@@ -236,8 +237,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   },
                 )
                 .join('\n');
-            } catch {
-              return 'Search temporarily unavailable';
+            } catch (error) {
+              if (error instanceof SearchError) throw error;
+              throw new SearchError('unavailable');
             }
           },
         }),
@@ -356,7 +358,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             let routeText = '';
             if (listData?.gpx_data) {
               const g = listData.gpx_data;
-              routeText = `\n\nRoute: ${g.track_name || 'Track'}\n  Distance: ${g.distance_km} km\n  Elevation gain: ${g.elevation_gain_m} m\n  Elevation loss: ${g.elevation_loss_m} m\n  Max elevation: ${g.max_elevation_m} m\n  Weather: ${g.weather || 'not available'}`;
+              routeText = `\n\nRoute: ${g.track_name || 'Track'}\n  Trip date: ${listData.trip_date || 'not set'}\n  Distance: ${g.distance_km} km\n  Elevation gain: ${g.elevation_gain_m} m\n  Elevation loss: ${g.elevation_loss_m} m\n  Max elevation: ${g.max_elevation_m} m\n  Weather (for trip date): ${g.weather || 'not available'}`;
             }
             return `Items (${lines.length}), total ${total}g:\n${lines.join('\n')}${routeText}`;
           },
@@ -761,7 +763,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       onFinish: async () => {
         if (!usingOwnKey) {
           try {
-            await supabase.from('ai_usage').upsert(
+            const { error: usageWriteError } = await supabase.from('ai_usage').upsert(
               {
                 user_id: user.id,
                 date: new Date().toISOString().split('T')[0],
@@ -769,8 +771,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               },
               { onConflict: 'user_id,date' },
             );
-          } catch {
-            // Rate limit persistence failed — non-critical, user gets one extra message
+            if (usageWriteError) {
+              console.error('[chat] ai_usage upsert failed:', usageWriteError.message);
+            }
+          } catch (error) {
+            // The reply has already streamed; the worst case is one uncounted message.
+            console.error(
+              '[chat] ai_usage upsert threw:',
+              error instanceof Error ? error.message : String(error),
+            );
           }
         }
       },
@@ -778,6 +787,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     result.pipeDataStreamToResponse(res, {
       getErrorMessage: (error: unknown) => {
+        // Search failures are wrapped in a ToolExecutionError whose message also
+        // matches the "tool" check below, so inspect the cause first.
+        const cause = (error as { cause?: unknown } | null | undefined)?.cause;
+        if (cause instanceof SearchError) {
+          console.error('[chat] search error:', cause.kind);
+          return cause.kind === 'key' ? 'SEARCH_KEY_INVALID' : 'SEARCH_UNAVAILABLE';
+        }
         const msg = error instanceof Error ? error.message : String(error);
         const lower = msg.toLowerCase();
         if (

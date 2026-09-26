@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient } from '@supabase/ssr';
 import type { User } from '@supabase/supabase-js';
+import { serializeCookie } from './cookieHeader';
 
 /**
  * Current user for a Pages Router API route.
@@ -37,19 +38,7 @@ export async function getRouteUser(
               ? (Array.isArray(existing) ? existing.map(String) : [String(existing)])
               : [];
             cookiesToSet.forEach(({ name, value, options }) => {
-              const parts = [`${name}=${encodeURIComponent(value)}`];
-              // maxAge 0 is how the library clears stale cookie chunks; a truthiness
-              // check would drop it and leave a mix of old and new chunks behind.
-              if (options?.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`);
-              if (options?.expires) parts.push(`Expires=${options.expires.toUTCString()}`);
-              if (options?.path) parts.push(`Path=${options.path}`);
-              if (options?.domain) parts.push(`Domain=${options.domain}`);
-              if (options?.secure) parts.push('Secure');
-              if (options?.httpOnly) parts.push('HttpOnly');
-              if (options?.sameSite) {
-                parts.push(`SameSite=${options.sameSite === true ? 'Strict' : options.sameSite}`);
-              }
-              setCookies.push(parts.join('; '));
+              setCookies.push(serializeCookie(name, value, options));
             });
             res.setHeader('Set-Cookie', setCookies);
           }

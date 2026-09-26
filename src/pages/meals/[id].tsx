@@ -4,7 +4,18 @@ import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
-import { fetchMealPlanDetail, fetchUserFoodItems } from '@/lib/supabase/service';
+import {
+  addMealDays,
+  addMealEntries,
+  deleteMealDay,
+  deleteMealEntry,
+  deleteMealPlan,
+  fetchMealPlanDetail,
+  fetchUserFoodItems,
+  updateMealDay,
+  updateMealEntry,
+  updateMealPlan,
+} from '@/lib/supabase/service';
 import type { MealPlan, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
@@ -67,6 +78,7 @@ export default function MealPlanDetailPage() {
   const [confirmRemoveDay, setConfirmRemoveDay] = useState(false);
   const [removingDay, setRemovingDay] = useState(false);
   const [confirmTemplate, setConfirmTemplate] = useState<string | null>(null);
+  const [confirmTypeChange, setConfirmTypeChange] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const userIdRef = useRef<string | null>(null);
@@ -189,6 +201,44 @@ export default function MealPlanDetailPage() {
     }
   }
 
+  /**
+   * Offline counterpart of recalculateTotals: the server cannot be read while the write
+   * sits in the queue, so the totals are computed from the local rows and enqueued after
+   * them (FIFO keeps the replay order). Only the days whose entries changed get a day
+   * update; the plan row always follows.
+   */
+  async function persistTotalsOffline(nextDays: MealDayWithEntries[], changedDayIds: string[]) {
+    const userId = userIdRef.current;
+    if (!userId) return;
+
+    const changed = new Set(changedDayIds);
+    for (const day of nextDays) {
+      if (!changed.has(day.id)) continue;
+      const entries = day.meal_entries || [];
+      day.total_calories = entries.reduce((sum, e) => sum + e.calories, 0);
+      day.total_weight_g = entries.reduce((sum, e) => sum + e.weight_g, 0);
+      const { error, queued } = await updateMealDay(day.id, userId, id, {
+        total_calories: day.total_calories,
+        total_weight_g: day.total_weight_g,
+      });
+      if (error && !queued) {
+        console.error('Persist totals offline: update meal_days totals (day', day.day_number, ') failed -', error.message);
+      }
+    }
+
+    const planTotalWeight = nextDays.reduce((sum, d) => sum + d.total_weight_g, 0);
+    const { error: planError, queued: planQueued } = await updateMealPlan(id, userId, {
+      total_weight_g: planTotalWeight,
+      days_count: nextDays.length,
+    });
+    if (planError && !planQueued) {
+      console.error('Persist totals offline: update meal_plans totals failed -', planError.message);
+    }
+
+    setDays(nextDays);
+    setPlan(prev => prev ? { ...prev, total_weight_g: planTotalWeight, days_count: nextDays.length } : null);
+  }
+
   function toggleDay(dayNumber: number) {
     setExpandedDays(prev => {
       const next = new Set(prev);
@@ -284,7 +334,6 @@ export default function MealPlanDetailPage() {
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
 
-    const supabase = createClient();
     setSaving(true);
     setActionError(null);
 
@@ -319,44 +368,66 @@ export default function MealPlanDetailPage() {
       saveCarbs = entryForm.carbs_g;
     }
 
-    if (editEntryId) {
-      const { error: updateError } = await supabase
-        .from('meal_entries')
-        .update({
-          meal_type: entryForm.meal_type,
-          name: saveName,
-          weight_g: saveWeight,
-          calories: saveCalories,
-          protein_g: saveProtein,
-          fat_g: saveFat,
-          carbs_g: saveCarbs,
-        })
-        .eq('id', editEntryId);
+    const entryPayload = {
+      meal_type: entryForm.meal_type,
+      name: saveName,
+      weight_g: saveWeight,
+      calories: saveCalories,
+      protein_g: saveProtein,
+      fat_g: saveFat,
+      carbs_g: saveCarbs,
+    };
 
-      if (updateError) {
+    if (editEntryId) {
+      const { error: updateError, queued } = await updateMealEntry(editEntryId, userId, id, entryPayload);
+
+      if (updateError && !queued) {
         setActionError(updateError.message);
         toast.error(updateError.message);
         setSaving(false);
         return;
       }
-    } else {
-      const { error: insertError } = await supabase
-        .from('meal_entries')
-        .insert({
-          day_id: activeDayId,
-          meal_type: entryForm.meal_type,
-          name: saveName,
-          weight_g: saveWeight,
-          calories: saveCalories,
-          protein_g: saveProtein,
-          fat_g: saveFat,
-          carbs_g: saveCarbs,
-        });
 
-      if (insertError) {
+      if (queued) {
+        setEntryModalOpen(false);
+        setSaving(false);
+        await persistTotalsOffline(
+          days.map(day => day.id !== activeDayId ? day : {
+            ...day,
+            meal_entries: (day.meal_entries || []).map(e => e.id === editEntryId ? { ...e, ...entryPayload } : e),
+          }),
+          [activeDayId],
+        );
+        toast.info(tCommon('saved_offline'));
+        return;
+      }
+    } else {
+      const newEntryId = crypto.randomUUID();
+      const { error: insertError, queued } = await addMealEntries(userId, id, [
+        { id: newEntryId, day_id: activeDayId, ...entryPayload },
+      ]);
+
+      if (insertError && !queued) {
         setActionError(insertError.message);
         toast.error(insertError.message);
         setSaving(false);
+        return;
+      }
+
+      if (queued) {
+        // The row carries its final id right away, so the new entry can be edited and
+        // deleted offline before the queue ever reaches the server.
+        const newEntry: MealEntry = { id: newEntryId, day_id: activeDayId, ...entryPayload };
+        setEntryModalOpen(false);
+        setSaving(false);
+        await persistTotalsOffline(
+          days.map(day => day.id !== activeDayId ? day : {
+            ...day,
+            meal_entries: [...(day.meal_entries || []), newEntry],
+          }),
+          [activeDayId],
+        );
+        toast.info(tCommon('saved_offline'));
         return;
       }
     }
@@ -386,16 +457,25 @@ export default function MealPlanDetailPage() {
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
 
-    const supabase = createClient();
+    const { error: deleteError, queued } = await deleteMealEntry(entryId, userId, id);
 
-    const { error: deleteError } = await supabase
-      .from('meal_entries')
-      .delete()
-      .eq('id', entryId);
-
-    if (deleteError) {
+    if (deleteError && !queued) {
       setError(deleteError.message);
       toast.error(deleteError.message);
+      return;
+    }
+
+    if (queued) {
+      const entryDay = days.find(day => (day.meal_entries || []).some(e => e.id === entryId));
+      setConfirmDeleteEntry(null);
+      await persistTotalsOffline(
+        days.map(day => day.id !== entryDay?.id ? day : {
+          ...day,
+          meal_entries: (day.meal_entries || []).filter(e => e.id !== entryId),
+        }),
+        entryDay ? [entryDay.id] : [],
+      );
+      toast.info(tCommon('saved_offline'));
       return;
     }
 
@@ -418,39 +498,59 @@ export default function MealPlanDetailPage() {
     }
   }
 
-  async function handleUpdatePlan() {
+  async function handleUpdatePlan(confirmedTypeChange = false) {
     try {
     if (!editForm.name.trim()) return;
 
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
 
-    const supabase = createClient();
-    setSaving(true);
-    setActionError(null);
+    const oldType = plan?.plan_type || 'standard';
+    const oldPeople = plan?.people_count || 1;
+    const typeChangeWithDays = oldType !== editForm.plan_type && days.length > 0;
 
-    const { error: updateError } = await supabase
-      .from('meal_plans')
-      .update({
-        name: editForm.name.trim(),
-        plan_type: editForm.plan_type,
-        people_count: editForm.people_count,
-        target_calories: editForm.target_calories,
-        target_weight_g: editForm.target_weight_g,
-      })
-      .eq('id', id);
-
-    if (updateError) {
-      setActionError(updateError.message);
-      toast.error(updateError.message);
-      setSaving(false);
+    // A type change rebuilds the plan from a template, discarding the current days and
+    // entries; the template button confirms the exact same destructive step. The rebuild
+    // deletes rows by filter (day_id / plan_id), which the offline queue cannot replay,
+    // so offline it must not start at all — a guard later would leave the plan half-done.
+    if (typeChangeWithDays && !navigator.onLine) {
+      toast.error(tCommon('connection_error'));
       return;
     }
 
-    const oldType = plan?.plan_type || 'standard';
-    const oldPeople = plan?.people_count || 1;
+    if (typeChangeWithDays && !confirmedTypeChange) {
+      setConfirmTypeChange(true);
+      return;
+    }
 
-    if (oldType !== editForm.plan_type && days.length > 0) {
+    setSaving(true);
+    setActionError(null);
+
+    const planFields = {
+      name: editForm.name.trim(),
+      plan_type: editForm.plan_type,
+      people_count: editForm.people_count,
+      target_calories: editForm.target_calories,
+      target_weight_g: editForm.target_weight_g,
+    };
+
+    if (typeChangeWithDays) {
+      // Raw online writes on purpose: routing the mid-rebuild plan update through the
+      // service could queue a plan_type change whose rebuild never runs.
+      const supabase = createClient();
+
+      const { error: updateError } = await supabase
+        .from('meal_plans')
+        .update(planFields)
+        .eq('id', id);
+
+      if (updateError) {
+        setActionError(updateError.message);
+        toast.error(updateError.message);
+        setSaving(false);
+        return;
+      }
+
       const templateId = `${editForm.plan_type}_3day`;
       setSaving(false);
       setEditPlanModalOpen(false);
@@ -479,19 +579,42 @@ export default function MealPlanDetailPage() {
       return;
     }
 
+    const { error: updateError, queued } = await updateMealPlan(id, userId, planFields);
+
+    if (updateError && !queued) {
+      setActionError(updateError.message);
+      toast.error(updateError.message);
+      setSaving(false);
+      return;
+    }
+
+    let anyQueued = queued === true;
+
     if (oldPeople !== editForm.people_count && days.length > 0) {
       const pRatio = editForm.people_count / oldPeople;
-      for (const day of days) {
-        for (const e of (day.meal_entries || [])) {
-          const { error: rescaleError } = await supabase.from('meal_entries').update({
-            weight_g: Math.round(e.weight_g * pRatio),
-            calories: Math.round(e.calories * pRatio),
-            protein_g: Math.round(e.protein_g * pRatio * 10) / 10,
-            fat_g: Math.round(e.fat_g * pRatio * 10) / 10,
-            carbs_g: Math.round(e.carbs_g * pRatio * 10) / 10,
-          }).eq('id', e.id);
+      const nextDays: MealDayWithEntries[] = days.map(day => ({
+        ...day,
+        meal_entries: (day.meal_entries || []).map(e => ({
+          ...e,
+          weight_g: Math.round(e.weight_g * pRatio),
+          calories: Math.round(e.calories * pRatio),
+          protein_g: Math.round(e.protein_g * pRatio * 10) / 10,
+          fat_g: Math.round(e.fat_g * pRatio * 10) / 10,
+          carbs_g: Math.round(e.carbs_g * pRatio * 10) / 10,
+        })),
+      }));
 
-          if (rescaleError) {
+      for (const day of nextDays) {
+        for (const e of (day.meal_entries || [])) {
+          const { error: rescaleError, queued: entryQueued } = await updateMealEntry(e.id, userId, id, {
+            weight_g: e.weight_g,
+            calories: e.calories,
+            protein_g: e.protein_g,
+            fat_g: e.fat_g,
+            carbs_g: e.carbs_g,
+          });
+
+          if (rescaleError && !entryQueued) {
             console.error('Update plan:', `rescale meal_entries (day ${day.day_number})`, 'failed on', 'meal_entries', '-', rescaleError.message);
             setSaving(false);
             setEditPlanModalOpen(false);
@@ -501,20 +624,32 @@ export default function MealPlanDetailPage() {
             await refreshPlanFromServer();
             return;
           }
+
+          if (entryQueued) anyQueued = true;
         }
       }
+
+      if (anyQueued) {
+        // The queue owns (part of) the rescale; the local rows adopt the same numbers it
+        // will replay, so the page matches the post-sync state.
+        setSaving(false);
+        setEditPlanModalOpen(false);
+        setPlan(prev => prev ? { ...prev, ...planFields } : null);
+        await persistTotalsOffline(nextDays, nextDays.map(d => d.id));
+        toast.info(tCommon('saved_offline'));
+        return;
+      }
+    } else if (anyQueued) {
+      setSaving(false);
+      setEditPlanModalOpen(false);
+      setPlan(prev => prev ? { ...prev, ...planFields } : null);
+      toast.info(tCommon('saved_offline'));
+      return;
     }
 
     setSaving(false);
     setEditPlanModalOpen(false);
-    setPlan(prev => prev ? {
-      ...prev,
-      name: editForm.name.trim(),
-      plan_type: editForm.plan_type,
-      people_count: editForm.people_count,
-      target_calories: editForm.target_calories,
-      target_weight_g: editForm.target_weight_g,
-    } : null);
+    setPlan(prev => prev ? { ...prev, ...planFields } : null);
     const totalsOk = await recalculateTotals();
     await invalidateCache(cacheKeys.mealPlanDetail(id));
     await invalidateCache(cacheKeys.mealPlans(userId));
@@ -537,19 +672,26 @@ export default function MealPlanDetailPage() {
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
 
-    const supabase = createClient();
+    const { error: deleteError, queued } = await deleteMealPlan(id, userId);
 
-    const { error: deleteError } = await supabase
-      .from('meal_plans')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
+    if (deleteError && !queued) {
       setError(deleteError.message);
       return;
     }
 
+    if (queued) {
+      // The service keeps all three cache keys on a queued delete — offline reads still
+      // serve the pre-delete snapshot until the queue replays.
+      toast.info(tCommon('saved_offline'));
+      router.push('/meals');
+      return;
+    }
+
+    // All three keys must be dropped before navigating: the /meals list reads cache-first
+    // and would otherwise render the deleted plan from the old snapshot.
+    await invalidateCache(cacheKeys.mealPlanDetail(id));
     await invalidateCache(cacheKeys.mealPlans(userId));
+    await invalidateCache(cacheKeys.mealPlansLight(userId));
     toast.success(t('deleted'));
     router.push('/meals');
     } catch (err) {
@@ -563,20 +705,32 @@ export default function MealPlanDetailPage() {
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
 
-    const supabase = createClient();
     const maxDayNumber = days.reduce((max, d) => Math.max(max, d.day_number), 0);
+    const newDayId = crypto.randomUUID();
 
-    const { error: insertError } = await supabase
-      .from('meal_days')
-      .insert({
+    const { error: insertError, queued } = await addMealDays(userId, id, [{
+      id: newDayId,
+      day_number: maxDayNumber + 1,
+      total_calories: 0,
+      total_weight_g: 0,
+    }]);
+
+    if (insertError && !queued) {
+      setError(insertError.message);
+      return;
+    }
+
+    if (queued) {
+      const newDay: MealDayWithEntries = {
+        id: newDayId,
         plan_id: id,
         day_number: maxDayNumber + 1,
         total_calories: 0,
         total_weight_g: 0,
-      });
-
-    if (insertError) {
-      setError(insertError.message);
+        meal_entries: [],
+      };
+      await persistTotalsOffline([...days, newDay], []);
+      toast.info(tCommon('saved_offline'));
       return;
     }
 
@@ -603,17 +757,22 @@ export default function MealPlanDetailPage() {
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
 
-    const supabase = createClient();
     const lastDay = days[days.length - 1];
 
-    const { error: deleteError } = await supabase
-      .from('meal_days')
-      .delete()
-      .eq('id', lastDay.id);
+    const { error: deleteError, queued } = await deleteMealDay(lastDay.id, userId, id);
 
-    if (deleteError) {
+    if (deleteError && !queued) {
       setError(deleteError.message);
       toast.error(deleteError.message);
+      return;
+    }
+
+    if (queued) {
+      // The day delete cascades to its entries inside the DB; the queue holds the single
+      // row delete and the totals of the remaining days.
+      setConfirmRemoveDay(false);
+      await persistTotalsOffline(days.slice(0, -1), []);
+      toast.info(tCommon('saved_offline'));
       return;
     }
 
@@ -663,6 +822,13 @@ export default function MealPlanDetailPage() {
   }
 
   async function handleApplyTemplate(templateId: string, peopleCountOverride?: number): Promise<boolean> {
+    // Rebuilding deletes rows by filter (day_id / plan_id), which the offline queue cannot
+    // replay; starting it without a connection would only produce a half-applied plan.
+    if (!navigator.onLine) {
+      toast.error(tCommon('connection_error'));
+      return false;
+    }
+
     const template = getMealTemplate(templateId);
     if (!template || !plan) return false;
 
@@ -949,8 +1115,12 @@ export default function MealPlanDetailPage() {
           saving={saving}
           actionError={actionError}
           locale={locale}
-          onClose={() => setEditPlanModalOpen(false)}
-          onSave={handleUpdatePlan}
+          onClose={() => {
+            // Escape is delivered to every open dialog, so the stacked type-change
+            // confirmation must not take this form down with it.
+            if (!confirmTypeChange) setEditPlanModalOpen(false);
+          }}
+          onSave={() => handleUpdatePlan()}
           onFieldChange={handleEditFieldChange}
           t={t}
           tCommon={tCommon}
@@ -999,6 +1169,17 @@ export default function MealPlanDetailPage() {
           title={t('confirm_apply_template')}
           message={t('confirm_apply_template_desc')}
           loading={applyingTemplate}
+        />
+
+        <ConfirmDeleteModal
+          open={confirmTypeChange}
+          onCancel={() => setConfirmTypeChange(false)}
+          onConfirm={() => {
+            setConfirmTypeChange(false);
+            handleUpdatePlan(true);
+          }}
+          title={t('confirm_change_type')}
+          message={t('confirm_change_type_desc')}
         />
 
         <TemplateModal
