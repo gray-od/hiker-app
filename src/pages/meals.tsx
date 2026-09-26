@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import { resolveUser } from '@/lib/supabase/resolveUser';
-import type { MealPlan } from '@/lib/types';
+import type { MealPlan, MealEntry, MealDayWithEntries } from '@/lib/types';
 import {
   addMealDays,
   addMealEntries,
@@ -11,7 +11,8 @@ import {
   deleteMealPlan,
   fetchUserMealPlans,
 } from '@/lib/supabase/service';
-import { invalidateCache, cacheKeys } from '@/lib/cache';
+import type { MealPlanLight } from '@/lib/supabase/service';
+import { setCache, removeCache, cacheKeys } from '@/lib/cache';
 import { getPlanTypeBadgeClass } from '@/lib/badges';
 import { formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
@@ -37,6 +38,31 @@ const EMPTY_FORM = {
   target_weight_g: 650,
   template_id: '',
 };
+
+function toLightPlan(plan: MealPlanWithDays): MealPlanLight {
+  return {
+    id: plan.id,
+    name: plan.name,
+    people_count: plan.people_count,
+    total_weight_g: plan.total_weight_g,
+  };
+}
+
+/**
+ * A queued create is invisible to the cache-first reads — the /meals list, the linked-plan
+ * select and the plan detail — so an offline reload would show the pre-create picture. The
+ * rows being written are known locally in full, so the snapshots are updated to match.
+ */
+async function cacheQueuedNewPlan(
+  userId: string,
+  plan: MealPlanWithDays,
+  days: MealDayWithEntries[],
+  nextPlans: MealPlanWithDays[],
+) {
+  await setCache(cacheKeys.mealPlanDetail(userId, plan.id), { plan, days });
+  await setCache(cacheKeys.mealPlans(userId), nextPlans);
+  await setCache(cacheKeys.mealPlansLight(userId), nextPlans.map(toLightPlan));
+}
 
 export default function MealsPage() {
   const router = useRouter();
@@ -95,16 +121,6 @@ export default function MealsPage() {
     return (plan.meal_days ?? []).reduce((sum, d) => sum + (d.total_weight_g ?? 0), 0);
   }
 
-  async function fetchPlans() {
-    const user = await resolveUser();
-    if (!user) return;
-
-    const { data, error: fetchError } = await fetchUserMealPlans(user.id);
-    if (!fetchError && data) {
-      setPlans(data);
-    }
-  }
-
   async function handleCreate() {
     let planId: string | null = null;
     let userId: string | null = null;
@@ -138,7 +154,7 @@ export default function MealsPage() {
     const entries: {
       id: string;
       day_id: string;
-      meal_type: string;
+      meal_type: MealEntry['meal_type'];
       name: string;
       weight_g: number;
       calories: number;
@@ -229,28 +245,39 @@ export default function MealsPage() {
       throw hardError;
     }
 
+    // The card is built from the rows just written and added to the list directly: a
+    // re-read can fail or serve the pre-insert snapshot, which used to leave the success
+    // toast standing over a list without the new plan.
+    const localPlan: MealPlanWithDays = {
+      id: newPlanId,
+      user_id: user.id,
+      name: formData.name,
+      days_count: formData.days_count,
+      total_weight_g: planTotalWeight,
+      plan_type: formData.plan_type,
+      people_count: formData.people_count,
+      target_calories: formData.target_calories,
+      target_weight_g: formData.target_weight_g,
+      created_at: new Date().toISOString(),
+      meal_days: days.map((day) => ({ total_calories: day.total_calories, total_weight_g: day.total_weight_g })),
+    };
+
+    setPlans((prev) => [localPlan, ...prev]);
+
     if (anyQueued) {
-      // The queue owns the write and the cache still holds the pre-insert snapshot:
-      // reading it back would overwrite the optimistic row, so the plan is added locally.
-      const localPlan: MealPlanWithDays = {
-        id: newPlanId,
-        user_id: user.id,
-        name: formData.name,
-        days_count: formData.days_count,
-        total_weight_g: planTotalWeight,
-        plan_type: formData.plan_type,
-        people_count: formData.people_count,
-        target_calories: formData.target_calories,
-        target_weight_g: formData.target_weight_g,
-        created_at: new Date().toISOString(),
-        meal_days: days.map((day) => ({ total_calories: day.total_calories, total_weight_g: day.total_weight_g })),
-      };
-      setPlans((prev) => [localPlan, ...prev]);
+      // The queue owns the write, so the cache-first snapshots must be brought up to date
+      // here — otherwise an offline reload shows the plan list without this plan.
+      const localDays: MealDayWithEntries[] = days.map((day) => ({
+        id: day.id,
+        plan_id: newPlanId,
+        day_number: day.day_number,
+        total_calories: day.total_calories,
+        total_weight_g: day.total_weight_g,
+        meal_entries: entries.filter((entry) => entry.day_id === day.id),
+      }));
+      await cacheQueuedNewPlan(user.id, localPlan, localDays, [localPlan, ...plans]);
       toast.info(tCommon('saved_offline'));
     } else {
-      // fetchUserMealPlans is cache-first: this read must not return the pre-insert snapshot.
-      await invalidateCache(cacheKeys.mealPlans(user.id));
-      await fetchPlans();
       toast.success(t('created'));
     }
 
@@ -301,9 +328,13 @@ export default function MealsPage() {
       return;
     }
 
-    // The service drops the plan list, the light list and the detail key on a confirmed
-    // delete; a queued delete keeps them — offline reads still need the pre-delete snapshot.
+    // A confirmed delete drops the cache keys inside the service; a queued one keeps them,
+    // so the snapshots are updated here — an offline reload would otherwise resurrect the plan.
     if (queued) {
+      const remaining = plans.filter((p) => p.id !== id);
+      await removeCache(cacheKeys.mealPlanDetail(user.id, id));
+      await setCache(cacheKeys.mealPlans(user.id), remaining);
+      await setCache(cacheKeys.mealPlansLight(user.id), remaining.map(toLightPlan));
       toast.info(tCommon('saved_offline'));
     } else {
       toast.success(t('deleted'));

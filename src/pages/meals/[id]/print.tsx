@@ -36,10 +36,11 @@ export default function MealPlanPrintPage() {
 
       setLoading(true);
 
-      const { data: mealResult, error: mealError } = await fetchMealPlanDetail(id);
+      const { data: mealResult, error: mealError } = await fetchMealPlanDetail(user.id, id);
 
       if (mealError || !mealResult) {
-        setError(mealError?.message || 'Plan not found');
+        console.error('Failed to load meal plan print:', mealError ?? 'no plan data');
+        setError(t('plan_not_found'));
         setLoading(false);
         return;
       }

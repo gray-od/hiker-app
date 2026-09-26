@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import Head from 'next/head';
@@ -35,8 +35,10 @@ export default function ListDetailPage() {
   const [editForm, setEditForm] = useState({ name: '', season: 'summer', trip_date: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGearIds, setSelectedGearIds] = useState<Set<string>>(new Set());
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [itemsLoadFailed, setItemsLoadFailed] = useState(false);
   const [weightHint, setWeightHint] = useState<string | null>(null);
   const [gpxUploading, setGpxUploading] = useState(false);
   const [gpxError, setGpxError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export default function ListDetailPage() {
   const [removingGpx, setRemovingGpx] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
+  const [mealPlansError, setMealPlansError] = useState(false);
   const userIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!router.isReady || typeof id !== 'string') return;
@@ -62,8 +65,8 @@ export default function ListDetailPage() {
       setLoading(true);
 
       const [listResult, itemsResult, gearResult, plansResult] = await Promise.all([
-        fetchUserListDetail(id),
-        fetchListItems(id),
+        fetchUserListDetail(user.id, id),
+        fetchListItems(user.id, id),
         fetchUserGear(user.id),
         fetchUserMealPlansLight(user.id),
       ]);
@@ -74,7 +77,8 @@ export default function ListDetailPage() {
       const { data: plansData, error: plansError } = plansResult;
 
       if (listError || !listData) {
-        setError(listError?.message || 'List not found');
+        if (listError) console.error('Failed to load list:', listError);
+        setError(t('list_not_found'));
         setLoading(false);
         return;
       }
@@ -83,6 +87,7 @@ export default function ListDetailPage() {
 
       if (itemsError) {
         console.error('Failed to load items:', itemsError);
+        setItemsLoadFailed(true);
       } else if (itemsData) {
         setListItems(itemsData);
       }
@@ -95,7 +100,9 @@ export default function ListDetailPage() {
 
       if (plansError) {
         console.error('Failed to load meal plans:', plansError);
+        setMealPlansError(true);
       } else if (plansData) {
+        setMealPlansError(false);
         setMealPlans(plansData);
       }
 
@@ -106,6 +113,33 @@ export default function ListDetailPage() {
       setError(tCommon('error_loading'));
     });
   }, [id, router]);
+
+  async function retryLoadItems() {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const { data, error: fetchError } = await fetchListItems(userId, id);
+    if (fetchError) {
+      console.error('Failed to load items:', fetchError);
+      setItemsLoadFailed(true);
+      return;
+    }
+    setListItems(data ?? []);
+    setItemsLoadFailed(false);
+  }
+
+  /** Retries the linked-plan select load after a failure; mirrors retryLoadItems. */
+  async function retryLoadMealPlans() {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const { data, error: fetchError } = await fetchUserMealPlansLight(userId);
+    if (fetchError) {
+      console.error('Failed to load meal plans:', fetchError);
+      setMealPlansError(true);
+      return;
+    }
+    setMealPlansError(false);
+    setMealPlans(data ?? []);
+  }
 
   const baseWeight = useMemo(() =>
     calcWeight(listItems.map(li => ({ quantity: li.quantity, weight_g: li.gear_item?.weight_g, worn: li.worn, consumable: li.consumable })), (li) => !li.worn && !li.consumable),
@@ -407,6 +441,33 @@ export default function ListDetailPage() {
     }
   }
 
+  /** Writes the pending draft of a quantity input once the user finishes editing it. */
+  function commitQuantityDraft(itemId: string) {
+    const raw = quantityDrafts[itemId];
+    if (raw === undefined) return;
+
+    setQuantityDrafts(prev => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+
+    // An emptied or non-numeric draft keeps the stored quantity instead of becoming 1.
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) return;
+
+    handleSetQuantity(itemId, parsed);
+  }
+
+  /** The +/− control finishes a pending draft instead of stepping from the stored value. */
+  function handleQuantityControl(itemId: string, delta: number) {
+    if (quantityDrafts[itemId] !== undefined) {
+      commitQuantityDraft(itemId);
+      return;
+    }
+    handleUpdateQuantity(itemId, delta);
+  }
+
   async function handleRemoveItem(itemId: string) {
     setRemovingItemId(itemId);
     try {
@@ -462,7 +523,7 @@ export default function ListDetailPage() {
 
       // Queued rows are not on the server yet, so a refetch would only re-render the unchanged list.
       if (!queued) {
-        const { data: itemsData } = await fetchListItems(id);
+        const { data: itemsData } = await fetchListItems(userId, id);
 
         if (itemsData) {
           setListItems(itemsData);
@@ -516,11 +577,17 @@ export default function ListDetailPage() {
       if (result.points.length > 0 && list?.trip_date) {
         refreshStoredWeather(gpxData, list.trip_date);
       }
-    } catch (err: any) {
-      const isSaveError = err?.code && typeof err.code === 'string';
-      const msg = isSaveError
-        ? (err.message || tCommon('error_occurred') || 'Failed to save GPX data')
-        : (err.message || 'Failed to parse GPX');
+    } catch (err) {
+      console.error('GPX upload failed:', err);
+      // The parser tags its own failures with a `code`; a plain Error is a save failure.
+      const code = err instanceof Error && 'code' in err ? err.code : undefined;
+      const message = err instanceof Error ? err.message : undefined;
+      const isSaveError = typeof code === 'string';
+      const msg = code === 'GPX_NO_TRACKS'
+        ? t('gpx_no_tracks')
+        : isSaveError
+          ? (message || tCommon('error_occurred') || 'Failed to save GPX data')
+          : (message || 'Failed to parse GPX');
       toast.error(tCommon('error'));
       setGpxError(msg);
     } finally {
@@ -594,6 +661,18 @@ export default function ListDetailPage() {
       return next;
     });
   }
+
+  // Stable identities: Modal restarts its focus effect whenever onClose changes, which
+  // would steal focus back to the close button after every keystroke.
+  const closeEditListModal = useCallback(() => setEditModalOpen(false), []);
+  const closeAddItemsModal = useCallback(() => {
+    setAddItemsModalOpen(false);
+    setSelectedGearIds(new Set());
+    setSearchQuery('');
+  }, []);
+  const cancelDeleteList = useCallback(() => setConfirmDelete(false), []);
+  const cancelRemoveItem = useCallback(() => setConfirmRemoveItem(null), []);
+  const cancelRemoveGpx = useCallback(() => setConfirmRemoveGpx(false), []);
 
   const head = (
     <Head>
@@ -710,16 +789,18 @@ export default function ListDetailPage() {
         fileInputRef={fileInputRef}
       />
 
-      <WeightStatCard
-        baseWeight={baseWeight}
-        wornWeight={wornWeight}
-        consumableWeight={consumableWeight}
-        totalWeight={totalWeight}
-        weightHint={weightHint}
-        onHintChange={setWeightHint}
-        t={t}
-        tGear={tCommon}
-      />
+      {!itemsLoadFailed && (
+        <WeightStatCard
+          baseWeight={baseWeight}
+          wornWeight={wornWeight}
+          consumableWeight={consumableWeight}
+          totalWeight={totalWeight}
+          weightHint={weightHint}
+          onHintChange={setWeightHint}
+          t={t}
+          tGear={tCommon}
+        />
+      )}
 
       <div className="mb-4">
         <div className="flex items-center gap-2">
@@ -749,6 +830,11 @@ export default function ListDetailPage() {
                       toast.error(tCommon('error'));
                     }
                   }}
+                  onFocus={() => {
+                    // Opening the select retries a failed load, so a transient error does not
+                    // leave the linked-plan list silently empty for the rest of the session.
+                    if (mealPlansError) retryLoadMealPlans();
+                  }}
                   className="text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-zinc-600 dark:text-zinc-400"
                 >
                   <option value="">{t('no_meal_plan')}</option>
@@ -765,6 +851,9 @@ export default function ListDetailPage() {
             );
           })()}
         </div>
+        {mealPlansError && (
+          <p className="text-xs text-red-600 dark:text-red-400 mt-1">{tCommon('error_loading')}</p>
+        )}
       </div>
 
       {totalItems > 0 && (
@@ -798,7 +887,21 @@ export default function ListDetailPage() {
         </button>
       </div>
 
-      {listItems.length === 0 && (
+      {itemsLoadFailed && (
+        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-12 text-center">
+          <h2 className="text-base font-medium text-red-700 dark:text-red-400 mb-2">
+            {t('items_load_failed')}
+          </h2>
+          <button
+            onClick={retryLoadItems}
+            className="mt-2 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+          >
+            {tCommon('retry')}
+          </button>
+        </div>
+      )}
+
+      {!itemsLoadFailed && listItems.length === 0 && (
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
           <svg className="w-12 h-12 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -809,7 +912,7 @@ export default function ListDetailPage() {
         </div>
       )}
 
-      {listItems.length > 0 && (
+      {!itemsLoadFailed && listItems.length > 0 && (
         <div className="space-y-2">
           {listItems.map((item) => (
             <div
@@ -857,8 +960,11 @@ export default function ListDetailPage() {
 
               <div className="flex items-center gap-2 mt-2 ml-8 flex-wrap">
                 <div className="flex items-center gap-1">
+                  {/* preventDefault keeps focus in the input: a blur here would commit the draft
+                      and the click would immediately write a stepped value as a second write */}
                   <button
-                    onClick={() => handleUpdateQuantity(item.id, -1)}
+                    onClick={() => handleQuantityControl(item.id, -1)}
+                    onMouseDown={(e) => e.preventDefault()}
                     disabled={item.quantity <= 1}
                     className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                     aria-label={t('quantity')}
@@ -868,12 +974,17 @@ export default function ListDetailPage() {
                   <input
                     type="number"
                     min={1}
-                    value={item.quantity}
-                    onChange={(e) => handleSetQuantity(item.id, parseInt(e.target.value) || 1)}
+                    value={quantityDrafts[item.id] ?? item.quantity}
+                    onChange={(e) => setQuantityDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                    onBlur={() => commitQuantityDraft(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitQuantityDraft(item.id);
+                    }}
                     className="w-10 text-center text-sm font-medium text-zinc-900 dark:text-zinc-100 bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                   <button
-                    onClick={() => handleUpdateQuantity(item.id, 1)}
+                    onClick={() => handleQuantityControl(item.id, 1)}
+                    onMouseDown={(e) => e.preventDefault()}
                     className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium"
                     aria-label={t('quantity')}
                   >
@@ -923,7 +1034,7 @@ export default function ListDetailPage() {
 
       <EditListModal
         open={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
+        onClose={closeEditListModal}
         editForm={editForm}
         saving={saving}
         onSave={handleUpdateList}
@@ -935,11 +1046,7 @@ export default function ListDetailPage() {
 
       <AddItemsModal
         open={addItemsModalOpen}
-        onClose={() => {
-          setAddItemsModalOpen(false);
-          setSelectedGearIds(new Set());
-          setSearchQuery('');
-        }}
+        onClose={closeAddItemsModal}
         allGear={allGear}
         listItems={listItems}
         searchQuery={searchQuery}
@@ -955,7 +1062,7 @@ export default function ListDetailPage() {
 
       <DeleteListModal
         open={confirmDelete}
-        onCancel={() => setConfirmDelete(false)}
+        onCancel={cancelDeleteList}
         onConfirm={handleDeleteList}
         title={t('delete_list')}
         message={t('delete_confirm')}
@@ -964,7 +1071,7 @@ export default function ListDetailPage() {
 
       <ConfirmDeleteModal
         open={confirmRemoveItem !== null}
-        onCancel={() => setConfirmRemoveItem(null)}
+        onCancel={cancelRemoveItem}
         onConfirm={() => {
           if (confirmRemoveItem) {
             handleRemoveItem(confirmRemoveItem);
@@ -977,7 +1084,7 @@ export default function ListDetailPage() {
 
       <ConfirmDeleteModal
         open={confirmRemoveGpx}
-        onCancel={() => setConfirmRemoveGpx(false)}
+        onCancel={cancelRemoveGpx}
         onConfirm={() => {
           handleRemoveGpx();
         }}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
@@ -17,19 +17,25 @@ import {
   updateMealPlan,
 } from '@/lib/supabase/service';
 import type { MealPlan, MealEntry, MealDayWithEntries, UserFoodItem } from '@/lib/types';
+import type { MealPlanLight } from '@/lib/supabase/service';
 import { FOOD_CATALOG, FOOD_CATEGORY_NAMES, calculateNutrition } from '@/lib/food-catalog';
 import type { FoodItem, FoodCategory } from '@/lib/food-catalog';
 import { type PlanTypeId, getPlanType } from '@/lib/hiking-standards';
-import { getMealTemplate } from '@/lib/meal-templates';
+import { getMealTemplate, getMealTemplateByPlanType } from '@/lib/meal-templates';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { toast } from '@/lib/toast';
-import { invalidateCache, cacheKeys } from '@/lib/cache';
+import { invalidateCache, cacheKeys, getCached, setCache, removeCache } from '@/lib/cache';
 import StatsCards from '@/components/meals/StatsCards';
 import PlanHeader from '@/components/meals/PlanHeader';
 import DayCard from '@/components/meals/DayCard';
 import EntryModal from '@/components/meals/EntryModal';
 import EditPlanModal from '@/components/meals/EditPlanModal';
 import TemplateModal from '@/components/meals/TemplateModal';
+
+// Shape of the /meals list snapshot in IndexedDB (written by fetchUserMealPlans).
+type MealPlanWithDays = MealPlan & {
+  meal_days: { total_calories: number; total_weight_g: number }[];
+};
 
 export default function MealPlanDetailPage() {
   const router = useRouter();
@@ -81,6 +87,8 @@ export default function MealPlanDetailPage() {
   const [confirmTypeChange, setConfirmTypeChange] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [addingDay, setAddingDay] = useState(false);
+  const addingDayRef = useRef(false);
   const userIdRef = useRef<string | null>(null);
   const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
   const [entryMode, setEntryMode] = useState<'catalog' | 'my_products' | 'custom'>('catalog');
@@ -109,14 +117,15 @@ export default function MealPlanDetailPage() {
       setLoading(true);
 
       const [planResult, foodResult] = await Promise.all([
-        fetchMealPlanDetail(id),
+        fetchMealPlanDetail(user.id, id),
         fetchUserFoodItems(user.id),
       ]);
       const { data: planData, error: planError } = planResult;
       const { data: userFoodData, error: foodError } = foodResult;
 
       if (planError || !planData) {
-        setError(planError?.message || 'Plan not found');
+        console.error('Failed to load meal plan:', planError ?? 'no plan data');
+        setError(t('plan_not_found'));
         setLoading(false);
         return;
       }
@@ -202,12 +211,74 @@ export default function MealPlanDetailPage() {
   }
 
   /**
+   * A queued write leaves the cache-first reads on the pre-write snapshot, so an offline
+   * reload would drop what the user just did. The local outcome is stored under the same
+   * keys those reads use; the plan list and the linked-plan select are patched in place
+   * so their other rows survive.
+   */
+  async function cachePlanOutcome(userId: string, nextPlan: MealPlan, nextDays: MealDayWithEntries[]) {
+    await setCache(cacheKeys.mealPlanDetail(userId, id), { plan: nextPlan, days: nextDays });
+
+    const cards = await getCached<MealPlanWithDays[]>(cacheKeys.mealPlans(userId));
+    if (cards) {
+      await setCache(
+        cacheKeys.mealPlans(userId),
+        cards.map((card) => card.id === nextPlan.id
+          ? {
+              ...card,
+              ...nextPlan,
+              meal_days: nextDays.map((day) => ({
+                total_calories: day.total_calories,
+                total_weight_g: day.total_weight_g,
+              })),
+            }
+          : card),
+      );
+    }
+
+    const light = await getCached<MealPlanLight[]>(cacheKeys.mealPlansLight(userId));
+    if (light) {
+      await setCache(
+        cacheKeys.mealPlansLight(userId),
+        light.map((entry) => entry.id === nextPlan.id
+          ? {
+              id: nextPlan.id,
+              name: nextPlan.name,
+              people_count: nextPlan.people_count,
+              total_weight_g: nextPlan.total_weight_g,
+            }
+          : entry),
+      );
+    }
+  }
+
+  /** A queued delete keeps the deleted plan readable offline — drop what it leaves behind. */
+  async function cachePlanDeletion(userId: string) {
+    await removeCache(cacheKeys.mealPlanDetail(userId, id));
+
+    const cards = await getCached<MealPlanWithDays[]>(cacheKeys.mealPlans(userId));
+    if (cards) {
+      await setCache(cacheKeys.mealPlans(userId), cards.filter((card) => card.id !== id));
+    }
+
+    const light = await getCached<MealPlanLight[]>(cacheKeys.mealPlansLight(userId));
+    if (light) {
+      await setCache(cacheKeys.mealPlansLight(userId), light.filter((entry) => entry.id !== id));
+    }
+  }
+
+  /**
    * Offline counterpart of recalculateTotals: the server cannot be read while the write
    * sits in the queue, so the totals are computed from the local rows and enqueued after
    * them (FIFO keeps the replay order). Only the days whose entries changed get a day
-   * update; the plan row always follows.
+   * update; the plan row always follows. `planPatch` carries field edits the caller has
+   * applied to local state but that this closure's `plan` value still lacks.
    */
-  async function persistTotalsOffline(nextDays: MealDayWithEntries[], changedDayIds: string[]) {
+  async function persistTotalsOffline(
+    nextDays: MealDayWithEntries[],
+    changedDayIds: string[],
+    planPatch?: Partial<MealPlan>,
+  ) {
     const userId = userIdRef.current;
     if (!userId) return;
 
@@ -236,7 +307,13 @@ export default function MealPlanDetailPage() {
     }
 
     setDays(nextDays);
-    setPlan(prev => prev ? { ...prev, total_weight_g: planTotalWeight, days_count: nextDays.length } : null);
+    const nextPlan = plan
+      ? { ...plan, ...planPatch, total_weight_g: planTotalWeight, days_count: nextDays.length }
+      : null;
+    setPlan(nextPlan);
+    if (nextPlan) {
+      await cachePlanOutcome(userId, nextPlan, nextDays);
+    }
   }
 
   function toggleDay(dayNumber: number) {
@@ -435,7 +512,7 @@ export default function MealPlanDetailPage() {
     setEntryModalOpen(false);
     setSaving(false);
     const totalsOk = await recalculateTotals();
-    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     if (!totalsOk) {
       // The entry itself was saved; re-read so it is not hidden by stale local state.
@@ -480,7 +557,7 @@ export default function MealPlanDetailPage() {
     }
 
     const totalsOk = await recalculateTotals();
-    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     setConfirmDeleteEntry(null);
     if (!totalsOk) {
@@ -502,11 +579,21 @@ export default function MealPlanDetailPage() {
     try {
     if (!editForm.name.trim()) return;
 
+    // Below 1 the rescale factor becomes 0 and every entry is zeroed — refuse the value
+    // before any write instead of persisting it.
+    const peopleCount = Math.floor(editForm.people_count);
+    if (!Number.isFinite(peopleCount) || peopleCount < 1) {
+      const msg = tCommon('error_occurred');
+      setActionError(msg);
+      toast.error(msg);
+      return;
+    }
+
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
 
     const oldType = plan?.plan_type || 'standard';
-    const oldPeople = plan?.people_count || 1;
+    const oldPeople = Math.max(1, plan?.people_count || 1);
     const typeChangeWithDays = oldType !== editForm.plan_type && days.length > 0;
 
     // A type change rebuilds the plan from a template, discarding the current days and
@@ -523,18 +610,33 @@ export default function MealPlanDetailPage() {
       return;
     }
 
+    // A type change rebuilds the plan from the template registered for the selected type;
+    // template ids do not spell out plan types (`comfort` is rebuilt from `comfort_winter`),
+    // so the mapping in meal-templates.ts is the only source. Without a template the rebuild
+    // cannot run — refuse before any write instead of persisting the new type over the old days.
+    const typeTemplate = typeChangeWithDays
+      ? getMealTemplateByPlanType(editForm.plan_type as PlanTypeId)
+      : undefined;
+
+    if (typeChangeWithDays && !typeTemplate) {
+      const msg = t('template_not_found');
+      setActionError(msg);
+      toast.error(msg);
+      return;
+    }
+
     setSaving(true);
     setActionError(null);
 
     const planFields = {
       name: editForm.name.trim(),
       plan_type: editForm.plan_type,
-      people_count: editForm.people_count,
+      people_count: peopleCount,
       target_calories: editForm.target_calories,
       target_weight_g: editForm.target_weight_g,
     };
 
-    if (typeChangeWithDays) {
+    if (typeChangeWithDays && typeTemplate) {
       // Raw online writes on purpose: routing the mid-rebuild plan update through the
       // service could queue a plan_type change whose rebuild never runs.
       const supabase = createClient();
@@ -551,10 +653,9 @@ export default function MealPlanDetailPage() {
         return;
       }
 
-      const templateId = `${editForm.plan_type}_3day`;
       setSaving(false);
       setEditPlanModalOpen(false);
-      const applied = await handleApplyTemplate(templateId, editForm.people_count);
+      const applied = await handleApplyTemplate(typeTemplate.id, peopleCount);
       // The apply handler already reported the failure and reloaded the plan; adopting the
       // new name/type here would present a half-applied plan as a successful update.
       if (!applied) return;
@@ -563,7 +664,7 @@ export default function MealPlanDetailPage() {
         .from('meal_plans')
         .update({
           name: editForm.name.trim(),
-          people_count: editForm.people_count,
+          people_count: peopleCount,
         })
         .eq('id', id);
 
@@ -575,7 +676,7 @@ export default function MealPlanDetailPage() {
         return;
       }
 
-      setPlan(prev => prev ? { ...prev, name: editForm.name.trim(), people_count: editForm.people_count } : null);
+      setPlan(prev => prev ? { ...prev, name: editForm.name.trim(), people_count: peopleCount } : null);
       return;
     }
 
@@ -590,8 +691,8 @@ export default function MealPlanDetailPage() {
 
     let anyQueued = queued === true;
 
-    if (oldPeople !== editForm.people_count && days.length > 0) {
-      const pRatio = editForm.people_count / oldPeople;
+    if (oldPeople !== peopleCount && days.length > 0) {
+      const pRatio = peopleCount / oldPeople;
       const nextDays: MealDayWithEntries[] = days.map(day => ({
         ...day,
         meal_entries: (day.meal_entries || []).map(e => ({
@@ -635,7 +736,7 @@ export default function MealPlanDetailPage() {
         setSaving(false);
         setEditPlanModalOpen(false);
         setPlan(prev => prev ? { ...prev, ...planFields } : null);
-        await persistTotalsOffline(nextDays, nextDays.map(d => d.id));
+        await persistTotalsOffline(nextDays, nextDays.map(d => d.id), planFields);
         toast.info(tCommon('saved_offline'));
         return;
       }
@@ -643,6 +744,10 @@ export default function MealPlanDetailPage() {
       setSaving(false);
       setEditPlanModalOpen(false);
       setPlan(prev => prev ? { ...prev, ...planFields } : null);
+      if (plan) {
+        // The queued field update is invisible to the cache-first detail read.
+        await cachePlanOutcome(userId, { ...plan, ...planFields }, days);
+      }
       toast.info(tCommon('saved_offline'));
       return;
     }
@@ -651,7 +756,7 @@ export default function MealPlanDetailPage() {
     setEditPlanModalOpen(false);
     setPlan(prev => prev ? { ...prev, ...planFields } : null);
     const totalsOk = await recalculateTotals();
-    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     if (!totalsOk) {
       // The plan row and entries were written; re-read so the page shows the server's totals.
@@ -680,8 +785,9 @@ export default function MealPlanDetailPage() {
     }
 
     if (queued) {
-      // The service keeps all three cache keys on a queued delete — offline reads still
-      // serve the pre-delete snapshot until the queue replays.
+      // The service keeps all three cache keys on a queued delete — offline reads would
+      // resurrect the deleted plan, so the snapshots are updated here instead.
+      await cachePlanDeletion(userId);
       toast.info(tCommon('saved_offline'));
       router.push('/meals');
       return;
@@ -689,7 +795,7 @@ export default function MealPlanDetailPage() {
 
     // All three keys must be dropped before navigating: the /meals list reads cache-first
     // and would otherwise render the deleted plan from the old snapshot.
-    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     await invalidateCache(cacheKeys.mealPlansLight(userId));
     toast.success(t('deleted'));
@@ -701,6 +807,11 @@ export default function MealPlanDetailPage() {
   }
 
   async function handleAddDay() {
+    // The day number is derived from the current state, so a second insert must not start
+    // before the first one lands — both would compute the same day_number.
+    if (addingDayRef.current) return;
+    addingDayRef.current = true;
+    setAddingDay(true);
     try {
     const userId = userIdRef.current;
     if (!userId) { toast.error(tCommon('error_loading')); return; }
@@ -735,7 +846,7 @@ export default function MealPlanDetailPage() {
     }
 
     const totalsOk = await recalculateTotals();
-    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     if (!totalsOk) {
       // The day row exists; re-read so it is not hidden by stale local state.
@@ -746,6 +857,9 @@ export default function MealPlanDetailPage() {
     } catch (err) {
       toast.error(tCommon('error'));
       setError(err instanceof Error ? err.message : 'Operation failed');
+    } finally {
+      addingDayRef.current = false;
+      setAddingDay(false);
     }
   }
 
@@ -777,7 +891,7 @@ export default function MealPlanDetailPage() {
     }
 
     const totalsOk = await recalculateTotals();
-    await invalidateCache(cacheKeys.mealPlanDetail(id));
+    await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
     await invalidateCache(cacheKeys.mealPlans(userId));
     setConfirmRemoveDay(false);
     if (!totalsOk) {
@@ -808,11 +922,22 @@ export default function MealPlanDetailPage() {
     setActionError(null);
   }
 
+  // Stable identity: Modal restarts its focus effect whenever onClose changes, which
+  // would steal focus back to the close button after every keystroke.
+  const closeEditPlanModal = useCallback(() => {
+    // Escape is delivered to every open dialog, so the stacked type-change
+    // confirmation must not take this form down with it.
+    if (!confirmTypeChange) setEditPlanModalOpen(false);
+  }, [confirmTypeChange]);
+
   async function refreshPlanFromServer() {
+    const userId = userIdRef.current;
+    if (!userId) return;
+
     // Drop the cached detail first: fetchMealPlanDetail is cache-first, so a stale entry
     // would otherwise be returned as the post-failure server state.
-    await invalidateCache(cacheKeys.mealPlanDetail(id));
-    const { data, error: reloadError } = await fetchMealPlanDetail(id);
+    await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
+    const { data, error: reloadError } = await fetchMealPlanDetail(userId, id);
     if (reloadError || !data) {
       console.error('Failed to reload meal plan from server:', reloadError?.message ?? 'no plan data');
       return;
@@ -945,7 +1070,7 @@ export default function MealPlanDetailPage() {
       setConfirmTemplate(null);
       setTemplateModalOpen(false);
       const totalsOk = await recalculateTotals();
-      await invalidateCache(cacheKeys.mealPlanDetail(id));
+      await invalidateCache(cacheKeys.mealPlanDetail(userId, id));
       await invalidateCache(cacheKeys.mealPlans(userId));
       if (!totalsOk) {
         // The template is applied, but recalculateTotals failed and already logged/toasted;
@@ -1072,7 +1197,8 @@ export default function MealPlanDetailPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleAddDay}
-            className="min-h-[44px] flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+            disabled={addingDay}
+            className="min-h-[44px] flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -1125,11 +1251,7 @@ export default function MealPlanDetailPage() {
           saving={saving}
           actionError={actionError}
           locale={locale}
-          onClose={() => {
-            // Escape is delivered to every open dialog, so the stacked type-change
-            // confirmation must not take this form down with it.
-            if (!confirmTypeChange) setEditPlanModalOpen(false);
-          }}
+          onClose={closeEditPlanModal}
           onSave={() => handleUpdatePlan()}
           onFieldChange={handleEditFieldChange}
           t={t}

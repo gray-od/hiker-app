@@ -6,6 +6,7 @@ import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchListItems, fetchUserListDetail } from '@/lib/supabase/service';
 import type { GearList, ListItemWithGear } from '@/lib/types';
 import { formatWeight, formatDate } from '@/lib/format';
+import { localizeWeather } from '@/lib/gpx-weather';
 
 export default function PrintListPage() {
   const router = useRouter();
@@ -30,17 +31,18 @@ export default function PrintListPage() {
 
       setLoading(true);
 
-      const { data: listData, error: listError } = await fetchUserListDetail(id);
+      const { data: listData, error: listError } = await fetchUserListDetail(user.id, id);
 
       if (listError || !listData) {
-        setError(listError?.message || 'List not found');
+        if (listError) console.error('Failed to load list:', listError);
+        setError(t('list_not_found'));
         setLoading(false);
         return;
       }
 
       setList(listData);
 
-      const { data: itemsData, error: itemsError } = await fetchListItems(id);
+      const { data: itemsData, error: itemsError } = await fetchListItems(user.id, id);
 
       if (itemsError) {
         console.error('Failed to load list items:', itemsError.message);
@@ -57,10 +59,16 @@ export default function PrintListPage() {
   }, [id, router]);
 
   const [today, setToday] = useState('');
+  const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
 
   useEffect(() => {
-    setToday(new Date().toLocaleDateString('uk-UA'));
+    const match = document.cookie.match(/NEXT_LOCALE=(\w+)/);
+    if (match && ['uk', 'ru', 'en'].includes(match[1])) setLocale(match[1] as 'uk' | 'ru' | 'en');
   }, []);
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US'));
+  }, [locale]);
 
   const head = (
     <Head>
@@ -165,14 +173,14 @@ export default function PrintListPage() {
           </span>
           {list.trip_date && (
             <span className="text-sm text-zinc-500">
-              {formatDate(list.trip_date)}
+              {formatDate(list.trip_date, locale)}
             </span>
           )}
         </div>
 
         {list.gpx_data?.weather && (
           <div className="text-sm text-zinc-600 mb-6">
-            {t('gpx_weather')}: {list.gpx_data.weather}
+            {t('gpx_weather')}: {localizeWeather(list.gpx_data.weather, t)}
           </div>
         )}
 

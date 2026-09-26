@@ -146,9 +146,9 @@ export default function FoodPage() {
         toast.info(tCommon('saved_offline'));
       } else {
         toast.success(tFood('created'));
-        if (data) {
-          setItems(prev => [data, ...prev]);
-        }
+      }
+      if (data) {
+        setItems(prev => [data, ...prev]);
       }
     }
 
@@ -301,7 +301,12 @@ export default function FoodPage() {
                       </span>
                       <span className="text-zinc-300 dark:text-zinc-600">·</span>
                       <span className="text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
-                        {formatKbju(item.protein_per100g, item.fat_per100g, item.carbs_per100g, item.calories_per100g)}
+                        {formatKbju(item.protein_per100g, item.fat_per100g, item.carbs_per100g, item.calories_per100g, {
+                          kcal: tFood('kcal'),
+                          protein: tFood('protein_short'),
+                          fat: tFood('fat_short'),
+                          carbs: tFood('carbs_short'),
+                        })}
                       </span>
                     </div>
                     <div className="mt-1">

@@ -53,9 +53,14 @@ export default function ChatWidget() {
   const [todayUsage, setTodayUsage] = useState<number | null>(null);
   const [byokActive, setByokActive] = useState(false);
 
-  const { messages, input, handleInputChange, handleSubmit, append, setInput, isLoading, error } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, append, setInput, isLoading, error, stop } = useChat({
     api: '/api/chat',
   });
+
+  // Closing only hides the panel, so an in-flight generation would otherwise keep
+  // running chat tools after the user believes the chat is over. `stop` is stable
+  // (useCallback with no deps), so this cleanup runs on unmount only.
+  useEffect(() => () => stop(), [stop]);
 
   useEffect(() => {
     const el = messagesContainerRef.current;
@@ -198,7 +203,7 @@ export default function ChatWidget() {
                 {expanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
               <button
-                onClick={() => setOpen(false)}
+                onClick={() => { stop(); setOpen(false); }}
                 aria-label={t('close')}
                 className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >

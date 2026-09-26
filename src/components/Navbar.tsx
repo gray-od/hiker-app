@@ -15,6 +15,7 @@ import {
 import { useState, useCallback } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { toast } from '@/lib/toast';
+import { clearUserCache } from '@/lib/cache';
 
 const locales = [
   { code: 'uk', label: 'UA' },
@@ -42,6 +43,7 @@ const bottomNavItems = [
 export default function Navbar() {
   const tnav = useTranslations('nav');
   const tcommon = useTranslations('common');
+  const tSettings = useTranslations('settings');
   const [langOpen, setLangOpen] = useState(false);
   const router = useRouter();
   const pathname = router.pathname;
@@ -62,15 +64,21 @@ export default function Navbar() {
   const handleLogout = async () => {
     let supabase: SupabaseClient;
     let clearStoredSession: (client: SupabaseClient) => Promise<boolean>;
+    let resolveUser: () => Promise<{ id: string } | null>;
     try {
       const client = await import('@/lib/supabase/client');
       supabase = client.createClient();
       clearStoredSession = client.clearStoredSession;
+      resolveUser = (await import('@/lib/supabase/resolveUser')).resolveUser;
     } catch {
       // Client chunk failed to load (offline); nothing was cleared.
       toast.error(tcommon('logout_failed'));
       return;
     }
+
+    // The cache is keyed by user id and the session is the only source of that id, so it
+    // is read before signOut removes it.
+    const user = await resolveUser();
 
     let sessionCleared = false;
     try {
@@ -88,6 +96,13 @@ export default function Navbar() {
     if (!sessionCleared) {
       toast.error(tcommon('logout_failed'));
       return;
+    }
+
+    // The signed-out account's cached pages must not stay readable on a shared browser.
+    // Queued offline mutations are not affected — they belong to the user and replay on
+    // their next sign-in.
+    if (user) {
+      await clearUserCache(user.id);
     }
 
     router.push('/login');
@@ -136,7 +151,7 @@ export default function Navbar() {
               className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             >
               <Globe className="w-5 h-5 shrink-0" />
-              <span>Language</span>
+              <span>{tSettings('language')}</span>
             </button>
             {langOpen && (
               <>

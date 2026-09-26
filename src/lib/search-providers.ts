@@ -1,3 +1,5 @@
+import { FetchJsonError, fetchJson, fetchWithTimeout, type FetchTimeoutInit } from '@/lib/fetchJson';
+
 const SEARCH_PROVIDERS = ['exa', 'brave', 'tavily', 'serper', 'firecrawl', 'perplexity', 'google_cse'] as const;
 type SearchProvider = (typeof SEARCH_PROVIDERS)[number];
 
@@ -36,9 +38,24 @@ export class SearchError extends Error {
   }
 }
 
-function ensureOk(res: Response, keyStatuses: number[] = [401, 403]): void {
-  if (res.ok) return;
-  throw new SearchError(keyStatuses.includes(res.status) ? 'key' : 'unavailable');
+const SEARCH_TIMEOUT_MS = 10000;
+const SEARCH_KEY_TIMEOUT_MS = 8000;
+
+// Таймаут и мёртвая сеть дают тот же 'unavailable', что раньше давал голый fetch; HTTP-статус
+// сохраняет деление key/unavailable, на которое опираются тексты ошибок в чате (SearchError).
+async function searchRequest<T>(
+  url: string,
+  init: FetchTimeoutInit = {},
+  keyStatuses: number[] = [401, 403],
+): Promise<T> {
+  try {
+    return await fetchJson<T>(url, { ...init, timeoutMs: SEARCH_TIMEOUT_MS });
+  } catch (error) {
+    if (error instanceof FetchJsonError && error.code === 'HTTP_ERROR') {
+      throw new SearchError(keyStatuses.includes(error.status ?? 0) ? 'key' : 'unavailable');
+    }
+    throw new SearchError('unavailable');
+  }
 }
 
 function formatResults(results: SearchResult[]): string {
@@ -49,15 +66,15 @@ function formatResults(results: SearchResult[]): string {
 }
 
 async function braveSearch(query: string, apiKey: string): Promise<string> {
-  const res = await fetch(
+  const data = await searchRequest<{
+    web?: { results?: Array<{ title?: string; description?: string; url?: string }> };
+  }>(
     `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`,
     { headers: { 'X-Subscription-Token': apiKey } },
   );
-  ensureOk(res);
-  const data = await res.json();
   const raw = data.web?.results || [];
   return formatResults(
-    raw.map((r: { title?: string; description?: string; url?: string }) => ({
+    raw.map((r) => ({
       title: r.title || r.url || '—',
       snippet: r.description || '',
       url: r.url || '',
@@ -66,16 +83,16 @@ async function braveSearch(query: string, apiKey: string): Promise<string> {
 }
 
 async function tavilySearch(query: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.tavily.com/search', {
+  const data = await searchRequest<{
+    results?: Array<{ title?: string; content?: string; url?: string }>;
+  }>('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ api_key: apiKey, query, max_results: 5 }),
   });
-  ensureOk(res);
-  const data = await res.json();
   const raw = data.results || [];
   return formatResults(
-    raw.map((r: { title?: string; content?: string; url?: string }) => ({
+    raw.map((r) => ({
       title: r.title || r.url || '—',
       snippet: r.content || '',
       url: r.url || '',
@@ -84,16 +101,16 @@ async function tavilySearch(query: string, apiKey: string): Promise<string> {
 }
 
 async function serperSearch(query: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://google.serper.dev/search', {
+  const data = await searchRequest<{
+    organic?: Array<{ title?: string; snippet?: string; link?: string }>;
+  }>('https://google.serper.dev/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
     body: JSON.stringify({ q: query, num: 5 }),
   });
-  ensureOk(res);
-  const data = await res.json();
   const raw = data.organic || [];
   return formatResults(
-    raw.map((r: { title?: string; snippet?: string; link?: string }) => ({
+    raw.map((r) => ({
       title: r.title || r.link || '—',
       snippet: r.snippet || '',
       url: r.link || '',
@@ -102,16 +119,16 @@ async function serperSearch(query: string, apiKey: string): Promise<string> {
 }
 
 async function exaSearch(query: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.exa.ai/search', {
+  const data = await searchRequest<{
+    results?: Array<{ title?: string; highlights?: string[]; text?: string; url?: string }>;
+  }>('https://api.exa.ai/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
     body: JSON.stringify({ query, type: 'auto', numResults: 5, contents: { highlights: true } }),
   });
-  ensureOk(res);
-  const data = await res.json();
   const raw = data.results || [];
   return formatResults(
-    raw.map((r: { title?: string; highlights?: string[]; text?: string; url?: string }) => ({
+    raw.map((r) => ({
       title: r.title || r.url || '—',
       snippet: (r.highlights && r.highlights.length > 0 ? r.highlights.join(' … ') : r.text) || '',
       url: r.url || '',
@@ -120,16 +137,16 @@ async function exaSearch(query: string, apiKey: string): Promise<string> {
 }
 
 async function firecrawlSearch(query: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.firecrawl.dev/v1/search', {
+  const data = await searchRequest<{
+    data?: Array<{ title?: string; description?: string; url?: string }>;
+  }>('https://api.firecrawl.dev/v1/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ query, limit: 5 }),
   });
-  ensureOk(res);
-  const data = await res.json();
   const raw = data.data || [];
   return formatResults(
-    raw.map((r: { title?: string; description?: string; url?: string }) => ({
+    raw.map((r) => ({
       title: r.title || r.url || '—',
       snippet: r.description || '',
       url: r.url || '',
@@ -138,7 +155,9 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<string> {
 }
 
 async function perplexitySearch(query: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.perplexity.ai/chat/completions', {
+  const data = await searchRequest<{
+    choices?: Array<{ message?: { content?: string } }>;
+  }>('https://api.perplexity.ai/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
@@ -146,21 +165,21 @@ async function perplexitySearch(query: string, apiKey: string): Promise<string> 
       messages: [{ role: 'user', content: query }],
     }),
   });
-  ensureOk(res);
-  const data = await res.json();
   return data.choices?.[0]?.message?.content || 'No search results found';
 }
 
 async function googleCseSearch(query: string, apiKey: string, cx: string): Promise<string> {
-  const res = await fetch(
+  const data = await searchRequest<{
+    items?: Array<{ title?: string; snippet?: string; link?: string }>;
+  }>(
     `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&num=5`,
+    undefined,
+    // Google reports both an invalid key and an invalid cx as HTTP 400.
+    [400, 403],
   );
-  // Google reports both an invalid key and an invalid cx as HTTP 400.
-  ensureOk(res, [400, 403]);
-  const data = await res.json();
   const raw = data.items || [];
   return formatResults(
-    raw.map((r: { title?: string; snippet?: string; link?: string }) => ({
+    raw.map((r) => ({
       title: r.title || r.link || '—',
       snippet: r.snippet || '',
       url: r.link || '',
@@ -201,9 +220,7 @@ export async function runUserSearch(
 export async function validateSearchKey(search: unknown): Promise<{ ok: boolean; error?: string }> {
   if (!isValidSearch(search)) return { ok: false, error: 'invalid config' };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-
+  // Проверяется только статус, тело не читается: 2xx и раньше означал «ключ принят».
   const p = search.provider as SearchProvider;
 
   try {
@@ -211,71 +228,66 @@ export async function validateSearchKey(search: unknown): Promise<{ ok: boolean;
 
     switch (p) {
       case 'exa':
-        response = await fetch('https://api.exa.ai/search', {
+        response = await fetchWithTimeout('https://api.exa.ai/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': search.apiKey },
           body: JSON.stringify({ query: 'test', numResults: 1 }),
-          signal: controller.signal,
+          timeoutMs: SEARCH_KEY_TIMEOUT_MS,
         });
         break;
       case 'brave':
-        response = await fetch(
+        response = await fetchWithTimeout(
           'https://api.search.brave.com/res/v1/web/search?q=test&count=1',
-          { headers: { 'X-Subscription-Token': search.apiKey }, signal: controller.signal },
+          { headers: { 'X-Subscription-Token': search.apiKey }, timeoutMs: SEARCH_KEY_TIMEOUT_MS },
         );
         break;
       case 'tavily':
-        response = await fetch('https://api.tavily.com/search', {
+        response = await fetchWithTimeout('https://api.tavily.com/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ api_key: search.apiKey, query: 'test', max_results: 1 }),
-          signal: controller.signal,
+          timeoutMs: SEARCH_KEY_TIMEOUT_MS,
         });
         break;
       case 'serper':
-        response = await fetch('https://google.serper.dev/search', {
+        response = await fetchWithTimeout('https://google.serper.dev/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-API-KEY': search.apiKey },
           body: JSON.stringify({ q: 'test', num: 1 }),
-          signal: controller.signal,
+          timeoutMs: SEARCH_KEY_TIMEOUT_MS,
         });
         break;
       case 'firecrawl':
-        response = await fetch('https://api.firecrawl.dev/v1/search', {
+        response = await fetchWithTimeout('https://api.firecrawl.dev/v1/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${search.apiKey}` },
           body: JSON.stringify({ query: 'test', limit: 1 }),
-          signal: controller.signal,
+          timeoutMs: SEARCH_KEY_TIMEOUT_MS,
         });
         break;
       case 'perplexity':
-        response = await fetch('https://api.perplexity.ai/chat/completions', {
+        response = await fetchWithTimeout('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${search.apiKey}` },
           body: JSON.stringify({ model: 'sonar', messages: [{ role: 'user', content: 'test' }], max_tokens: 1 }),
-          signal: controller.signal,
+          timeoutMs: SEARCH_KEY_TIMEOUT_MS,
         });
         break;
       case 'google_cse':
-        if (!search.cx) {
-          clearTimeout(timeoutId);
-          return { ok: false, error: 'missing cx' };
-        }
-        response = await fetch(
+        if (!search.cx) return { ok: false, error: 'missing cx' };
+        response = await fetchWithTimeout(
           `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(search.apiKey)}&cx=${encodeURIComponent(search.cx)}&q=test&num=1`,
-          { signal: controller.signal },
+          { timeoutMs: SEARCH_KEY_TIMEOUT_MS },
         );
         break;
       default:
-        clearTimeout(timeoutId);
         return { ok: false, error: 'invalid config' };
     }
 
-    clearTimeout(timeoutId);
     if (response.ok) return { ok: true };
     return { ok: false, error: `HTTP ${response.status}` };
   } catch {
-    clearTimeout(timeoutId);
+    // Таймаут и сетевой сбой — прежний результат 'network'.
     return { ok: false, error: 'network' };
   }
 }

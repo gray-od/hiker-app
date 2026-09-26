@@ -49,7 +49,9 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
     if (!mounted) return;
     try {
       localStorage.setItem('trip_weight_selection', JSON.stringify({ listId: selectedListId, weight: myWeight }));
-    } catch {}
+    } catch {
+      // localStorage is unavailable (private mode / full quota) — the selection just won't persist
+    }
   }, [selectedListId, myWeight, mounted]);
 
   const selectedList = lists.find(l => l.id === selectedListId);

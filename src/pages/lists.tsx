@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import Head from 'next/head';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { formatDate, formatWeight } from '@/lib/format';
@@ -30,6 +30,7 @@ export default function ListsPage() {
   const t = useTranslations('lists');
   const tCommon = useTranslations('common');
   const tGear = useTranslations('gear');
+  const locale = useLocale();
 
   const [lists, setLists] = useState<GearListWithTotalWeight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,7 @@ export default function ListsPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealPlans, setMealPlans] = useState<Array<{id:string; name:string; people_count:number; total_weight_g:number}>>([]);
+  const [mealPlansError, setMealPlansError] = useState(false);
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -66,10 +68,7 @@ export default function ListsPage() {
         setLoading(false);
       });
 
-      fetchUserMealPlansLight(user.id).then(({ data }) => {
-        if (cancelled) return;
-        if (data) setMealPlans(data);
-      });
+      loadMealPlans(user.id, () => cancelled);
     }).catch((err) => {
       if (cancelled) return;
       console.error(err);
@@ -77,6 +76,19 @@ export default function ListsPage() {
     });
     return () => { cancelled = true; };
   }, [router]);
+
+  function loadMealPlans(userId: string, isCancelled?: () => boolean) {
+    fetchUserMealPlansLight(userId).then(({ data, error }) => {
+      if (isCancelled?.()) return;
+      if (error) {
+        console.error('Failed to load meal plans:', error);
+        setMealPlansError(true);
+        return;
+      }
+      setMealPlansError(false);
+      if (data) setMealPlans(data);
+    });
+  }
 
   function getItemsCount(list: GearListWithTotalWeight): number {
     return list.list_items?.length ?? 0;
@@ -118,9 +130,9 @@ export default function ListsPage() {
       toast.info(tCommon('saved_offline'));
     } else {
       toast.success(t('created'));
-      if (data) {
-        setLists((prev) => [data, ...prev]);
-      }
+    }
+    if (data) {
+      setLists((prev) => [data, ...prev]);
     }
 
     setSaving(false);
@@ -172,6 +184,9 @@ export default function ListsPage() {
   }
 
   function openCreateModal() {
+    const userId = userIdRef.current;
+    // Retry a failed meal-plan load, so a transient error does not leave the select empty forever.
+    if (mealPlansError && userId) loadMealPlans(userId);
     setFormData(EMPTY_FORM);
     setModalOpen(true);
   }
@@ -284,7 +299,7 @@ export default function ListsPage() {
                   </span>
                   {list.trip_date && (
                     <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                      {formatDate(list.trip_date)}
+                      {formatDate(list.trip_date, locale)}
                     </span>
                   )}
                 </div>
@@ -378,6 +393,9 @@ export default function ListsPage() {
                       <option key={mp.id} value={mp.id}>{mp.name}</option>
                     ))}
                   </select>
+                  {mealPlansError && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">{tCommon('error_loading')}</p>
+                  )}
                 </div>
               </div>
 

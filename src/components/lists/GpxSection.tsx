@@ -1,8 +1,10 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import type { GearList } from '@/lib/types';
 import { getSeasonBadgeClass } from '@/lib/badges';
 import { formatDate } from '@/lib/format';
+import { localizeWeather } from '@/lib/gpx-weather';
 
 interface GpxSectionProps {
   list: GearList | null;
@@ -29,6 +31,7 @@ export default function GpxSection({
   onRemove,
   fileInputRef,
 }: GpxSectionProps) {
+  const locale = useLocale();
   if (!list) return null;
   return (
     <>
@@ -47,7 +50,7 @@ export default function GpxSection({
           </span>
           {list.trip_date && (
             <span className="text-sm text-zinc-500 dark:text-zinc-400">
-              {formatDate(list.trip_date)}
+              {formatDate(list.trip_date, locale)}
             </span>
           )}
           {list.gpx_data && (
@@ -94,7 +97,7 @@ export default function GpxSection({
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
           </svg>
-          <span>{t('gpx_weather')}: {list.gpx_data.weather}</span>
+          <span>{t('gpx_weather')}: {localizeWeather(list.gpx_data.weather, t)}</span>
         </div>
       )}
       {list?.gpx_data && list.trip_date && !list.gpx_data.weather && (

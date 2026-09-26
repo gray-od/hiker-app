@@ -16,7 +16,7 @@ export async function parseGpxFile(file: File): Promise<GpxResult> {
   parser.parse(text);
 
   if (parser.tracks.length === 0) {
-    throw new Error('No tracks found in GPX file');
+    throw Object.assign(new Error('GPX_NO_TRACKS'), { code: 'GPX_NO_TRACKS' });
   }
 
   const track = parser.tracks[0];

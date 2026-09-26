@@ -52,6 +52,10 @@ export default function App({ Component, pageProps }: AppProps) {
     }
   }, [router.asPath]);
 
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   return (
     <div
       className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 antialiased font-sans`}

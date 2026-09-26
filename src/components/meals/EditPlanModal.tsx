@@ -36,6 +36,15 @@ export default function EditPlanModal({
   t,
   tCommon,
 }: EditPlanModalProps) {
+  // An emptied numeric field keeps its previous value instead of silently becoming 0:
+  // a zero people count zeroes the whole plan (and a linked list shows Infinity per person).
+  function handleNumberChange(field: string, raw: string) {
+    if (raw === '') return;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return;
+    onFieldChange(field, parsed);
+  }
+
   return (
     <Modal open={open} onClose={onClose} title={t('edit_plan')}>
       {actionError && (
@@ -84,7 +93,7 @@ export default function EditPlanModal({
           <input
             type="number"
             value={editForm.people_count}
-            onChange={(e) => onFieldChange('people_count', Number(e.target.value))}
+            onChange={(e) => handleNumberChange('people_count', e.target.value)}
             min="1"
             step="1"
             className={inputClass}
@@ -98,7 +107,7 @@ export default function EditPlanModal({
           <input
             type="number"
             value={editForm.target_calories}
-            onChange={(e) => onFieldChange('target_calories', Number(e.target.value))}
+            onChange={(e) => handleNumberChange('target_calories', e.target.value)}
             min="0"
             step="1"
             className={inputClass}
@@ -112,7 +121,7 @@ export default function EditPlanModal({
           <input
             type="number"
             value={editForm.target_weight_g}
-            onChange={(e) => onFieldChange('target_weight_g', Number(e.target.value))}
+            onChange={(e) => handleNumberChange('target_weight_g', e.target.value)}
             min="0"
             step="1"
             className={inputClass}

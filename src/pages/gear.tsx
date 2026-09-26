@@ -143,9 +143,9 @@ export default function GearPage() {
         toast.info(tCommon('saved_offline'));
       } else {
         toast.success(tGear('created'));
-        if (data) {
-          setItems(prev => [data, ...prev]);
-        }
+      }
+      if (data) {
+        setItems(prev => [data, ...prev]);
       }
     }
 
@@ -449,7 +449,7 @@ export default function GearPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    {tGear('weight')}, г
+                    {tGear('weight')}, {tCommon('weight_g')}
                   </label>
                   <input
                     type="number"

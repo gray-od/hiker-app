@@ -8,9 +8,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const { email } = req.body;
-    if (!email) {
-      res.status(400).json({ error: 'Email is required' });
+    const { email } = req.body ?? {};
+    if (typeof email !== 'string' || email.length === 0 || email.length > 254) {
+      res.status(400).json({ error: 'invalid_request' });
       return;
     }
 

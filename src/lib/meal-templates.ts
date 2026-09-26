@@ -277,3 +277,12 @@ export const MEAL_TEMPLATES: MealTemplate[] = [
 export function getMealTemplate(id: string): MealTemplate | undefined {
   return MEAL_TEMPLATES.find((t) => t.id === id);
 }
+
+/**
+ * The single source of the plan-type → template mapping. Template ids cannot be composed
+ * from plan types (`comfort` is rebuilt from `comfort_winter`), so callers resolving a
+ * type change must look the template up here instead of building an id themselves.
+ */
+export function getMealTemplateByPlanType(planType: PlanTypeId): MealTemplate | undefined {
+  return MEAL_TEMPLATES.find((t) => t.planType === planType);
+}

@@ -13,6 +13,18 @@ const securityQuestionKeys: Record<string, string> = {
   favorite_color: 'question_favorite_color',
 };
 
+// Both recovery routes answer with machine codes; render them through i18n instead of
+// showing the token itself (invalid_request would otherwise reach the user verbatim).
+const recoveryErrorKeys: Record<string, string> = {
+  invalid_request: 'recovery_invalid_request',
+  wrong_answer: 'recovery_wrong_answer',
+  too_many_attempts: 'recovery_too_many_attempts',
+};
+
+function recoveryErrorMessageKey(code: unknown): string | undefined {
+  return typeof code === 'string' ? recoveryErrorKeys[code] : undefined;
+}
+
 export default function ForgotPasswordPage() {
   const t = useTranslations('common');
   const locale = useLocale();
@@ -46,6 +58,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setRecoveryUnavailable(false);
 
     try {
       const res = await fetch('/api/auth/lookup', {
@@ -56,12 +69,14 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || t('recovery_not_available'));
+        const errorKey = recoveryErrorMessageKey(data.error);
+        setError(errorKey ? t(errorKey as any) : t('recovery_not_available'));
         setRecoveryUnavailable(true);
         setLoading(false);
         return;
       }
 
+      setRecoveryUnavailable(false);
       setQuestion(data.question);
       setStep(2);
     } catch {
@@ -84,13 +99,8 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        const msg =
-          data.error === 'wrong_answer'
-            ? t('recovery_wrong_answer')
-            : data.error === 'too_many_attempts'
-              ? t('recovery_too_many_attempts')
-              : data.error || t('recovery_wrong_answer');
-        setError(msg);
+        const errorKey = recoveryErrorMessageKey(data.error);
+        setError(errorKey ? t(errorKey as any) : t('recovery_wrong_answer'));
         setLoading(false);
         return;
       }

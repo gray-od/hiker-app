@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations, useLocale } from 'next-intl';
 import Head from 'next/head';
@@ -16,6 +16,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 export default function Dashboard() {
   const router = useRouter();
   const t = useTranslations('dashboard');
+  const tCommon = useTranslations('common');
   const tGear = useTranslations('gear');
   const tMeals = useTranslations('meals');
   const locale = useLocale();
@@ -25,6 +26,24 @@ export default function Dashboard() {
   const [lists, setLists] = useState<GearListWithTotalWeight[]>([]);
   const [plans, setPlans] = useState<(MealPlan & { meal_days?: { total_weight_g: number }[] })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [listsError, setListsError] = useState(false);
+  const [plansError, setPlansError] = useState(false);
+
+  const loadDashboard = useCallback(async (userId: string) => {
+    const results = await Promise.allSettled([
+      fetchUserProfile(userId),
+      fetchUserLists(userId),
+      fetchUserMealPlans(userId),
+    ]);
+    const [profileRes, listsRes, plansRes] = results.map(r =>
+      r.status === 'fulfilled' ? r.value : { data: null, error: r.reason }
+    );
+    if (profileRes.data) setProfile(profileRes.data as Profile);
+    setListsError(!listsRes.data);
+    if (listsRes.data) setLists(listsRes.data as GearListWithTotalWeight[]);
+    setPlansError(!plansRes.data);
+    if (plansRes.data) setPlans(plansRes.data as (MealPlan & { meal_days?: { total_weight_g: number }[] })[]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,19 +56,8 @@ export default function Dashboard() {
       if (cancelled) return;
       setUser(user);
 
-      Promise.allSettled([
-        fetchUserProfile(user.id),
-        fetchUserLists(user.id),
-        fetchUserMealPlans(user.id),
-      ]).then((results) => {
-        if (cancelled) return;
-        const [profileRes, listsRes, plansRes] = results.map(r =>
-          r.status === 'fulfilled' ? r.value : { data: null, error: r.reason }
-        );
-        if (profileRes.data) setProfile(profileRes.data as Profile);
-        if (listsRes.data) setLists(listsRes.data as GearListWithTotalWeight[]);
-        if (plansRes.data) setPlans(plansRes.data as (MealPlan & { meal_days?: { total_weight_g: number }[] })[]);
-        setLoading(false);
+      loadDashboard(user.id).then(() => {
+        if (!cancelled) setLoading(false);
       });
     }).catch((err) => {
       console.error('Dashboard init failed:', err);
@@ -59,7 +67,7 @@ export default function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadDashboard, router]);
 
   const head = (
     <Head>
@@ -197,7 +205,19 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">
             {t('recent_lists')}
           </h2>
-          {recentLists && recentLists.length > 0 ? (
+          {listsError ? (
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-8 text-center">
+              <p className="text-sm text-red-700 dark:text-red-400">
+                {t('load_failed')}
+              </p>
+              <button
+                onClick={() => { if (user) loadDashboard(user.id); }}
+                className="mt-3 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+              >
+                {tCommon('retry')}
+              </button>
+            </div>
+          ) : recentLists && recentLists.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {recentLists.map((list: GearList) => (
                 <Link
@@ -216,7 +236,7 @@ export default function Dashboard() {
                     {list.name}
                   </h3>
                   <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                    {formatDate(list.created_at)}
+                    {formatDate(list.created_at, locale)}
                   </p>
                 </Link>
               ))}
@@ -248,7 +268,19 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">
             {t('recent_meals')}
           </h2>
-          {recentMeals && recentMeals.length > 0 ? (
+          {plansError ? (
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-8 text-center">
+              <p className="text-sm text-red-700 dark:text-red-400">
+                {t('load_failed')}
+              </p>
+              <button
+                onClick={() => { if (user) loadDashboard(user.id); }}
+                className="mt-3 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+              >
+                {tCommon('retry')}
+              </button>
+            </div>
+          ) : recentMeals && recentMeals.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {recentMeals.map((plan: MealPlan) => {
                 const pt = getPlanType((plan.plan_type as PlanTypeId) ?? 'standard');
@@ -270,7 +302,7 @@ export default function Dashboard() {
                       {plan.name}
                     </h3>
                     <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                      {plan.days_count} {tMeals('days')} · {formatDate(plan.created_at)}
+                      {plan.days_count} {tMeals('days')} · {formatDate(plan.created_at, locale)}
                     </p>
                   </Link>
                 );

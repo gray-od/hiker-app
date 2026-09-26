@@ -9,13 +9,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const { email, answer, newPassword } = req.body;
-    if (!email || !answer || !newPassword) {
-      res.status(400).json({ error: 'Email, answer, and new password are required' });
-      return;
-    }
-    if (newPassword.length < 6) {
-      res.status(400).json({ error: 'New password must be at least 6 characters' });
+    const { email, answer, newPassword } = req.body ?? {};
+    if (
+      typeof email !== 'string' || email.length === 0 || email.length > 254 ||
+      typeof answer !== 'string' || answer.length === 0 || answer.length > 200 ||
+      typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 72
+    ) {
+      res.status(400).json({ error: 'invalid_request' });
       return;
     }
 

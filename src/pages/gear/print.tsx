@@ -46,7 +46,16 @@ export default function PrintGearPage() {
   }, [router]);
 
   const [today, setToday] = useState('');
-  useEffect(() => { setToday(new Date().toLocaleDateString('uk-UA')); }, []);
+  const [locale, setLocale] = useState<'uk' | 'ru' | 'en'>('uk');
+
+  useEffect(() => {
+    const match = document.cookie.match(/NEXT_LOCALE=(\w+)/);
+    if (match && ['uk', 'ru', 'en'].includes(match[1])) setLocale(match[1] as 'uk' | 'ru' | 'en');
+  }, []);
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US'));
+  }, [locale]);
 
   const head = (
     <Head>
@@ -102,7 +111,9 @@ export default function PrintGearPage() {
           </h1>
         </div>
 
-        {items.length === 0 ? (
+        {error ? (
+          <p className="text-sm text-red-600 py-8">{tGear('print_load_failed')}</p>
+        ) : items.length === 0 ? (
           <p className="text-sm text-zinc-400 py-8">{tGear('empty')}</p>
         ) : (
           <>

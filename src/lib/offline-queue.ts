@@ -3,16 +3,24 @@ import { openDB, type IDBPDatabase } from 'idb';
 const DB_NAME = 'prohikes-queue';
 const DB_VERSION = 1;
 
-interface QueuedMutation {
+/**
+ * Cache invalidation context for the replay executor. Deliberately outside `payload`:
+ * the replay inserts payload as-is, and read-only columns would make PostgREST reject it.
+ * `listId` lets a replayed list-item write drop that one list's detail keys.
+ */
+export interface MutationMeta {
+  planId?: string;
+  listId?: string;
+}
+
+export interface QueuedMutation {
   id?: number;
   table: string;
   action: 'insert' | 'update' | 'delete';
   payload: Record<string, unknown>;
   userId: string;
   timestamp: number;
-  // Cache invalidation context for the replay executor. Deliberately outside `payload`:
-  // the replay inserts payload as-is, and read-only columns would make PostgREST reject it.
-  meta?: { planId?: string };
+  meta?: MutationMeta;
 }
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -36,7 +44,7 @@ export async function enqueue(
   action: 'insert' | 'update' | 'delete',
   payload: Record<string, unknown>,
   userId: string,
-  meta?: { planId?: string },
+  meta?: MutationMeta,
 ): Promise<boolean> {
   try {
     const db = await getDB();

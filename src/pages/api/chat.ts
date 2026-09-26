@@ -5,6 +5,7 @@ import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { buildSystemPrompt } from '@/lib/chat-system-prompt';
 import { FOOD_CATALOG, calculateNutrition } from '@/lib/food-catalog';
+import { fetchJson } from '@/lib/fetchJson';
 import { getMealTemplate } from '@/lib/meal-templates';
 import { resolveUserModel, validateAiKey } from '@/lib/ai-providers';
 import { isValidSearch, runUserSearch, SearchError } from '@/lib/search-providers';
@@ -25,9 +26,90 @@ function sanitizeLog(msg: string, secrets: string[] = []): string {
   );
 }
 
+// Limits sit above the client's own caps (100 KB attachments, unbounded page-session
+// history) but well below the 1 MB route body limit, so real chats never trip them.
+const MAX_CHAT_MESSAGES = 200;
+const MAX_CHAT_MESSAGE_CHARS = 150_000;
+const MAX_CHAT_TOTAL_CHARS = 600_000;
+
+// Strict client contract: role + string content only. Unknown fields are stripped, so a
+// forged "system" role (or provider-specific extras) can never reach the model or join
+// the server-side system prompt.
+const chatRequestBodySchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().max(MAX_CHAT_MESSAGE_CHARS),
+      }),
+    )
+    .min(1)
+    .max(MAX_CHAT_MESSAGES)
+    .refine(
+      (messages) =>
+        messages.reduce((sum, message) => sum + message.content.length, 0) <= MAX_CHAT_TOTAL_CHARS,
+      { message: 'total message length exceeded' },
+    ),
+  // BYOK configs mirror ai-providers.ts / search-providers.ts; null = use the free key.
+  ai: z
+    .object({
+      provider: z.string(),
+      apiKey: z.string(),
+      model: z.string().optional(),
+    })
+    .nullish(),
+  search: z
+    .object({
+      provider: z.string(),
+      apiKey: z.string(),
+      cx: z.string().optional(),
+    })
+    .nullish(),
+});
+
+type CreationKind = 'meal_plan' | 'list_item' | 'gear_list' | 'gear_item';
+
+const CREATION_TABLE: Record<CreationKind, string> = {
+  meal_plan: 'meal_plans',
+  list_item: 'list_items',
+  gear_list: 'gear_lists',
+  gear_item: 'gear_items',
+};
+
+// Children before the rows they point at, so no foreign key can block a batch rollback.
+const ROLLBACK_ORDER: CreationKind[] = ['meal_plan', 'list_item', 'gear_list', 'gear_item'];
+
 const google = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   ? createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
   : null;
+
+interface GeocodeResponse {
+  results?: Array<{
+    latitude: number;
+    longitude: number;
+    name: string;
+    country?: string;
+    elevation?: number;
+  }>;
+}
+
+interface WeatherResponse {
+  current: {
+    temperature_2m: number;
+    apparent_temperature: number;
+    weather_code: number;
+    wind_speed_10m: number;
+    precipitation: number;
+  };
+  daily: {
+    time: string[];
+    temperature_2m_min: number[];
+    temperature_2m_max: number[];
+    precipitation_sum: number[];
+    wind_speed_10m_max: number[];
+    weather_code: number[];
+  };
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -36,7 +118,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const secrets: string[] = [];
   try {
-    const { messages, ai, search } = req.body;
+    const parsedBody = chatRequestBodySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: 'invalid_request' });
+    }
+
+    const { messages, ai, search } = parsedBody.data;
     if (ai?.apiKey) secrets.push(ai.apiKey);
     if (search?.apiKey) secrets.push(search.apiKey);
     if (search?.cx) secrets.push(search.cx);
@@ -188,6 +275,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dataLocale =
       locale === 'uk' || locale === 'ru' ? (locale as 'uk' | 'ru') : ('en' as const);
 
+    const createdByRequest: { kind: CreationKind; id: string }[] = [];
+
+    // A "full trip" request creates gear, a list, its items and a meal plan in one go.
+    // Journaling every insert lets a failed step undo the whole batch: the model then
+    // sees an honest failure instead of a half-built trip, and a retry cannot duplicate.
+    async function rollbackRequestCreations(): Promise<{
+      rolledBack?: number;
+      rollbackFailed?: { table: string; id: string; error: string }[];
+    }> {
+      let rolledBack = 0;
+      const rollbackFailed: { table: string; id: string; error: string }[] = [];
+
+      for (const kind of ROLLBACK_ORDER) {
+        const ids = createdByRequest
+          .filter((entry) => entry.kind === kind)
+          .map((entry) => entry.id);
+        if (ids.length === 0) continue;
+
+        const { data: deleted, error } = await supabase
+          .from(CREATION_TABLE[kind])
+          .delete()
+          .in('id', ids)
+          .select('id');
+
+        if (error) {
+          console.error(`[chat] rollback of ${CREATION_TABLE[kind]} failed:`, error.message);
+          rollbackFailed.push(
+            ...ids.map((id) => ({ table: CREATION_TABLE[kind], id, error: error.message })),
+          );
+        } else {
+          rolledBack += deleted?.length ?? 0;
+        }
+      }
+
+      return {
+        rolledBack: rolledBack > 0 ? rolledBack : undefined,
+        rollbackFailed: rollbackFailed.length > 0 ? rollbackFailed : undefined,
+      };
+    }
+
     const result = streamText({
       model: userModel ?? google!('gemma-4-26b-a4b-it'),
       system: systemPrompt,
@@ -255,24 +382,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               return runUserSearch(search, 'weather forecast 7 day ' + location);
             }
             try {
-              const geoController = new AbortController();
-              const geoTimeout = setTimeout(() => geoController.abort(), 10000);
-              const geoRes = await fetch(
+              // Open-Meteo отвечает JSON и на отказ (429/500 с error): без проверки ok такой
+              // ответ выглядел как пустой результат. Сбой уходит в catch ниже — «сервис
+              // недоступен»; «место не найдено» остаётся только для успешного пустого results.
+              const geo = await fetchJson<GeocodeResponse>(
                 `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`,
-                { signal: geoController.signal },
+                { timeoutMs: 10000 },
               );
-              clearTimeout(geoTimeout);
-              const geo = await geoRes.json();
               const place = geo.results?.[0];
               if (!place) return `Location "${location}" not found`;
-              const wController = new AbortController();
-              const wTimeout = setTimeout(() => wController.abort(), 10000);
-              const wRes = await fetch(
+              const w = await fetchJson<WeatherResponse>(
                 `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,weather_code&forecast_days=7&timezone=auto`,
-                { signal: wController.signal },
+                { timeoutMs: 10000 },
               );
-              clearTimeout(wTimeout);
-              const w = await wRes.json();
               const wmo: Record<number, string> = {
                 0: 'Clear',
                 1: 'Mainly clear',
@@ -459,16 +581,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             if (planError || !plan) return { error: 'Failed to create plan' };
 
-            // meal_days and meal_entries cascade from the plan row, so one delete undoes everything.
-            const rollbackPlan = async () => {
-              const { error: cleanupErr } = await supabase
-                .from('meal_plans')
-                .delete()
-                .eq('id', plan.id);
-              if (cleanupErr) {
-                console.error('[chat] createMealPlan rollback failed:', cleanupErr);
-              }
-            };
+            // meal_days and meal_entries cascade from the plan row.
+            createdByRequest.push({ kind: 'meal_plan', id: plan.id });
 
             let totalEntries = 0;
             let totalWeight = 0;
@@ -537,8 +651,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             if (daysErr) {
               console.error('[chat] createMealPlan days insert failed:', daysErr);
-              await rollbackPlan();
-              return { success: false, error: 'Failed to create the meal plan' };
+              const rollback = await rollbackRequestCreations();
+              return { success: false, error: 'Failed to create the meal plan', ...rollback };
             }
 
             if (insertedDays && template) {
@@ -551,8 +665,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   .insert(allEntries);
                 if (entriesErr) {
                   console.error('[chat] createMealPlan entries insert failed:', entriesErr);
-                  await rollbackPlan();
-                  return { success: false, error: 'Failed to create the meal plan' };
+                  const rollback = await rollbackRequestCreations();
+                  return { success: false, error: 'Failed to create the meal plan', ...rollback };
                 }
               }
             }
@@ -636,13 +750,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               .insert(itemsToInsert)
               .select('id, name, weight_g');
 
-            if (gearErr) return { error: 'Failed to add gear items' };
+            if (gearErr) {
+              const rollback = await rollbackRequestCreations();
+              return { success: false, error: 'Failed to add gear items', ...rollback };
+            }
 
             const inserted = (data || []).map((d) => ({
               id: d.id,
               name: d.name,
               weightG: d.weight_g,
             }));
+            inserted.forEach((item) => createdByRequest.push({ kind: 'gear_item', id: item.id }));
             const totalWeight = inserted.reduce((sum, i) => sum + i.weightG, 0);
 
             return {
@@ -685,7 +803,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               .select()
               .single();
 
-            if (error || !list) return { error: 'Failed to create list' };
+            if (error || !list) {
+              const rollback = await rollbackRequestCreations();
+              return { success: false, error: 'Failed to create list', ...rollback };
+            }
+
+            createdByRequest.push({ kind: 'gear_list', id: list.id });
 
             return {
               success: true,
@@ -713,8 +836,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             listId: string;
             itemNames: string[];
           }) => {
-            const added = [];
-            const notFound = [];
+            const added: { name: string; weightG: number }[] = [];
+            const notFound: string[] = [];
+            const failed: { name: string; reason: string }[] = [];
             let totalWeight = 0;
 
             for (const itemName of itemNames) {
@@ -726,34 +850,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 .limit(1)
                 .single();
 
-              if (gearItem) {
-                const { error } = await supabase
-                  .from('list_items')
-                  .insert({
-                    list_id: listId,
-                    gear_item_id: gearItem.id,
-                    quantity: 1,
-                    is_packed: false,
-                    worn: false,
-                    consumable: false,
-                  });
-
-                if (!error) {
-                  added.push({ name: gearItem.name, weightG: gearItem.weight_g });
-                  totalWeight += gearItem.weight_g;
-                }
-              } else {
+              if (!gearItem) {
                 notFound.push(itemName);
+                continue;
               }
+
+              const { data: insertedItem, error } = await supabase
+                .from('list_items')
+                .insert({
+                  list_id: listId,
+                  gear_item_id: gearItem.id,
+                  quantity: 1,
+                  is_packed: false,
+                  worn: false,
+                  consumable: false,
+                })
+                .select('id')
+                .single();
+
+              if (error || !insertedItem) {
+                console.error('[chat] addItemsToList insert failed:', error?.message ?? 'no row');
+                failed.push({ name: gearItem.name, reason: error?.message ?? 'insert failed' });
+                continue;
+              }
+
+              createdByRequest.push({ kind: 'list_item', id: insertedItem.id });
+              added.push({ name: gearItem.name, weightG: gearItem.weight_g });
+              totalWeight += gearItem.weight_g;
             }
 
+            // A step that wrote nothing is a failed step: undo the batch it was part of so
+            // the model cannot build further on a half-created trip. A partial result is
+            // kept and reported — the failed entries below tell the model what is missing.
+            const rollback =
+              added.length === 0 && failed.length > 0 ? await rollbackRequestCreations() : undefined;
+
             return {
-              success: true,
+              success: failed.length === 0,
               added: added.length,
               totalWeightG: totalWeight,
               items: added,
               notFound: notFound.length > 0 ? notFound : undefined,
-              link: `/lists/${listId}`,
+              failed: failed.length > 0 ? failed : undefined,
+              error:
+                failed.length > 0
+                  ? `Failed to add ${failed.length} of ${itemNames.length} items to the list`
+                  : undefined,
+              ...(rollback ?? {}),
+              link: added.length > 0 ? `/lists/${listId}` : undefined,
             };
           },
         }),

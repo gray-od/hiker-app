@@ -35,10 +35,11 @@ export default function ShoppingListPage() {
 
       setLoading(true);
 
-      const { data: mealResult, error: mealError } = await fetchMealPlanDetail(id);
+      const { data: mealResult, error: mealError } = await fetchMealPlanDetail(user.id, id);
 
       if (mealError || !mealResult) {
-        setError(mealError?.message || 'Plan not found');
+        console.error('Failed to load shopping list:', mealError ?? 'no plan data');
+        setError(t('plan_not_found'));
         setLoading(false);
         return;
       }

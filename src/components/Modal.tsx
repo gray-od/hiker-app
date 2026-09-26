@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useId } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface ModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ export default function Modal({
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<Element | null>(null);
   const titleId = useId();
+  const t = useTranslations('common');
 
   const FOCUSABLE_SELECTOR =
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -115,7 +117,7 @@ export default function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={t('close')}
                 className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors -mr-2 -mt-2"
               >
                 <svg

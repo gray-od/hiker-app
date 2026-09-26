@@ -7,10 +7,40 @@ import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { createClient, clearStoredSession } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchUserProfile } from '@/lib/supabase/service';
-import { invalidateCache, cacheKeys } from '@/lib/cache';
+import { invalidateCache, cacheKeys, clearUserCache } from '@/lib/cache';
 import { inputClass, cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
+
+type ByokTestResult = 'valid' | 'invalid' | 'connection' | 'server';
+
+// /api/byok/validate answers 200 with { ok: false, error } when the provider rejects
+// the key, and non-2xx when the route itself failed. Its 'network' error means the
+// server could not reach the provider — the key was not rejected, so it must not be
+// reported as invalid.
+async function classifyByokResponse(res: Response): Promise<ByokTestResult> {
+  if (!res.ok) return 'server';
+  try {
+    const data: { ok?: boolean; error?: string } = await res.json();
+    if (data.ok) return 'valid';
+    return data.error === 'network' ? 'server' : 'invalid';
+  } catch {
+    // The server answered, but with a body that is not JSON.
+    return 'server';
+  }
+}
+
+function persistByok(storageKey: string, value: Record<string, string>): boolean {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(value));
+    return true;
+  } catch {
+    // Private browsing or a full quota: the key is valid but will not survive a
+    // reload. Reporting it as invalid would be wrong, so only the "saved" badge
+    // is skipped.
+    return false;
+  }
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -44,9 +74,9 @@ export default function SettingsPage() {
   const [aiSavedMessage, setAiSavedMessage] = useState('');
   const [searchSavedMessage, setSearchSavedMessage] = useState('');
   const [aiTesting, setAiTesting] = useState(false);
-  const [aiTestResult, setAiTestResult] = useState<'valid' | 'invalid' | null>(null);
+  const [aiTestResult, setAiTestResult] = useState<ByokTestResult | null>(null);
   const [searchTesting, setSearchTesting] = useState(false);
-  const [searchTestResult, setSearchTestResult] = useState<'valid' | 'invalid' | null>(null);
+  const [searchTestResult, setSearchTestResult] = useState<ByokTestResult | null>(null);
   const saveMsgTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -148,6 +178,9 @@ export default function SettingsPage() {
         return;
       }
       const supabase = createClient();
+      // The id has to be read before signOut removes the session: the deleted account's
+      // cached pages must not stay readable on a shared browser.
+      const user = await resolveUser();
       let sessionCleared = false;
       try {
         const { error } = await supabase.auth.signOut();
@@ -162,6 +195,10 @@ export default function SettingsPage() {
         // and the stored session survives; middleware trusts the cookie, so
         // landing on /login with it would still look signed in.
         await clearStoredSession(supabase);
+      }
+
+      if (user) {
+        await clearUserCache(user.id);
       }
 
       window.location.href = '/login';
@@ -183,18 +220,16 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind: 'ai', config: { provider: aiProvider, apiKey: aiKey, model: aiModel } }),
       });
-      const { ok } = await res.json();
-      if (ok) {
-        localStorage.setItem('prohikes.ai', JSON.stringify({ provider: aiProvider, apiKey: aiKey, model: aiModel }));
-        setAiTestResult('valid');
+      const result = await classifyByokResponse(res);
+      setAiTestResult(result);
+      if (result === 'valid' && persistByok('prohikes.ai', { provider: aiProvider, apiKey: aiKey, model: aiModel })) {
         setAiSavedMessage(t('saved'));
         if (saveMsgTimer.current) clearTimeout(saveMsgTimer.current);
         saveMsgTimer.current = setTimeout(() => setAiSavedMessage(''), 2000);
-      } else {
-        setAiTestResult('invalid');
       }
     } catch {
-      setAiTestResult('invalid');
+      // fetch rejected — the server never answered
+      setAiTestResult('connection');
     } finally {
       setAiTesting(false);
     }
@@ -219,18 +254,16 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind: 'search', config: payload }),
       });
-      const { ok } = await res.json();
-      if (ok) {
-        localStorage.setItem('prohikes.search', JSON.stringify(payload));
-        setSearchTestResult('valid');
+      const result = await classifyByokResponse(res);
+      setSearchTestResult(result);
+      if (result === 'valid' && persistByok('prohikes.search', payload)) {
         setSearchSavedMessage(t('saved'));
         if (saveMsgTimer.current) clearTimeout(saveMsgTimer.current);
         saveMsgTimer.current = setTimeout(() => setSearchSavedMessage(''), 2000);
-      } else {
-        setSearchTestResult('invalid');
       }
     } catch {
-      setSearchTestResult('invalid');
+      // fetch rejected — the server never answered
+      setSearchTestResult('connection');
     } finally {
       setSearchTesting(false);
     }
@@ -244,25 +277,31 @@ export default function SettingsPage() {
   };
 
   const handleChangePassword = async () => {
+    if (changingPassword) return;
+    setChangingPassword(true);
     setPasswordError(null);
     setPasswordMessage(null);
-    const supabase = createClient();
-    const user = await resolveUser();
-    if (!user?.email) { setPasswordError(tCommon('connection_error')); return; }
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email, password: currentPassword
-    });
-    if (signInError) {
-      setPasswordError(isAuthRetryableFetchError(signInError) ? tCommon('connection_error') : t('wrong_password'));
-      return;
+    try {
+      const supabase = createClient();
+      const user = await resolveUser();
+      if (!user?.email) { setPasswordError(tCommon('connection_error')); return; }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email, password: currentPassword
+      });
+      if (signInError) {
+        setPasswordError(isAuthRetryableFetchError(signInError) ? tCommon('connection_error') : t('wrong_password'));
+        return;
+      }
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) { setPasswordError(updateError.message); return; }
+      setPasswordMessage(t('password_changed'));
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch {
+      setPasswordError(tCommon('connection_error'));
+    } finally {
+      setChangingPassword(false);
     }
-    setChangingPassword(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-    setChangingPassword(false);
-    if (updateError) { setPasswordError(updateError.message); return; }
-    setPasswordMessage(t('password_changed'));
-    setCurrentPassword('');
-    setNewPassword('');
   };
 
   const head = (
@@ -409,6 +448,12 @@ export default function SettingsPage() {
                 {aiTestResult === 'invalid' && (
                   <span className="text-sm text-red-500 self-center">&#x2717; {t('byok_invalid')}</span>
                 )}
+                {aiTestResult === 'connection' && (
+                  <span className="text-sm text-amber-600 dark:text-amber-400 self-center">{tCommon('connection_error')}</span>
+                )}
+                {aiTestResult === 'server' && (
+                  <span className="text-sm text-red-500 self-center">{t('byok_server_error')}</span>
+                )}
                 {aiSavedMessage && (
                   <span className="text-sm text-[var(--color-brand)] self-center">{aiSavedMessage}</span>
                 )}
@@ -485,6 +530,12 @@ export default function SettingsPage() {
                 )}
                 {searchTestResult === 'invalid' && (
                   <span className="text-sm text-red-500 self-center">&#x2717; {t('byok_invalid')}</span>
+                )}
+                {searchTestResult === 'connection' && (
+                  <span className="text-sm text-amber-600 dark:text-amber-400 self-center">{tCommon('connection_error')}</span>
+                )}
+                {searchTestResult === 'server' && (
+                  <span className="text-sm text-red-500 self-center">{t('byok_server_error')}</span>
                 )}
                 {searchSavedMessage && (
                   <span className="text-sm text-[var(--color-brand)] self-center">{searchSavedMessage}</span>

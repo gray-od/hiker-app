@@ -1,4 +1,6 @@
+import { fetchWithTimeout } from '@/lib/fetchJson';
 import { cacheKeys, getCached, listCachedKeys } from '@/lib/cache';
+import { resolveUser } from '@/lib/supabase/resolveUser';
 import {
   fetchListItems,
   fetchMealPlanDetail,
@@ -16,6 +18,10 @@ import {
 const ROUTES = ['/', '/gear', '/food', '/lists', '/meals', '/settings'];
 
 const MAX_CONCURRENT_REQUESTS = 3;
+
+// Фоновая задача не должна ждать зависшую сеть: не ответивший вовремя маршрут
+// пропускается так же, как любой сбой ниже.
+const PREWARM_TIMEOUT_MS = 5000;
 
 // The worker's page cache evicts past 50 entries (src/sw.ts), which leaves headroom
 // for the 6 static routes plus this dynamic tail.
@@ -43,14 +49,18 @@ interface DynamicPrewarm {
   planIds: string[];
 }
 
-// `list:<id>` and `meal-plan:<id>` are the IndexedDB keys written through
-// cacheKeys.listDetail / cacheKeys.mealPlanDetail (src/lib/cache.ts) by the exact reads
-// those documents perform at render time. The collection keys — `lists:<uid>`,
-// `meals:<uid>` (written by fetchUserMealPlans, used by /meals and the dashboard) and
-// `meals-light:<uid>` (written by fetchUserMealPlansLight, used by the linked-plan
-// select) — hold records the user has seen listed but may never have opened; their
-// payloads carry the ids, whose detail data warmDetailData then fetches.
-async function dynamicRoutes(keys: string[]): Promise<DynamicPrewarm> {
+// Every cache key is scoped to its owner: `u:<uid>:<kind>[:<id>]` (src/lib/cache.ts).
+// Only the signed-in user's keys are prewarmed — the cache outlives a sign-out, and a
+// document or detail fetch for another account's key would run under this user's RLS,
+// fail, and spend the warm-up budget for nothing. Within that scope, `u:<uid>:list:<id>`
+// and `u:<uid>:meal-plan:<id>` are the IndexedDB keys written through cacheKeys.listDetail
+// / cacheKeys.mealPlanDetail by the exact reads those documents perform at render time.
+// The collection keys — `u:<uid>:lists`, `u:<uid>:meals` (written by fetchUserMealPlans,
+// used by /meals and the dashboard) and `u:<uid>:meals-light` (written by
+// fetchUserMealPlansLight, used by the linked-plan select) — hold records the user has
+// seen listed but may never have opened; their payloads carry the ids, whose detail data
+// warmDetailData then fetches.
+async function dynamicRoutes(userId: string, keys: string[]): Promise<DynamicPrewarm> {
   const documents = new Set<string>();
   const listIds = new Set<string>();
   const planIds = new Set<string>();
@@ -65,9 +75,16 @@ async function dynamicRoutes(keys: string[]): Promise<DynamicPrewarm> {
     documents.add(`/meals/${id}/shopping`);
   };
 
+  const userPrefix = `u:${userId}:`;
+
   for (const key of keys) {
-    const listId = /^list:([^:]+)$/.exec(key)?.[1];
-    const planId = /^meal-plan:([^:]+)$/.exec(key)?.[1];
+    if (!key.startsWith(userPrefix)) continue;
+    // `list:<id>` and `meal-plan:<id>` are single-segment kinds: `list-items:<id>`,
+    // `lists` and `meals-light` cannot match either pattern.
+    const scopedKey = key.slice(userPrefix.length);
+
+    const listId = /^list:([^:]+)$/.exec(scopedKey)?.[1];
+    const planId = /^meal-plan:([^:]+)$/.exec(scopedKey)?.[1];
     if (listId) {
       addListDocuments(listId);
       listIds.add(listId);
@@ -78,10 +95,10 @@ async function dynamicRoutes(keys: string[]): Promise<DynamicPrewarm> {
     }
 
     // The matched key is the cache key itself, so it goes to getCached unchanged.
-    if (/^lists:[^:]+$/.test(key)) {
+    if (/^lists$/.test(scopedKey)) {
       for (const id of recordIds(await getCached(key))) listIds.add(id);
     }
-    if (/^meals(?:-light)?:[^:]+$/.test(key)) {
+    if (/^meals(?:-light)?$/.test(scopedKey)) {
       for (const id of recordIds(await getCached(key))) planIds.add(id);
     }
   }
@@ -103,7 +120,7 @@ async function dynamicRoutes(keys: string[]): Promise<DynamicPrewarm> {
 // data fetched as well. An id whose keys are already present is skipped without
 // spending budget, which makes the steady state zero requests and lets successive passes
 // drain a large collection. Failures are dropped exactly like the document failures.
-async function warmDetailData(listIds: string[], planIds: string[]): Promise<void> {
+async function warmDetailData(userId: string, listIds: string[], planIds: string[]): Promise<void> {
   let listBudget = MAX_DATA_WARMUPS_PER_KIND;
   let planBudget = MAX_DATA_WARMUPS_PER_KIND;
 
@@ -111,13 +128,13 @@ async function warmDetailData(listIds: string[], planIds: string[]): Promise<voi
     if (listBudget === 0) break;
     try {
       const [detail, items] = await Promise.all([
-        getCached(cacheKeys.listDetail(id)),
-        getCached(cacheKeys.listItems(id)),
+        getCached(cacheKeys.listDetail(userId, id)),
+        getCached(cacheKeys.listItems(userId, id)),
       ]);
       if (detail && items) continue;
       listBudget--;
-      if (!detail) await fetchUserListDetail(id);
-      if (!items) await fetchListItems(id);
+      if (!detail) await fetchUserListDetail(userId, id);
+      if (!items) await fetchListItems(userId, id);
     } catch {
       // This record stays without offline data; the remaining ones are still worth trying.
     }
@@ -126,9 +143,9 @@ async function warmDetailData(listIds: string[], planIds: string[]): Promise<voi
   for (const id of planIds) {
     if (planBudget === 0) break;
     try {
-      if (await getCached(cacheKeys.mealPlanDetail(id))) continue;
+      if (await getCached(cacheKeys.mealPlanDetail(userId, id))) continue;
       planBudget--;
-      await fetchMealPlanDetail(id);
+      await fetchMealPlanDetail(userId, id);
     } catch {
       // Same trade-off as above: skip past the failure instead of aborting the pass.
     }
@@ -147,27 +164,33 @@ export async function prewarmRoutes(): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.onLine || started) return;
   started = true;
 
-  const { documents, listIds, planIds } = await dynamicRoutes(await listCachedKeys());
+  // Cache keys are user-scoped, so the id is resolved first. Without a session there is
+  // no dynamic tail to warm; the six static documents still warm as before.
+  const user = await resolveUser();
+  const { documents, listIds, planIds } = user
+    ? await dynamicRoutes(user.id, await listCachedKeys())
+    : { documents: [], listIds: [], planIds: [] };
   const pending = [...ROUTES, ...documents];
   const warm = async () => {
     for (let route = pending.shift(); route !== undefined; route = pending.shift()) {
       try {
         // `x-prohikes-prewarm` is what the worker's matcher in src/sw.ts keys on;
         // `no-store` keeps the HTTP cache out of the way, the Cache API is the target.
-        await fetch(route, {
+        await fetchWithTimeout(route, {
+          timeoutMs: PREWARM_TIMEOUT_MS,
           headers: { 'x-prohikes-prewarm': '1' },
           credentials: 'same-origin',
           cache: 'no-store',
         });
       } catch {
-        // Offline mid-run or a response the worker refused: this document stays
-        // uncached and offline navigation falls back to /offline.html as before.
+        // Offline mid-run, a timeout or a response the worker refused: this document
+        // stays uncached and offline navigation falls back to /offline.html as before.
       }
     }
   };
 
   await Promise.all([
     ...Array.from({ length: MAX_CONCURRENT_REQUESTS }, () => warm()),
-    warmDetailData(listIds, planIds),
+    ...(user ? [warmDetailData(user.id, listIds, planIds)] : []),
   ]);
 }
