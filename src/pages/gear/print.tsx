@@ -45,6 +45,9 @@ export default function PrintGearPage() {
     });
   }, [router]);
 
+  const [today, setToday] = useState('');
+  useEffect(() => { setToday(new Date().toLocaleDateString('uk-UA')); }, []);
+
   const head = (
     <Head>
       <title>{`ProHikes — ${tGear('title')}`}</title>
@@ -62,8 +65,6 @@ export default function PrintGearPage() {
     );
   }
 
-  const [today, setToday] = useState('');
-  useEffect(() => { setToday(new Date().toLocaleDateString('uk-UA')); }, []);
   const totalWeight = items.reduce((sum, item) => sum + item.weight_g, 0);
 
   return (
