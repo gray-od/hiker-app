@@ -43,13 +43,40 @@ export default function PrivacyPage() {
             <p>{p('third_intro')}</p>
             <ul className="list-disc pl-5 space-y-1 mt-2">
               <li>{p('third_supabase')}</li>
+              <li>{p('third_hosting')}</li>
               <li>{p('third_google')}</li>
               <li>{p('third_ai')}</li>
               <li>{p('third_search')}</li>
               <li>{p('third_weather')}</li>
               <li>{p('third_byok')}</li>
+              <li>{p('third_donate')}</li>
             </ul>
+            <p className="mt-2">
+              {p('third_links')}{' '}
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+                Google
+              </a>,{' '}
+              <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+                Supabase
+              </a>,{' '}
+              <a href="https://exa.ai/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+                Exa
+              </a>,{' '}
+              <a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+                Open-Meteo
+              </a>,{' '}
+              <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+                Vercel
+              </a>.
+            </p>
           </section>
+
+          <p>
+            {p('controller_text')}{' '}
+            <a href="https://github.com/gray-od/hiker-app/issues" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+              {p('controller_link')}
+            </a>.
+          </p>
 
           <section>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('cookies_title')}</h2>
@@ -71,13 +98,11 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('deletion_title')}</h2>
             <p>{p('deletion_self_service')}</p>
             <p className="mt-2">{p('deletion_retention')}</p>
-            <p className="mt-2">
-              {p('deletion_text')}{' '}
-              <a href="https://github.com/gray-od/hiker-app/issues" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
-                GitHub Issues
-              </a>.{' '}
-              {p('deletion_period')}
-            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('rights_title')}</h2>
+            <p>{p('rights_text')}</p>
           </section>
 
           <section>
