@@ -171,9 +171,15 @@ export async function fetchUserMealPlans(
   });
 }
 
+/**
+ * Plan detail (plan plus its days and entries). Cache-first; `force` reads straight from the
+ * network — the cached snapshot can predate a write the caller is accounting for — and fails
+ * rather than serving that stale copy when the network does.
+ */
 export async function fetchMealPlanDetail(
   userId: string,
   planId: string,
+  options?: { force?: boolean },
 ): Promise<{ data: { plan: MealPlan; days: MealDayWithEntries[] } | null; error: Error | null; fromCache: boolean }> {
   return withCache(cacheKeys.mealPlanDetail(userId, planId), async () => {
     const supabase = createClient();
@@ -201,7 +207,7 @@ export async function fetchMealPlanDetail(
       },
       error: null,
     };
-  });
+  }, { skipCache: options?.force });
 }
 
 export async function fetchUserMealPlansLight(
@@ -249,6 +255,9 @@ async function invalidateGearCache(userId: string): Promise<void> {
  */
 async function invalidateAfterReplay(userId: string, m: QueuedMutation): Promise<void> {
   switch (m.table) {
+    case 'profiles':
+      await removeCache(cacheKeys.profile(userId));
+      return;
     case 'gear_items':
       await invalidateGearCache(userId);
       return;
@@ -304,6 +313,26 @@ async function withWriteTimeout<T>(run: (signal: AbortSignal) => PromiseLike<T>)
   } finally {
     clearTimeout(timer);
   }
+}
+
+// ── Profile mutations ──
+
+export async function updateUserProfile(
+  userId: string,
+  payload: { name?: string; lang?: string },
+): Promise<{ error: Error | null; queued?: boolean }> {
+  const supabase = createClient();
+  const { error } = await withWriteTimeout((signal) =>
+    supabase.from('profiles').update(payload).eq('id', userId).abortSignal(signal),
+  );
+  if (error) {
+    // A replayed update addresses its row by payload.id (syncQueue strips it from the write
+    // body), so the row's own id is what the queued payload must carry.
+    const queued = await enqueue('profiles', 'update', { id: userId, ...payload }, userId);
+    return { error: new Error(error.message), queued };
+  }
+  await invalidateCache(cacheKeys.profile(userId));
+  return { error: null };
 }
 
 // ── Gear mutations ──
@@ -590,6 +619,13 @@ async function invalidateMealCache(userId: string, planId?: string): Promise<voi
   await Promise.all(keys.map((key) => removeCache(key)));
 }
 
+/**
+ * `queue` defaults to true — a failed write is enqueued for replay. `queue: false` keeps the
+ * wait limit but hands the failure back as-is: the online-only plan rebuilds use it, where a
+ * queued mid-rebuild step would leave the plan half-applied.
+ */
+type MealMutationOptions = { queue?: boolean };
+
 /** Creates a meal plan with a client-generated id, so an offline create can be queued and replayed. */
 export async function createMealPlan(
   userId: string,
@@ -621,6 +657,7 @@ export async function addMealDays(
   userId: string,
   planId: string,
   days: { id: string; day_number: number; total_calories?: number; total_weight_g?: number }[],
+  options?: MealMutationOptions,
 ): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const rows = days.map((day) => ({ plan_id: planId, ...day }));
@@ -628,6 +665,7 @@ export async function addMealDays(
     supabase.from('meal_days').insert(rows).abortSignal(signal),
   );
   if (error) {
+    if (options?.queue === false) return { error: new Error(error.message) };
     // One queue entry per row: the replay executor inserts a single payload object.
     // A partially persisted batch reports queued: false — "saved offline" may not be
     // claimed while some rows are not actually in the queue.
@@ -655,12 +693,14 @@ export async function addMealEntries(
     fat_g: number;
     carbs_g: number;
   }[],
+  options?: MealMutationOptions,
 ): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await withWriteTimeout((signal) =>
     supabase.from('meal_entries').insert(entries).abortSignal(signal),
   );
   if (error) {
+    if (options?.queue === false) return { error: new Error(error.message) };
     const queued = (
       await Promise.all(entries.map((row) => enqueue('meal_entries', 'insert', row, userId, { planId })))
     ).every(Boolean);
@@ -673,12 +713,14 @@ export async function addMealEntries(
 export async function updateMealPlan(
   id: string, userId: string,
   payload: Record<string, unknown>,
+  options?: MealMutationOptions,
 ): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await withWriteTimeout((signal) =>
     supabase.from('meal_plans').update(payload).eq('id', id).abortSignal(signal),
   );
   if (error) {
+    if (options?.queue === false) return { error: new Error(error.message) };
     const queued = await enqueue('meal_plans', 'update', { id, ...payload }, userId, { planId: id });
     return { error: new Error(error.message), queued };
   }
@@ -705,12 +747,14 @@ export async function deleteMealPlan(
 export async function updateMealDay(
   id: string, userId: string, planId: string,
   payload: Record<string, unknown>,
+  options?: MealMutationOptions,
 ): Promise<{ error: Error | null; queued?: boolean }> {
   const supabase = createClient();
   const { error } = await withWriteTimeout((signal) =>
     supabase.from('meal_days').update(payload).eq('id', id).abortSignal(signal),
   );
   if (error) {
+    if (options?.queue === false) return { error: new Error(error.message) };
     const queued = await enqueue('meal_days', 'update', { id, ...payload }, userId, { planId });
     return { error: new Error(error.message), queued };
   }
@@ -730,6 +774,36 @@ export async function deleteMealDay(
     const queued = await enqueue('meal_days', 'delete', { id }, userId, { planId });
     return { error: new Error(error.message), queued };
   }
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+/**
+ * Removes every day of a plan in one filtered delete. Online-rebuild step only — never
+ * queued: the queue replays rows by id, so a filtered delete it cannot replay would leave
+ * the plan half-rebuilt.
+ */
+export async function deleteMealDaysByPlan(
+  planId: string, userId: string,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await withWriteTimeout((signal) =>
+    supabase.from('meal_days').delete().eq('plan_id', planId).abortSignal(signal),
+  );
+  if (error) return { error: new Error(error.message) };
+  await invalidateMealCache(userId, planId);
+  return { error: null };
+}
+
+/** Removes every entry of one day in one filtered delete. Online-rebuild step only — never queued. */
+export async function deleteMealEntriesByDay(
+  dayId: string, userId: string, planId?: string,
+): Promise<{ error: Error | null }> {
+  const supabase = createClient();
+  const { error } = await withWriteTimeout((signal) =>
+    supabase.from('meal_entries').delete().eq('day_id', dayId).abortSignal(signal),
+  );
+  if (error) return { error: new Error(error.message) };
   await invalidateMealCache(userId, planId);
   return { error: null };
 }

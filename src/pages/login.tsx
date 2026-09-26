@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations, useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { safeRedirectPath } from '@/lib/safeRedirect';
 
 const features = [
   {
@@ -45,6 +46,8 @@ export default function LoginPage() {
   const te = useTranslations('errors');
   const router = useRouter();
   const locale = useLocale();
+  // Page the middleware guard sent the visitor away from; "/" when absent or unsafe.
+  const nextPath = safeRedirectPath(router.query.next) ?? '/';
 
   const switchLocale = (loc: string) => {
     document.cookie = `NEXT_LOCALE=${loc}; path=/; max-age=${60 * 60 * 24 * 365}`;
@@ -63,6 +66,7 @@ export default function LoginPage() {
   const [customQuestion, setCustomQuestion] = useState('');
   const [securitySaveFailed, setSecuritySaveFailed] = useState(false);
   const [securityRetrying, setSecurityRetrying] = useState(false);
+  const [securityNotice, setSecurityNotice] = useState(false);
 
   const securityQuestions = [
     { value: 'mother_maiden', key: 'question_mother_maiden' },
@@ -78,10 +82,15 @@ export default function LoginPage() {
 
     const supabase = createClient();
 
+    // next rides on the callback URL: GoTrue appends the auth code while keeping the
+    // existing query parameters, so callback.ts can send the visitor on to the target.
+    const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+    if (nextPath !== '/') callbackUrl.searchParams.set('next', nextPath);
+
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: callbackUrl.toString(),
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -95,14 +104,15 @@ export default function LoginPage() {
     }
   };
 
-  // Used by sign-up and by the retry button: the account already exists in both cases,
-  // so a retry only re-sends the security question/answer over the active session.
+  // Used by sign-up and by the retry button: the account already exists in both
+  // cases and both run right after sign-up, so the form's password is the account's
+  // own — the route checks it for accounts with a password identity.
   const saveSecurityRecord = async (): Promise<boolean> => {
     try {
       const res = await fetch('/api/auth/security', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer }),
+        body: JSON.stringify({ question: securityQuestion === 'custom' ? customQuestion : securityQuestion, answer: securityAnswer, currentPassword: password }),
       });
       return res.ok;
     } catch {
@@ -114,7 +124,7 @@ export default function LoginPage() {
   const handleRetrySecuritySave = async () => {
     setSecurityRetrying(true);
     if (await saveSecurityRecord()) {
-      router.push('/');
+      router.push(nextPath);
       return;
     }
     setSecurityRetrying(false);
@@ -135,7 +145,27 @@ export default function LoginPage() {
         setEmailLoading(false);
         return;
       }
-      router.push('/');
+
+      // Advisory only: when the check fails the user goes on to the requested page,
+      // and a missing recovery question shows a notice instead of blocking the sign-in.
+      let hasQuestion = true;
+      try {
+        const res = await fetch('/api/auth/security-status', { method: 'POST' });
+        if (res.ok) {
+          const data: { hasQuestion?: boolean } = await res.json();
+          hasQuestion = data.hasQuestion !== false;
+        }
+      } catch {
+        // Network failure — treat the question state as unknown and continue.
+      }
+
+      if (!hasQuestion) {
+        setSecurityNotice(true);
+        setEmailLoading(false);
+        return;
+      }
+
+      router.push(nextPath);
     } else {
       if (!securityQuestion || !securityAnswer || (securityQuestion === 'custom' && !customQuestion)) {
         setError(t('fill_security_fields'));
@@ -154,7 +184,7 @@ export default function LoginPage() {
       }
       if (data?.session) {
         if (await saveSecurityRecord()) {
-          router.push('/');
+          router.push(nextPath);
           return;
         }
         console.error('[login] failed to save security question, session exists');
@@ -242,6 +272,28 @@ export default function LoginPage() {
             {signUpSuccess && (
               <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-400">
                 {t('check_email')}
+              </div>
+            )}
+
+            {securityNotice && (
+              <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-700 dark:text-amber-400">
+                <p>{t('security_not_set_notice')}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/settings')}
+                    className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-medium rounded-lg transition-colors focus:ring-2 focus:ring-[var(--color-brand)] min-h-[44px]"
+                  >
+                    {t('open_settings')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push(nextPath)}
+                    className="px-4 py-2 text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 font-medium rounded-lg transition-colors focus:ring-2 focus:ring-[var(--color-brand)] min-h-[44px]"
+                  >
+                    {t('continue')}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -397,7 +449,7 @@ export default function LoginPage() {
                   {t('no_account')}{' '}
                   <button
                     type="button"
-                    onClick={() => { setAuthMode('signup'); setError(null); setSignUpSuccess(false); setSecuritySaveFailed(false); setSecurityRetrying(false); }}
+                    onClick={() => { setAuthMode('signup'); setError(null); setSignUpSuccess(false); setSecuritySaveFailed(false); setSecurityRetrying(false); setSecurityNotice(false); }}
                     className="text-[var(--color-brand)] hover:underline font-medium focus:ring-2 focus:ring-[var(--color-brand)] rounded"
                   >
                     {t('sign_up_with_email')}
@@ -408,7 +460,7 @@ export default function LoginPage() {
                   {t('have_account')}{' '}
                   <button
                     type="button"
-                    onClick={() => { setAuthMode('signin'); setError(null); setSignUpSuccess(false); setSecuritySaveFailed(false); setSecurityRetrying(false); }}
+                    onClick={() => { setAuthMode('signin'); setError(null); setSignUpSuccess(false); setSecuritySaveFailed(false); setSecurityRetrying(false); setSecurityNotice(false); }}
                     className="text-[var(--color-brand)] hover:underline font-medium focus:ring-2 focus:ring-[var(--color-brand)] rounded"
                   >
                     {t('sign_in_with_email')}

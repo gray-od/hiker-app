@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient } from '@supabase/ssr';
 import { serializeCookie } from '@/lib/supabase/cookieHeader';
+import { safeRedirectPath } from '@/lib/safeRedirect';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return; }
@@ -10,9 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { searchParams } = new URL(req.url || '/', origin);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/';
-  // Validate redirect target to prevent open redirect
-  const safeNext = next.startsWith('/') ? next : '/';
+  // Open-redirect guard lives in safeRedirectPath, shared with middleware and login.tsx.
+  const next = safeRedirectPath(searchParams.get('next')) ?? '/';
 
   if (code) {
     const supabase = createServerClient(
@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (!error) {
-        res.redirect(302, `${origin}${safeNext}`);
+        res.redirect(302, `${origin}${next}`);
         return;
       }
     } catch {

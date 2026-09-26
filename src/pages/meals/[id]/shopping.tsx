@@ -29,7 +29,7 @@ export default function ShoppingListPage() {
 
     resolveUser().then(async (user) => {
       if (!user) {
-        router.push('/login');
+        router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
         return;
       }
 

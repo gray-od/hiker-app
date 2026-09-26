@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { safeRedirectPath } from '@/lib/safeRedirect';
 
 const DEFAULT_LOCALE = 'uk';
 const SUPPORTED_LOCALES = ['uk', 'ru', 'en'] as const;
@@ -51,7 +52,13 @@ export default function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/'));
 
   if (!hasSessionCookie && !isPublicRoute) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    // Keeping the requested path (query included) lets login.tsx and the OAuth callback
+    // return the visitor to it; safeRedirectPath rejects crafted paths that would resolve
+    // off-origin once the browser parses them.
+    const loginUrl = new URL('/login', request.url);
+    const next = safeRedirectPath(`${request.nextUrl.pathname}${request.nextUrl.search}`);
+    if (next) loginUrl.searchParams.set('next', next);
+    return NextResponse.redirect(loginUrl);
   }
 
   response.cookies.set('NEXT_LOCALE', locale, {

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
@@ -180,25 +181,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const FREE_DAILY_LIMIT = 15;
 
-    let todayCount = 0;
-
     if (!usingOwnKey) {
-      const { data: usage, error: usageError } = await supabase
-        .from('ai_usage')
-        .select('message_count')
-        .eq('user_id', user.id)
-        .eq('date', new Date().toISOString().split('T')[0])
-        .maybeSingle();
-
-      if (usageError) {
-        // Fail closed: an unreadable counter must not silently grant unlimited use.
-        console.error('[chat] ai_usage read failed:', usageError.message);
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!serviceRoleKey) {
+        // Fail closed: without the server key the daily counter cannot be consumed.
+        console.error('[chat] SUPABASE_SERVICE_ROLE_KEY not configured');
         return res.status(503).end('USAGE_CHECK_FAILED');
       }
 
-      todayCount = usage?.message_count || 0;
+      const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
 
-      if (todayCount >= FREE_DAILY_LIMIT) {
+      const { data: usageRows, error: usageError } = await adminClient.rpc('consume_ai_message', {
+        p_user_id: user.id,
+        p_limit: FREE_DAILY_LIMIT,
+      });
+
+      const usage = usageRows?.[0] as { allowed: boolean } | undefined;
+
+      if (usageError || !usage) {
+        // Fail closed: a counter that cannot be consumed must not silently grant unlimited use.
+        console.error('[chat] consume_ai_message failed:', usageError?.message ?? 'no row returned');
+        return res.status(503).end('USAGE_CHECK_FAILED');
+      }
+
+      if (!usage.allowed) {
         return res.status(429).end('RATE_LIMIT');
       }
     }
@@ -904,29 +915,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       maxSteps: 4,
       maxTokens: 4096,
-      onFinish: async () => {
-        if (!usingOwnKey) {
-          try {
-            const { error: usageWriteError } = await supabase.from('ai_usage').upsert(
-              {
-                user_id: user.id,
-                date: new Date().toISOString().split('T')[0],
-                message_count: todayCount + 1,
-              },
-              { onConflict: 'user_id,date' },
-            );
-            if (usageWriteError) {
-              console.error('[chat] ai_usage upsert failed:', usageWriteError.message);
-            }
-          } catch (error) {
-            // The reply has already streamed; the worst case is one uncounted message.
-            console.error(
-              '[chat] ai_usage upsert threw:',
-              error instanceof Error ? error.message : String(error),
-            );
-          }
-        }
-      },
     });
 
     result.pipeDataStreamToResponse(res, {

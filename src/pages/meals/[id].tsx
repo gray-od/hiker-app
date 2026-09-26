@@ -2,12 +2,13 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import {
   addMealDays,
   addMealEntries,
   deleteMealDay,
+  deleteMealDaysByPlan,
+  deleteMealEntriesByDay,
   deleteMealEntry,
   deleteMealPlan,
   fetchMealPlanDetail,
@@ -109,7 +110,7 @@ export default function MealPlanDetailPage() {
 
     resolveUser().then(async (user) => {
       if (!user) {
-        router.push('/login');
+        router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
         return;
       }
 
@@ -148,40 +149,44 @@ export default function MealPlanDetailPage() {
   }, [id, router]);
 
   async function recalculateTotals(): Promise<boolean> {
-    const supabase = createClient();
-
-    // supabase-js resolves PostgREST failures as `{ error }` instead of throwing, so each
-    // statement is checked explicitly; the boolean lets callers gate their success toasts.
+    // The service layer resolves failures as `{ error }` and reports a write taken by the
+    // offline queue as `queued: true`, so each step is checked explicitly; the boolean lets
+    // callers gate their success toasts.
     const failTotals = (step: string, table: string, message: string): false => {
       console.error('Recalculate totals:', step, 'failed on', table, '-', message);
       toast.error(tCommon('error_occurred'));
       return false;
     };
 
-    try {
-      const { data: currentDays, error: daysReadError } = await supabase
-        .from('meal_days')
-        .select('*, meal_entries(*)')
-        .eq('plan_id', id)
-        .order('day_number');
+    const userId = userIdRef.current;
+    if (!userId) {
+      console.error('Recalculate totals: no signed-in user');
+      toast.error(tCommon('error_occurred'));
+      return false;
+    }
 
-      if (daysReadError || !currentDays) {
-        return failTotals('select meal_days', 'meal_days', daysReadError?.message ?? 'no rows returned');
+    try {
+      // Forced read: the cached snapshot can predate the write being accounted for.
+      const { data: detail, error: detailError } = await fetchMealPlanDetail(userId, id, { force: true });
+
+      if (detailError || !detail) {
+        return failTotals('fetch meal plan detail', 'meal_days', detailError?.message ?? 'no rows returned');
       }
 
-      const typedDays = currentDays as MealDayWithEntries[];
+      const typedDays = detail.days;
 
       for (const day of typedDays) {
         const entries = day.meal_entries || [];
         const totalCalories = entries.reduce((sum, e) => sum + e.calories, 0);
         const totalWeight = entries.reduce((sum, e) => sum + e.weight_g, 0);
-        const { error: dayUpdateError } = await supabase
-          .from('meal_days')
-          .update({ total_calories: totalCalories, total_weight_g: totalWeight })
-          .eq('id', day.id);
+        // A queued update is not a failure: the queue replays it when connectivity returns.
+        const { error, queued } = await updateMealDay(day.id, userId, id, {
+          total_calories: totalCalories,
+          total_weight_g: totalWeight,
+        });
 
-        if (dayUpdateError) {
-          return failTotals(`update meal_days totals (day ${day.day_number})`, 'meal_days', dayUpdateError.message);
+        if (error && !queued) {
+          return failTotals(`update meal_days totals (day ${day.day_number})`, 'meal_days', error.message);
         }
 
         day.total_calories = totalCalories;
@@ -191,13 +196,13 @@ export default function MealPlanDetailPage() {
       const planTotalWeight = typedDays.reduce((sum, d) => sum + d.total_weight_g, 0);
       const planDaysCount = typedDays.length;
 
-      const { error: planUpdateError } = await supabase
-        .from('meal_plans')
-        .update({ total_weight_g: planTotalWeight, days_count: planDaysCount })
-        .eq('id', id);
+      const { error: planError, queued: planQueued } = await updateMealPlan(id, userId, {
+        total_weight_g: planTotalWeight,
+        days_count: planDaysCount,
+      });
 
-      if (planUpdateError) {
-        return failTotals('update meal_plans totals', 'meal_plans', planUpdateError.message);
+      if (planError && !planQueued) {
+        return failTotals('update meal_plans totals', 'meal_plans', planError.message);
       }
 
       setDays(typedDays);
@@ -637,14 +642,9 @@ export default function MealPlanDetailPage() {
     };
 
     if (typeChangeWithDays && typeTemplate) {
-      // Raw online writes on purpose: routing the mid-rebuild plan update through the
-      // service could queue a plan_type change whose rebuild never runs.
-      const supabase = createClient();
-
-      const { error: updateError } = await supabase
-        .from('meal_plans')
-        .update(planFields)
-        .eq('id', id);
+      // Queue-free writes on purpose: a plan_type change queued while its rebuild never
+      // runs would leave the plan in the old days under a new type.
+      const { error: updateError } = await updateMealPlan(id, userId, planFields, { queue: false });
 
       if (updateError) {
         setActionError(updateError.message);
@@ -660,13 +660,10 @@ export default function MealPlanDetailPage() {
       // new name/type here would present a half-applied plan as a successful update.
       if (!applied) return;
 
-      const { error: renameError } = await supabase
-        .from('meal_plans')
-        .update({
-          name: editForm.name.trim(),
-          people_count: peopleCount,
-        })
-        .eq('id', id);
+      const { error: renameError } = await updateMealPlan(id, userId, {
+        name: editForm.name.trim(),
+        people_count: peopleCount,
+      }, { queue: false });
 
       if (renameError) {
         console.error('Apply template: update meal_plans (name/people_count) failed -', renameError.message);
@@ -961,9 +958,8 @@ export default function MealPlanDetailPage() {
     if (!userId) { toast.error(tCommon('error_loading')); return false; }
 
     setApplyingTemplate(true);
-    const supabase = createClient();
 
-    // supabase-js resolves PostgREST failures as `{ error }` instead of throwing, so every
+    // The service layer resolves PostgREST failures as `{ error }` instead of throwing, so every
     // mutation below is checked explicitly. The first failure stops the sequence — earlier
     // deletes may already have been applied, so the caller must not treat this as success.
     const failApply = async (step: string, table: string, message: string): Promise<false> => {
@@ -980,12 +976,12 @@ export default function MealPlanDetailPage() {
       const existingDayIds = days.map(d => d.id);
       if (existingDayIds.length > 0) {
         for (const dayId of existingDayIds) {
-          const { error: entriesDeleteError } = await supabase.from('meal_entries').delete().eq('day_id', dayId);
+          const { error: entriesDeleteError } = await deleteMealEntriesByDay(dayId, userId, plan.id);
           if (entriesDeleteError) {
             return await failApply('delete meal_entries', 'meal_entries', entriesDeleteError.message);
           }
         }
-        const { error: daysDeleteError } = await supabase.from('meal_days').delete().eq('plan_id', plan.id);
+        const { error: daysDeleteError } = await deleteMealDaysByPlan(plan.id, userId);
         if (daysDeleteError) {
           return await failApply('delete meal_days', 'meal_days', daysDeleteError.message);
         }
@@ -996,14 +992,11 @@ export default function MealPlanDetailPage() {
       const peopleCount = peopleCountOverride ?? plan.people_count ?? 1;
       const daysCount = plan.days_count || 3;
 
-      const { error: planUpdateError } = await supabase
-        .from('meal_plans')
-        .update({
-          plan_type: templatePlanType,
-          target_calories: planTypeConfig.targetCalories.default,
-          target_weight_g: planTypeConfig.targetWeight.default,
-        })
-        .eq('id', plan.id);
+      const { error: planUpdateError } = await updateMealPlan(plan.id, userId, {
+        plan_type: templatePlanType,
+        target_calories: planTypeConfig.targetCalories.default,
+        target_weight_g: planTypeConfig.targetWeight.default,
+      }, { queue: false });
 
       if (planUpdateError) {
         return await failApply('update meal_plans', 'meal_plans', planUpdateError.message);
@@ -1017,14 +1010,15 @@ export default function MealPlanDetailPage() {
         const patternIndex = i % template.dayPatterns.length;
         const pattern = template.dayPatterns[patternIndex];
 
-        const { data: dayData, error: dayInsertError } = await supabase
-          .from('meal_days')
-          .insert({ plan_id: plan.id, day_number: i + 1, total_calories: 0, total_weight_g: 0 })
-          .select()
-          .single();
+        // The rebuild needs the new day's id for its entries; addMealDays takes
+        // client-generated ids, so generating it here avoids a select round-trip.
+        const dayId = crypto.randomUUID();
+        const { error: dayInsertError } = await addMealDays(userId, plan.id, [
+          { id: dayId, day_number: i + 1, total_calories: 0, total_weight_g: 0 },
+        ], { queue: false });
 
-        if (dayInsertError || !dayData) {
-          return await failApply(`insert meal_days (day ${i + 1})`, 'meal_days', dayInsertError?.message ?? 'no row returned');
+        if (dayInsertError) {
+          return await failApply(`insert meal_days (day ${i + 1})`, 'meal_days', dayInsertError.message);
         }
 
         let dayCalories = 0;
@@ -1038,8 +1032,9 @@ export default function MealPlanDetailPage() {
           const portionG = Math.round(foodItem.defaultPortion[templatePlanType] * portionMultiplier * peopleCount);
           const nutrition = calculateNutrition(foodItem, portionG);
 
-          const { error: entryInsertError } = await supabase.from('meal_entries').insert({
-            day_id: dayData.id,
+          const { error: entryInsertError } = await addMealEntries(userId, plan.id, [{
+            id: crypto.randomUUID(),
+            day_id: dayId,
             meal_type: entry.mealType,
             name: foodItem.name[loc],
             weight_g: portionG,
@@ -1047,7 +1042,7 @@ export default function MealPlanDetailPage() {
             protein_g: nutrition.protein,
             fat_g: nutrition.fat,
             carbs_g: nutrition.carbs,
-          });
+          }], { queue: false });
 
           if (entryInsertError) {
             return await failApply(`insert meal_entries (day ${i + 1}, ${entry.mealType})`, 'meal_entries', entryInsertError.message);
@@ -1057,10 +1052,10 @@ export default function MealPlanDetailPage() {
           dayWeight += portionG;
         }
 
-        const { error: totalsError } = await supabase
-          .from('meal_days')
-          .update({ total_calories: dayCalories, total_weight_g: dayWeight })
-          .eq('id', dayData.id);
+        const { error: totalsError } = await updateMealDay(dayId, userId, plan.id, {
+          total_calories: dayCalories,
+          total_weight_g: dayWeight,
+        }, { queue: false });
 
         if (totalsError) {
           return await failApply(`update meal_days totals (day ${i + 1})`, 'meal_days', totalsError.message);

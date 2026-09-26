@@ -65,6 +65,9 @@
     "security_question": "Security question",
     "security_save_failed": "Your account was created, but the security question was not saved. Without it you cannot reset your password.",
     "security_warning": "Save your answer — without it you cannot reset your password",
+    "security_not_set_notice": "Password recovery is not set up. Set a security question in Settings so you can reset your password if you forget it.",
+    "open_settings": "Open settings",
+    "continue": "Continue",
     "deleting": "Deleting…",
     "saved_offline": "Saved on this device — it will be sent when the connection returns",
     "enter_name": "Enter a name to continue",
@@ -388,7 +391,14 @@
     "change_password": "Change password",
     "current_password": "Current password",
     "password_changed": "Password changed successfully",
-    "wrong_password": "Current password is incorrect"
+    "wrong_password": "Current password is incorrect",
+    "security_status_set": "Security question is set",
+    "security_status_not_set": "Security question is not set — password recovery is unavailable",
+    "security_status_error": "Could not check the security question. Try again later.",
+    "set_security_question": "Set security question",
+    "replace_security_question": "Replace security question",
+    "security_saved": "Security question saved",
+    "security_save_error": "Failed to save the security question. Try again later."
   },
   "chat": {
     "title": "AI Assistant",

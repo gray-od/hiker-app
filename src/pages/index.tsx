@@ -50,7 +50,7 @@ export default function Dashboard() {
 
     resolveUser().then((user) => {
       if (!user) {
-        router.push('/login');
+        router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
         return;
       }
       if (cancelled) return;

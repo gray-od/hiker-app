@@ -48,7 +48,7 @@ export default function GearPage() {
     resolveUser().then((user) => {
       if (cancelled) return;
       if (!user) {
-        router.push('/login');
+        router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
         return;
       }
 

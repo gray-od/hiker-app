@@ -7,6 +7,8 @@ import remarkGfm from 'remark-gfm';
 import { createClient } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 
+const FREE_DAILY_LIMIT = 15;
+
 function stripThoughts(text: string): string {
   return text
     // remove leaked reasoning blocks
@@ -92,20 +94,16 @@ export default function ChatWidget() {
         return;
       }
       setByokActive(false);
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error: usageError } = await supabase
-        .from('ai_usage')
-        .select('message_count')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .maybeSingle();
+      const { data: usageRows, error: usageError } = await supabase.rpc('get_ai_usage_today', {
+        p_limit: FREE_DAILY_LIMIT,
+      });
       if (usageError) {
         // Hide the badge instead of showing "0/15" when the counter could not be read.
         console.warn('[chat] usage read failed:', usageError.message);
         setTodayUsage(null);
         return;
       }
-      setTodayUsage(data?.message_count ?? 0);
+      setTodayUsage(usageRows?.[0]?.used ?? 0);
     });
   }, [open]);
 
@@ -190,7 +188,7 @@ export default function ChatWidget() {
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t('title')}</h3>
               {!byokActive && todayUsage !== null && (
                 <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${todayUsage >= 13 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : todayUsage >= 10 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'}`}>
-                  {todayUsage}/15
+                  {todayUsage}/{FREE_DAILY_LIMIT}
                 </span>
               )}
             </div>

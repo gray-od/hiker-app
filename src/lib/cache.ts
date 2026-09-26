@@ -401,6 +401,8 @@ function noteNetworkFailure(error: unknown): void {
  * Wraps a fetch function with cache-first strategy.
  * Returns cached data immediately if available, then updates in background from network.
  * Network waits are bounded: no call to fetcher can hang the caller past NETWORK_TIMEOUT_MS.
+ * `skipCache` bypasses the cache as a data source: the answer comes from the network (a fresh
+ * result is still stored) or the call fails — a stale copy is never served.
  */
 export async function withCache<T>(
   key: string,
@@ -412,16 +414,19 @@ export async function withCache<T>(
   // Offline: cache only. A doomed fetch adds latency and returns the same cached
   // value, so the network is never attempted. No TTL check — a stale copy beats a
   // spinner, mirroring the post-failure fallback below (getCached without maxAge).
+  // A forced call has no such copy to fall back to: it fails instead.
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    const cached = await getCached<T>(key);
-    if (cached) return { data: cached, error: null, fromCache: true };
+    if (!skipCache) {
+      const cached = await getCached<T>(key);
+      if (cached) return { data: cached, error: null, fromCache: true };
+    }
     return { data: null, error: new Error('Offline'), fromCache: false };
   }
 
   // Recent connectivity failure: serve any cached copy (no TTL check) instead of
   // paying for the dead network again. The window is bounded, so the network is
   // retried soon. Without a cached value there is nothing to serve — fall through.
-  if (Date.now() - lastNetworkFailureAt < NETWORK_FAILURE_FUSE_MS) {
+  if (!skipCache && Date.now() - lastNetworkFailureAt < NETWORK_FAILURE_FUSE_MS) {
     const cached = await getCached<T>(key);
     if (cached) return { data: cached, error: null, fromCache: true };
   }
@@ -464,10 +469,13 @@ export async function withCache<T>(
     return { ...fresh, fromCache: false };
   } catch (err) {
     noteNetworkFailure(err);
-    // Network failed or timed out — try cache as fallback (skip TTL check — stale is better than nothing)
-    const cached = await getCached<T>(key);
-    if (cached) {
-      return { data: cached, error: null, fromCache: true };
+    // Network failed or timed out — try cache as fallback (skip TTL check — stale is better than nothing).
+    // A forced call never takes that fallback: the caller asked for the network answer.
+    if (!skipCache) {
+      const cached = await getCached<T>(key);
+      if (cached) {
+        return { data: cached, error: null, fromCache: true };
+      }
     }
     return { data: null, error: err instanceof Error ? err : new Error('Network error'), fromCache: false };
   }

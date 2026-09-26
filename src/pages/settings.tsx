@@ -1,18 +1,32 @@
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { isAuthRetryableFetchError } from '@supabase/supabase-js';
+import { isAuthRetryableFetchError, type User } from '@supabase/supabase-js';
 import { createClient, clearStoredSession } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
-import { fetchUserProfile } from '@/lib/supabase/service';
-import { invalidateCache, cacheKeys, clearUserCache } from '@/lib/cache';
+import { fetchUserProfile, updateUserProfile } from '@/lib/supabase/service';
+import { clearUserCache } from '@/lib/cache';
 import { inputClass, cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 type ByokTestResult = 'valid' | 'invalid' | 'connection' | 'server';
+
+type SecurityStatus = 'loading' | 'set' | 'unset' | 'error';
+
+// Accounts created through Google have no password: their identities hold only the
+// OAuth provider. When identities are absent (older stored sessions), fall back to
+// app_metadata.providers; anything unknown defaults to "password required".
+function hasPasswordIdentity(user: User): boolean {
+  if (user.identities && user.identities.length > 0) {
+    return user.identities.some((identity) => identity.provider === 'email');
+  }
+  const providers = user.app_metadata?.providers;
+  if (providers) return providers.includes('email');
+  return true;
+}
 
 // /api/byok/validate answers 200 with { ok: false, error } when the provider rejects
 // the key, and non-2xx when the route itself failed. Its 'network' error means the
@@ -83,6 +97,31 @@ export default function SettingsPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [securityStatus, setSecurityStatus] = useState<SecurityStatus>('loading');
+  const [hasPasswordLogin, setHasPasswordLogin] = useState(true);
+  const [securityEditing, setSecurityEditing] = useState(false);
+  const [securityQuestion, setSecurityQuestion] = useState('');
+  const [securityCustomQuestion, setSecurityCustomQuestion] = useState('');
+  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [securityPassword, setSecurityPassword] = useState('');
+  const [savingSecurity, setSavingSecurity] = useState(false);
+  const [securitySavedMessage, setSecuritySavedMessage] = useState('');
+  const [securityError, setSecurityError] = useState<string | null>(null);
+
+  const loadSecurityStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/security-status', { method: 'POST' });
+      if (!res.ok) {
+        setSecurityStatus('error');
+        return;
+      }
+      const data: { hasQuestion?: boolean } = await res.json();
+      setSecurityStatus(data.hasQuestion ? 'set' : 'unset');
+    } catch {
+      // The check itself failed (network or unparsable body) — distinct from "not set".
+      setSecurityStatus('error');
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -103,12 +142,16 @@ export default function SettingsPage() {
     resolveUser().then(async (user) => {
       if (cancelled) return;
       if (!user) {
-        router.push('/login');
+        router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
         return;
       }
 
       setEmail(user.email || '');
       setName(user.user_metadata?.full_name || '');
+      setHasPasswordLogin(hasPasswordIdentity(user));
+
+      await loadSecurityStatus();
+      if (cancelled) return;
 
       const { data } = await fetchUserProfile(user.id);
       if (cancelled) return;
@@ -121,7 +164,7 @@ export default function SettingsPage() {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [router]);
+  }, [router, loadSecurityStatus]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -149,13 +192,12 @@ export default function SettingsPage() {
     document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
     try {
       setCurrentLocale(locale);
-      const supabase = createClient();
       const user = await resolveUser();
       if (user) {
-        await supabase.from('profiles').update({ lang: locale }).eq('id', user.id);
+        await updateUserProfile(user.id, { lang: locale });
       }
     } catch {
-      // silent — cookie already set, DB update is best-effort
+      // silent — cookie already set, and a failed profile write is queued for replay
     }
     window.location.reload();
   };
@@ -301,6 +343,79 @@ export default function SettingsPage() {
       setPasswordError(tCommon('connection_error'));
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const closeSecurityForm = () => {
+    setSecurityEditing(false);
+    setSecurityQuestion('');
+    setSecurityCustomQuestion('');
+    setSecurityAnswer('');
+    setSecurityPassword('');
+    setSecurityError(null);
+  };
+
+  const handleSaveSecurityQuestion = async () => {
+    if (savingSecurity) return;
+    setSavingSecurity(true);
+    setSecurityError(null);
+    setSecuritySavedMessage('');
+    try {
+      const supabase = createClient();
+      const user = await resolveUser();
+      if (!user) {
+        setSecurityError(tCommon('connection_error'));
+        return;
+      }
+
+      // A session alone must not be enough to overwrite recovery: re-check the
+      // current password the same way the password change does. Google-only
+      // accounts have no password to check.
+      if (hasPasswordIdentity(user)) {
+        if (!user.email) {
+          setSecurityError(t('security_save_error'));
+          return;
+        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email, password: securityPassword,
+        });
+        if (signInError) {
+          setSecurityError(isAuthRetryableFetchError(signInError) ? tCommon('connection_error') : t('wrong_password'));
+          return;
+        }
+      }
+
+      const question = securityQuestion === 'custom' ? securityCustomQuestion : securityQuestion;
+      const res = await fetch('/api/auth/security', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, answer: securityAnswer, currentPassword: securityPassword }),
+      });
+      if (!res.ok) {
+        let code = '';
+        try {
+          const data: { error?: string } = await res.json();
+          code = data.error ?? '';
+        } catch {
+          // Unparsable body — fall through to the generic save error.
+        }
+        if (code === 'wrong_password') {
+          setSecurityError(t('wrong_password'));
+        } else if (code === 'verify_unavailable') {
+          setSecurityError(tCommon('connection_error'));
+        } else {
+          setSecurityError(t('security_save_error'));
+        }
+        return;
+      }
+
+      closeSecurityForm();
+      setSecurityStatus('set');
+      setSecuritySavedMessage(t('security_saved'));
+    } catch {
+      setSecurityError(tCommon('connection_error'));
+    } finally {
+      setSavingSecurity(false);
     }
   };
 
@@ -573,20 +688,22 @@ export default function SettingsPage() {
                     onClick={async () => {
                       try {
                       setSavingName(true);
-                      const supabase = createClient();
                       const user = await resolveUser();
                       if (!user) {
                         toast.error(t('error_saving'));
                         return;
                       }
-                      const { error } = await supabase.from('profiles').update({ name: nameInput }).eq('id', user.id);
-                      if (error) {
+                      const { error, queued } = await updateUserProfile(user.id, { name: nameInput });
+                      if (error && !queued) {
                         toast.error(t('error_saving'));
                         return;
                       }
-                      await invalidateCache(cacheKeys.profile(user.id));
                       setName(nameInput);
-                      toast.success(t('name_saved'));
+                      if (queued) {
+                        toast.info(tCommon('saved_offline'));
+                      } else {
+                        toast.success(t('name_saved'));
+                      }
                       setEditingName(false);
                       } catch (err) {
                         toast.error(t('error_saving'));
@@ -667,6 +784,136 @@ export default function SettingsPage() {
               {changingPassword ? <LoadingSpinner size="sm" /> : t('change_password')}
             </button>
           </div>
+        </section>
+
+        <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            {tCommon('security_question')}
+          </h2>
+
+          {securityEditing ? (
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="securityQuestion" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  {tCommon('security_question')}
+                </label>
+                <select
+                  id="securityQuestion"
+                  value={securityQuestion}
+                  onChange={(e) => { setSecurityQuestion(e.target.value); setSecurityError(null); }}
+                  className={inputClass}
+                >
+                  <option value="">—</option>
+                  <option value="mother_maiden">{tCommon('question_mother_maiden')}</option>
+                  <option value="birth_city">{tCommon('question_birth_city')}</option>
+                  <option value="first_school">{tCommon('question_first_school')}</option>
+                  <option value="pet_name">{tCommon('question_pet_name')}</option>
+                  <option value="custom">{tCommon('question_custom')}</option>
+                </select>
+              </div>
+              {securityQuestion === 'custom' && (
+                <div>
+                  <label htmlFor="securityCustomQuestion" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                    {tCommon('question_custom')}
+                  </label>
+                  <input
+                    id="securityCustomQuestion"
+                    type="text"
+                    value={securityCustomQuestion}
+                    onChange={(e) => { setSecurityCustomQuestion(e.target.value); setSecurityError(null); }}
+                    maxLength={200}
+                    className={inputClass}
+                  />
+                </div>
+              )}
+              <div>
+                <label htmlFor="securityAnswer" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  {tCommon('security_answer')}
+                </label>
+                <input
+                  id="securityAnswer"
+                  type="text"
+                  value={securityAnswer}
+                  onChange={(e) => { setSecurityAnswer(e.target.value); setSecurityError(null); }}
+                  maxLength={200}
+                  className={inputClass}
+                />
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{tCommon('security_warning')}</p>
+              </div>
+              {hasPasswordLogin && (
+                <div>
+                  <label htmlFor="securityCurrentPassword" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                    {t('current_password')}
+                  </label>
+                  <input
+                    id="securityCurrentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    value={securityPassword}
+                    onChange={(e) => { setSecurityPassword(e.target.value); setSecurityError(null); }}
+                    className={inputClass}
+                  />
+                </div>
+              )}
+              {securityError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{securityError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveSecurityQuestion}
+                  disabled={savingSecurity || !securityQuestion || !securityAnswer || (securityQuestion === 'custom' && !securityCustomQuestion) || (hasPasswordLogin && !securityPassword)}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {savingSecurity ? <LoadingSpinner size="sm" /> : tCommon('save')}
+                </button>
+                <button
+                  onClick={closeSecurityForm}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                >
+                  {tCommon('cancel')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {securityStatus === 'set' && (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('security_status_set')}</p>
+              )}
+              {securityStatus === 'unset' && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">{t('security_status_not_set')}</p>
+              )}
+              {securityStatus === 'error' && (
+                <p className="text-sm text-red-600 dark:text-red-400">{t('security_status_error')}</p>
+              )}
+              {securitySavedMessage && (
+                <p className="text-sm text-[var(--color-brand)]">{securitySavedMessage}</p>
+              )}
+              {securityStatus === 'set' && (
+                <button
+                  onClick={() => { setSecurityEditing(true); setSecuritySavedMessage(''); }}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {t('replace_security_question')}
+                </button>
+              )}
+              {securityStatus === 'unset' && (
+                <button
+                  onClick={() => { setSecurityEditing(true); setSecuritySavedMessage(''); }}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {t('set_security_question')}
+                </button>
+              )}
+              {securityStatus === 'error' && (
+                <button
+                  onClick={() => { setSecurityStatus('loading'); void loadSecurityStatus(); }}
+                  className="px-4 py-2 min-w-[44px] min-h-[44px] text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                >
+                  {tCommon('retry')}
+                </button>
+              )}
+            </div>
+          )}
         </section>
         </div>
 

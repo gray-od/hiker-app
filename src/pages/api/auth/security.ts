@@ -1,7 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, isAuthRetryableFetchError, type User } from '@supabase/supabase-js';
 import { pbkdf2Sync, randomBytes } from 'crypto';
 import { getRouteUser } from '@/lib/supabase/routeAuth';
+
+// Accounts created through Google have no password: their identities hold only the
+// OAuth provider. When identities are absent (older stored sessions), fall back to
+// app_metadata.providers; anything unknown defaults to "password required".
+function hasPasswordIdentity(user: User): boolean {
+  if (user.identities && user.identities.length > 0) {
+    return user.identities.some((identity) => identity.provider === 'email');
+  }
+  const providers = user.app_metadata?.providers;
+  if (providers) return providers.includes('email');
+  return true;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -10,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const { question, answer } = req.body;
+    const { question, answer, currentPassword } = req.body ?? {};
     if (!question || !answer) {
       res.status(400).json({ error: 'Question and answer are required' });
       return;
@@ -20,6 +32,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!user) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
+    }
+
+    // A stolen session alone must not replace the recovery question — from there the
+    // password could be reset without ever knowing it. Accounts with a password
+    // identity prove the password here; Google-only accounts have none to prove.
+    if (hasPasswordIdentity(user)) {
+      if (
+        typeof currentPassword !== 'string' ||
+        currentPassword.length < 6 ||
+        currentPassword.length > 72
+      ) {
+        res.status(400).json({ error: 'invalid_request' });
+        return;
+      }
+      if (!user.email) {
+        // Nothing to verify against — this must not fall through as if the account
+        // had no password at all.
+        res.status(503).json({ error: 'verify_unavailable' });
+        return;
+      }
+      const authClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      );
+      const { error: verifyError } = await authClient.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        // Network/5xx failures and GoTrue rate limits mean the password was not
+        // evaluated, so they must not be reported as wrong; GoTrue's own message
+        // stays internal either way.
+        if (isAuthRetryableFetchError(verifyError) || verifyError.status === 429) {
+          res.status(503).json({ error: 'verify_unavailable' });
+          return;
+        }
+        res.status(403).json({ error: 'wrong_password' });
+        return;
+      }
     }
 
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -30,7 +30,7 @@ export default function MealPlanPrintPage() {
 
     resolveUser().then(async (user) => {
       if (!user) {
-        router.push('/login');
+        router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
         return;
       }
 
