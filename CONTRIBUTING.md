@@ -39,19 +39,19 @@ npm run lint
 ```
 src/
 ├── pages/          # Next.js Pages Router
-│   ├── api/        # 7 API routes (chat, auth, byok, account)
+│   ├── api/        # 8 API routes (chat, auth, byok, account)
 │   ├── _app.tsx    # App wrapper (theme, i18n, offline banner)
 │   └── _document.tsx
 ├── components/     # 22 shared components
 │   ├── meals/      # Meal plan components
 │   └── lists/      # Packing list components
-├── lib/            # 21 utility modules
+├── lib/            # 24 utility modules
 │   ├── supabase/   # Supabase client + data service
 │   ├── cache.ts    # IndexedDB cache layer (TTL 5min)
 │   ├── offline-queue.ts  # Mutation queue for offline
 │   └── format.ts   # i18n formatters
 ├── styles/         # Tailwind globals
-└── middleware.ts   # Auth + i18n middleware
+└── middleware.ts   # Custom middleware: locale cookie, local session-cookie check, ?next= redirects
 ```
 
 ## Architecture

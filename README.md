@@ -21,6 +21,8 @@ AI-first hiking planner — gear, packing lists, meals, and an AI partner that a
 - Packing lists with GPX route import + weather
 - Meal plans with day-by-day calories, templates, shopping list
 - AI chat with live weather, web search, hiking knowledge, and full access to your gear, food, lists, and meals
+- 15 free AI messages per day; your own AI key removes the daily limit
+- BYOK — optionally bring your own AI or web-search API key
 - Dark/light theme, 3 languages (UA/RU/EN)
 
 ### Auth & Registration
