@@ -27,6 +27,9 @@ export default function PrivacyPage() {
               <li>{p('data_gear')}</li>
               <li>{p('data_meals')}</li>
               <li>{p('data_lists')}</li>
+              <li>{p('data_gpx')}</li>
+              <li>{p('data_security_question')}</li>
+              <li>{p('data_ai_usage')}</li>
             </ul>
           </section>
 
@@ -51,11 +54,23 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('cookies_title')}</h2>
             <p>{p('cookies_text')}</p>
+            <p className="mt-2">{p('cookies_storage')}</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('local_title')}</h2>
+            <p>{p('local_text')}</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('stats_title')}</h2>
+            <p>{p('stats_text')}</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{p('deletion_title')}</h2>
             <p>{p('deletion_self_service')}</p>
+            <p className="mt-2">{p('deletion_retention')}</p>
             <p className="mt-2">
               {p('deletion_text')}{' '}
               <a href="https://github.com/gray-od/hiker-app/issues" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
