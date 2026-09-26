@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <Head>
-        <title>ProHikes — {t('forgot_password_title')}</title>
+        <title>ProHikes — Password Reset</title>
         <meta name="description" content="Reset your ProHikes account password" />
       </Head>
       <div className="min-h-screen bg-zinc-50 dark:bg-black">
