@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { formatWeight } from '@/lib/format';
 
 interface WeightStatCardProps {
@@ -28,7 +29,7 @@ function HintButton({
     <button
       onClick={() => onHintChange(currentHint === hint ? null : hint)}
       aria-label={label}
-      className="text-zinc-400 hover:text-[var(--color-brand)] transition-colors"
+      className="mt-px text-zinc-400 hover:text-[var(--color-brand)] transition-colors"
     >
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="12" cy="12" r="10" />
@@ -48,15 +49,17 @@ export default function WeightStatCard({
   t,
   tGear,
 }: WeightStatCardProps) {
+  const locale = useLocale();
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex min-h-8 items-start gap-1">
           {t('base_weight')}
           <HintButton hint="base" currentHint={weightHint} label={t('base_weight')} onHintChange={onHintChange} />
         </div>
         <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-          {formatWeight(baseWeight, tGear)}
+          {formatWeight(baseWeight, locale, tGear)}
         </div>
         {weightHint === 'base' && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
@@ -65,12 +68,12 @@ export default function WeightStatCard({
         )}
       </div>
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex min-h-8 items-start gap-1">
           {t('worn_weight')}
           <HintButton hint="worn" currentHint={weightHint} label={t('worn_weight')} onHintChange={onHintChange} />
         </div>
         <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-          {formatWeight(wornWeight, tGear)}
+          {formatWeight(wornWeight, locale, tGear)}
         </div>
         {weightHint === 'worn' && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
@@ -79,12 +82,12 @@ export default function WeightStatCard({
         )}
       </div>
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex items-center gap-1">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 flex min-h-8 items-start gap-1">
           {t('consumable_weight')}
           <HintButton hint="consumable" currentHint={weightHint} label={t('consumable_weight')} onHintChange={onHintChange} />
         </div>
         <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-          {formatWeight(consumableWeight, tGear)}
+          {formatWeight(consumableWeight, locale, tGear)}
         </div>
         {weightHint === 'consumable' && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
@@ -93,9 +96,9 @@ export default function WeightStatCard({
         )}
       </div>
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>
+        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 min-h-8">{t('total_weight')}</div>
         <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-          {formatWeight(totalWeight, tGear)}
+          {formatWeight(totalWeight, locale, tGear)}
         </div>
       </div>
     </div>

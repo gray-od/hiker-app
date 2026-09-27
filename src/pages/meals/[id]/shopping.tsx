@@ -188,7 +188,7 @@ export default function ShoppingListPage() {
                     <tr key={item.name}>
                       <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-zinc-500">{idx + 1}</td>
                       <td className="border border-zinc-300 px-2 py-1 text-black break-words">{item.name}</td>
-                      <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatWeight(item.weight_g, tCommon)}</td>
+                      <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatWeight(item.weight_g, locale, tCommon)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -197,7 +197,7 @@ export default function ShoppingListPage() {
 
             <div className="border-t-2 border-black pt-3 mt-4 text-right">
               <span className="text-base font-semibold text-black">
-                {t('total_weight')}: {formatWeight(totalWeight, tCommon)}
+                {t('total_weight')}: {formatWeight(totalWeight, locale, tCommon)}
               </span>
             </div>
           </>

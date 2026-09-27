@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import type { UserFoodItem } from '@/lib/types';
-import { formatKbju } from '@/lib/format';
+import { formatKbju, formatNumber } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
 import { fetchUserFoodItems, createFoodItem, updateFoodItem, deleteFoodItem } from '@/lib/supabase/service';
 import { toast } from '@/lib/toast';
@@ -29,6 +29,7 @@ export default function FoodPage() {
   const router = useRouter();
   const tFood = useTranslations('food');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   const [items, setItems] = useState<UserFoodItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -306,7 +307,7 @@ export default function FoodPage() {
                           protein: tFood('protein_short'),
                           fat: tFood('fat_short'),
                           carbs: tFood('carbs_short'),
-                        })}
+                        }, locale)}
                       </span>
                     </div>
                     <div className="mt-1">
@@ -384,16 +385,16 @@ export default function FoodPage() {
                         {tFood(`categories.${item.category}`)}
                       </td>
                       <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                        {item.calories_per100g}
+                        {formatNumber(item.calories_per100g, locale)}
                       </td>
                       <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                        {item.protein_per100g}
+                        {formatNumber(item.protein_per100g, locale)}
                       </td>
                       <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                        {item.fat_per100g}
+                        {formatNumber(item.fat_per100g, locale)}
                       </td>
                       <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                        {item.carbs_per100g}
+                        {formatNumber(item.carbs_per100g, locale)}
                       </td>
                       <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
                         {item.default_portion_g} {tCommon('weight_g')}
@@ -434,7 +435,7 @@ export default function FoodPage() {
       {/* Add/Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <div className="p-6">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 {editingItem ? tFood('edit_item') : tFood('add_item')}
@@ -442,10 +443,11 @@ export default function FoodPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="food-item-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tFood('name')}
                   </label>
                   <input
+                    id="food-item-name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
@@ -458,10 +460,11 @@ export default function FoodPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="food-item-category" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tFood('category')}
                   </label>
                   <select
+                    id="food-item-category"
                     value={formData.category}
                     onChange={(e) => handleFormChange('category', e.target.value)}
                     className={inputClass}
@@ -475,10 +478,11 @@ export default function FoodPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="food-item-calories" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tFood('calories')}, {tFood('per_100g')}
                   </label>
                   <input
+                    id="food-item-calories"
                     type="number"
                     value={formData.calories_per100g}
                     onChange={(e) => handleFormChange('calories_per100g', parseFloat(e.target.value) || 0)}
@@ -489,10 +493,11 @@ export default function FoodPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="food-item-protein" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tFood('protein')}, {tFood('per_100g')}
                   </label>
                   <input
+                    id="food-item-protein"
                     type="number"
                     value={formData.protein_per100g}
                     onChange={(e) => handleFormChange('protein_per100g', parseFloat(e.target.value) || 0)}
@@ -503,10 +508,11 @@ export default function FoodPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="food-item-fat" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tFood('fat')}, {tFood('per_100g')}
                   </label>
                   <input
+                    id="food-item-fat"
                     type="number"
                     value={formData.fat_per100g}
                     onChange={(e) => handleFormChange('fat_per100g', parseFloat(e.target.value) || 0)}
@@ -517,10 +523,11 @@ export default function FoodPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="food-item-carbs" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tFood('carbs')}, {tFood('per_100g')}
                   </label>
                   <input
+                    id="food-item-carbs"
                     type="number"
                     value={formData.carbs_per100g}
                     onChange={(e) => handleFormChange('carbs_per100g', parseFloat(e.target.value) || 0)}
@@ -531,10 +538,11 @@ export default function FoodPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="food-item-portion" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tFood('default_portion')}
                   </label>
                   <input
+                    id="food-item-portion"
                     type="number"
                     value={formData.default_portion_g}
                     onChange={(e) => handleFormChange('default_portion_g', parseInt(e.target.value) || 0)}
@@ -568,7 +576,7 @@ export default function FoodPage() {
       {/* Delete confirmation modal */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm max-h-[90dvh] overflow-y-auto p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {tCommon('delete')}
             </h3>

@@ -31,7 +31,7 @@ export default function TemplateModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md pb-[max(1rem,env(safe-area-inset-bottom,1rem))]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">{t('apply_template')}</h3>
         <div className="space-y-2">
           {matchingTemplates.map((tmpl) => (

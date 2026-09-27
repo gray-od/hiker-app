@@ -55,10 +55,11 @@ export default function EditPlanModal({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-plan-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('name')}
           </label>
           <input
+            id="edit-plan-name"
             type="text"
             value={editForm.name}
             onChange={(e) => onFieldChange('name', e.target.value)}
@@ -70,10 +71,11 @@ export default function EditPlanModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-plan-type" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('plan_type')}
           </label>
           <select
+            id="edit-plan-type"
             value={editForm.plan_type}
             onChange={(e) => onFieldChange('plan_type', e.target.value)}
             className={inputClass}
@@ -87,10 +89,11 @@ export default function EditPlanModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-plan-people" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('people_count')}
           </label>
           <input
+            id="edit-plan-people"
             type="number"
             value={editForm.people_count}
             onChange={(e) => handleNumberChange('people_count', e.target.value)}
@@ -101,10 +104,11 @@ export default function EditPlanModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-plan-calories" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('target_calories')}
           </label>
           <input
+            id="edit-plan-calories"
             type="number"
             value={editForm.target_calories}
             onChange={(e) => handleNumberChange('target_calories', e.target.value)}
@@ -115,10 +119,11 @@ export default function EditPlanModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-plan-weight" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('target_weight')}
           </label>
           <input
+            id="edit-plan-weight"
             type="number"
             value={editForm.target_weight_g}
             onChange={(e) => handleNumberChange('target_weight_g', e.target.value)}

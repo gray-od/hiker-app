@@ -3,7 +3,7 @@
 import { useLocale } from 'next-intl';
 import type { GearList } from '@/lib/types';
 import { getSeasonBadgeClass } from '@/lib/badges';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatNumber } from '@/lib/format';
 import { localizeWeather } from '@/lib/gpx-weather';
 
 interface GpxSectionProps {
@@ -36,9 +36,11 @@ export default function GpxSection({
   return (
     <>
       <input
+        id="gpx-file-input"
         ref={fileInputRef}
         type="file"
         accept=".gpx"
+        aria-label={t('upload_gpx')}
         onChange={onGpxUpload}
         className="hidden"
       />
@@ -55,10 +57,12 @@ export default function GpxSection({
           )}
           {list.gpx_data && (
             <>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_distance')}>
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="2.5" cy="8" r="1.5"/><line x1="4" y1="8" x2="12" y2="8"/><circle cx="13.5" cy="8" r="1.5"/></svg>
-                {list.gpx_data.distance_km} {t('gpx_km')}
-              </span>
+              {list.gpx_data.distance_km != null && (
+                <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_distance')}>
+                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="2.5" cy="8" r="1.5"/><line x1="4" y1="8" x2="12" y2="8"/><circle cx="13.5" cy="8" r="1.5"/></svg>
+                  {formatNumber(list.gpx_data.distance_km, locale, 1)} {t('gpx_km')}
+                </span>
+              )}
               <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1" title={t('gpx_elevation_gain')}>
                 <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3,11 8,5 8,5"/><polyline points="5,7 8,5 11,7"/><line x1="8" y1="5" x2="8" y2="14"/></svg>
                 +{list.gpx_data.elevation_gain_m} {t('gpx_m')}

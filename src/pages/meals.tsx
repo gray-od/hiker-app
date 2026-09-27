@@ -494,13 +494,13 @@ export default function MealsPage() {
 
                   <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-3">
                     <span>
-                      {plan.days_count} {t('days')}
+                      {t('days_short', { count: plan.days_count })}
                     </span>
                     <span>
                       {totalCalories} {t('kcal')}
                     </span>
                     <span>
-                      {formatWeight(totalWeight, tCommon)}
+                      {formatWeight(totalWeight, locale, tCommon)}
                     </span>
                   </div>
 
@@ -522,7 +522,7 @@ export default function MealsPage() {
 
         {modalOpen && (
           <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
               <div className="p-6">
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                   {t('add')}
@@ -530,10 +530,11 @@ export default function MealsPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label htmlFor="meal-plan-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       {t('name')}
                     </label>
                     <input
+                      id="meal-plan-name"
                       type="text"
                       value={formData.name}
                       onChange={(e) => handleFormChange('name', e.target.value)}
@@ -546,10 +547,11 @@ export default function MealsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label htmlFor="meal-plan-days" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       {t('days_count')}
                     </label>
                     <input
+                      id="meal-plan-days"
                       type="number"
                       min={1}
                       max={30}
@@ -611,10 +613,11 @@ export default function MealsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label htmlFor="meal-plan-people" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       {t('people_count')}
                     </label>
                     <input
+                      id="meal-plan-people"
                       type="number"
                       min={1}
                       max={50}
@@ -626,10 +629,11 @@ export default function MealsPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      <label htmlFor="meal-plan-calories" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                         {t('target_calories')}
                       </label>
                       <input
+                        id="meal-plan-calories"
                         type="number"
                         min={planTypeConfig.targetCalories.min}
                         max={planTypeConfig.targetCalories.max}
@@ -640,10 +644,11 @@ export default function MealsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      <label htmlFor="meal-plan-weight" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                         {t('target_weight')}
                       </label>
                       <input
+                        id="meal-plan-weight"
                         type="number"
                         min={planTypeConfig.targetWeight.min}
                         max={planTypeConfig.targetWeight.max}
@@ -664,10 +669,11 @@ export default function MealsPage() {
                         {t('template_hint')}
                       </div>
                     )}
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label htmlFor="meal-plan-template" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       {t('from_template')}
                     </label>
                     <select
+                      id="meal-plan-template"
                       value={formData.template_id}
                       onChange={(e) => handleFormChange('template_id', e.target.value)}
                       className={inputClass}
@@ -719,7 +725,7 @@ export default function MealsPage() {
 
         {confirmDelete && (
           <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] max-h-[90dvh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                 {tCommon('delete')}
               </h3>

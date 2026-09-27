@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useLocale } from 'next-intl';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { GearItem, ListItemWithGear } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
@@ -39,6 +40,7 @@ export default function AddItemsModal({
   tCommon,
   tGear,
 }: AddItemsModalProps) {
+  const locale = useLocale();
   const debouncedQuery = useDebounce(searchQuery, 200);
 
   const listItemGearIds = useMemo(() => new Set(listItems.map(li => li.gear_item_id)), [listItems]);
@@ -51,7 +53,9 @@ export default function AddItemsModal({
     <Modal open={open} onClose={onClose} title={t('select_items')} maxWidth="max-w-md">
       <div className="border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <input
+          id="add-items-search"
           type="text"
+          aria-label={t('search_gear')}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t('search_gear')}
@@ -99,7 +103,7 @@ export default function AddItemsModal({
                   {tGear(`categories.${gear.category}`)}
                 </span>
                 <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                  {formatWeight(gear.weight_g, tCommon)}
+                  {formatWeight(gear.weight_g, locale, tCommon)}
                 </span>
               </div>
             </div>

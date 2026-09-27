@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { getTerrainLimitPct, bannerColor } from '@/lib/weight-calc';
-import { formatWeight } from '@/lib/format';
+import { formatWeight, formatNumber } from '@/lib/format';
 import { inputClass } from '@/lib/cn';
 
 interface TripWeightCardProps {
@@ -26,6 +26,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
   const t = useTranslations('dashboard');
   const tLists = useTranslations('lists');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   const [selectedListId, setSelectedListId] = useState<string>('');
   const [mounted, setMounted] = useState(false);
@@ -69,15 +70,16 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
       <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">{t('trip_weight')}</h3>
 
       <div className="mb-4">
-        <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('gear_weight')}</label>
+        <label htmlFor="trip-weight-list" className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('gear_weight')}</label>
         <select
+          id="trip-weight-list"
           value={selectedListId}
           onChange={(e) => setSelectedListId(e.target.value)}
           className={inputClass}
         >
           <option value="">{t('select_list')}</option>
           {lists.map(l => (
-            <option key={l.id} value={l.id}>{l.name} ({formatWeight(l.totalWeight, tCommon)})</option>
+            <option key={l.id} value={l.id}>{l.name} ({formatWeight(l.totalWeight, locale, tCommon)})</option>
           ))}
         </select>
       </div>
@@ -88,7 +90,7 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
             <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
               <span>{t('food_weight')}:</span>
               <span className="text-[var(--color-brand)]">{linkedPlanDisplay.name}</span>
-              <span>· {formatWeight(linkedPlanDisplay.totalWeight, tCommon)} {t('per_person', { n: linkedPlanDisplay.people_count })}</span>
+              <span>· {formatWeight(linkedPlanDisplay.totalWeight, locale, tCommon)} {t('per_person', { n: linkedPlanDisplay.people_count })}</span>
             </div>
           ) : (
             <div className="text-xs text-zinc-400 dark:text-zinc-500">
@@ -102,22 +104,24 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
         <>
           <div className="flex items-center justify-between text-sm border-t border-zinc-200 dark:border-zinc-800 pt-3">
             <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-400">
-              <span>{t('gear_weight')}: {formatWeight(gearWeight, tCommon)}</span>
+              <span>{t('gear_weight')}: {formatWeight(gearWeight, locale, tCommon)}</span>
               {(() => {
                 const lp = selectedList.meal_plan_id ? plans.find(p => p.id === selectedList.meal_plan_id) : null;
-                return lp ? <span>{t('food_weight')}: {formatWeight(lp.totalWeight / lp.people_count, tCommon)}</span> : null;
+                return lp ? <span>{t('food_weight')}: {formatWeight(lp.totalWeight / lp.people_count, locale, tCommon)}</span> : null;
               })()}
             </div>
             <div className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-              {t('combined_weight')}: {formatWeight(totalWeight, tCommon)}
+              {t('combined_weight')}: {formatWeight(totalWeight, locale, tCommon)}
             </div>
           </div>
           {selectedList?.gpx_data && (
             <div className="flex items-center gap-3 mt-3 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
-              <span className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="2.5" cy="8" r="1.5"/><line x1="4" y1="8" x2="12" y2="8"/><circle cx="13.5" cy="8" r="1.5"/></svg>
-                {selectedList.gpx_data.distance_km} {tLists('gpx_km')}
-              </span>
+              {selectedList.gpx_data.distance_km != null && (
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="2.5" cy="8" r="1.5"/><line x1="4" y1="8" x2="12" y2="8"/><circle cx="13.5" cy="8" r="1.5"/></svg>
+                  {formatNumber(selectedList.gpx_data.distance_km, locale, 1)} {tLists('gpx_km')}
+                </span>
+              )}
               <span className="flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="3,11 8,5"/><line x1="8" y1="5" x2="8" y2="14"/></svg>
                 +{selectedList.gpx_data.elevation_gain_m} {tLists('gpx_m')}
@@ -134,7 +138,9 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
             <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
               <span>{t('my_weight')}:</span>
               <input
+                id="trip-weight-my-weight"
                 type="number"
+                aria-label={t('my_weight')}
                 value={myWeight}
                 onChange={(e) => { const v = e.target.value; setMyWeight(v === '' ? 0 : Number(v) || 0); }}
                 className="w-16 px-1.5 py-0.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded text-xs text-zinc-900 dark:text-zinc-100"
@@ -156,8 +162,8 @@ export default function TripWeightCard({ lists, plans }: TripWeightCardProps) {
             const pct = maxGrams > 0 ? Math.round((groupTotal / maxGrams) * 100) : 0;
             return (
               <div className={`mt-3 p-2 rounded-lg text-xs flex items-center justify-between flex-wrap gap-2 ${bannerColor(pct)}`}>
-                <span>⚖ {formatWeight(gearTotal, tCommon)} + {formatWeight(foodTotal, tCommon)} = {formatWeight(groupTotal, tCommon)}</span>
-                <span className="tabular-nums font-medium">≤ {formatWeight(maxGrams, tCommon)} ({pct}%)</span>
+                <span>⚖ {formatWeight(gearTotal, locale, tCommon)} + {formatWeight(foodTotal, locale, tCommon)} = {formatWeight(groupTotal, locale, tCommon)}</span>
+                <span className="tabular-nums font-medium">≤ {formatWeight(maxGrams, locale, tCommon)} ({pct}%)</span>
               </div>
             );
           })()}

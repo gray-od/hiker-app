@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { useLocale } from 'next-intl';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { MealEntry, UserFoodItem } from '@/lib/types';
 import {
@@ -10,6 +11,7 @@ import {
   type FoodItem,
   type FoodCategory,
 } from '@/lib/food-catalog';
+import { formatNumber } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
@@ -35,7 +37,6 @@ interface EntryModalProps {
   userFoodItems: UserFoodItem[];
   saving: boolean;
   actionError: string | null;
-  locale: string;
   foodCategories: FoodCategory[];
   onClose: () => void;
   onSave: () => void;
@@ -63,7 +64,6 @@ export default function EntryModal({
   userFoodItems,
   saving,
   actionError,
-  locale,
   foodCategories,
   onClose,
   onSave,
@@ -77,8 +77,7 @@ export default function EntryModal({
   t,
   tCommon,
 }: EntryModalProps) {
-  if (!open) return null;
-
+  const locale = useLocale();
   const debouncedSearch = useDebounce(productSearch, 200);
 
   const filteredProducts = useMemo(() => FOOD_CATALOG.filter(p => {
@@ -116,6 +115,7 @@ export default function EntryModal({
     (entryMode === 'custom' && !entryForm.name.trim());
 
   useEffect(() => {
+    if (!open) return;
     const onResize = () => {
       if (window.visualViewport) {
         const activeEl = document.activeElement as HTMLElement | null;
@@ -126,11 +126,14 @@ export default function EntryModal({
     };
     window.visualViewport?.addEventListener('resize', onResize);
     return () => window.visualViewport?.removeEventListener('resize', onResize);
-  }, []);
+  }, [open]);
+
+  // The parent mounts this modal unconditionally, so the early return must stay below every hook.
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[85dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
             {editEntryId ? t('edit_entry') : t('add_entry')}
@@ -168,10 +171,11 @@ export default function EntryModal({
           {entryMode === 'catalog' && !editEntryId ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="entry-catalog-meal-type" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('meal_type')}
                 </label>
                 <select
+                  id="entry-catalog-meal-type"
                   value={entryForm.meal_type}
                   onChange={(e) =>
                     onEntryFormChange('meal_type', e.target.value)
@@ -187,10 +191,11 @@ export default function EntryModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="entry-catalog-category" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('category')}
                 </label>
                 <select
+                  id="entry-catalog-category"
                   value={categoryFilter}
                   onChange={(e) => onCategoryFilterChange(e.target.value as FoodCategory | '')}
                   className={inputClass}
@@ -206,10 +211,12 @@ export default function EntryModal({
 
               <div>
                 <input
+                  id="entry-catalog-search"
                   type="text"
                   value={productSearch}
                   onChange={(e) => onProductSearchChange(e.target.value)}
                   placeholder={t('search_product')}
+                  aria-label={t('search_product')}
                   maxLength={200}
                   className={cn(inputClass, 'placeholder-zinc-400')}
                 />
@@ -247,10 +254,11 @@ export default function EntryModal({
                     {selectedProduct.name[locale as 'uk' | 'ru' | 'en']}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label htmlFor="entry-catalog-portion" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       {t('portion')}
                     </label>
                     <input
+                      id="entry-catalog-portion"
                       type="number"
                       value={portionG}
                       onChange={(e) => onPortionChange(Number(e.target.value))}
@@ -264,25 +272,25 @@ export default function EntryModal({
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('kcal')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {catalogNutrition.calories}
+                          {formatNumber(catalogNutrition.calories, locale)}
                         </div>
                       </div>
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('protein')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {catalogNutrition.protein}
+                          {formatNumber(catalogNutrition.protein, locale)}
                         </div>
                       </div>
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('fat')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {catalogNutrition.fat}
+                          {formatNumber(catalogNutrition.fat, locale)}
                         </div>
                       </div>
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('carbs')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {catalogNutrition.carbs}
+                          {formatNumber(catalogNutrition.carbs, locale)}
                         </div>
                       </div>
                     </div>
@@ -294,10 +302,11 @@ export default function EntryModal({
           ) : entryMode === 'my_products' && !editEntryId ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="entry-my-meal-type" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('meal_type')}
                 </label>
                 <select
+                  id="entry-my-meal-type"
                   value={entryForm.meal_type}
                   onChange={(e) =>
                     onEntryFormChange('meal_type', e.target.value)
@@ -313,10 +322,11 @@ export default function EntryModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="entry-my-category" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('category')}
                 </label>
                 <select
+                  id="entry-my-category"
                   value={categoryFilter}
                   onChange={(e) => onCategoryFilterChange(e.target.value as FoodCategory | '')}
                   className={inputClass}
@@ -332,10 +342,12 @@ export default function EntryModal({
 
               <div>
                 <input
+                  id="entry-my-search"
                   type="text"
                   value={productSearch}
                   onChange={(e) => onProductSearchChange(e.target.value)}
                   placeholder={t('search_product')}
+                  aria-label={t('search_product')}
                   maxLength={200}
                   className={cn(inputClass, 'placeholder-zinc-400')}
                 />
@@ -361,7 +373,7 @@ export default function EntryModal({
                       {product.name}
                     </div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {product.calories_per100g} {t('kcal')}/{t('per_100g')}
+                      {formatNumber(product.calories_per100g, locale)} {t('kcal')}/{t('per_100g')}
                     </div>
                   </button>
                 ))}
@@ -373,10 +385,11 @@ export default function EntryModal({
                     {selectedUserProduct.name}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label htmlFor="entry-my-portion" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       {t('portion')}
                     </label>
                     <input
+                      id="entry-my-portion"
                       type="number"
                       value={portionG}
                       onChange={(e) => onPortionChange(Number(e.target.value))}
@@ -390,25 +403,25 @@ export default function EntryModal({
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('kcal')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {userProductNutrition.calories}
+                          {formatNumber(userProductNutrition.calories, locale)}
                         </div>
                       </div>
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('protein')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {userProductNutrition.protein}
+                          {formatNumber(userProductNutrition.protein, locale)}
                         </div>
                       </div>
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('fat')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {userProductNutrition.fat}
+                          {formatNumber(userProductNutrition.fat, locale)}
                         </div>
                       </div>
                       <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 text-center">
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{t('carbs')}</div>
                         <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                          {userProductNutrition.carbs}
+                          {formatNumber(userProductNutrition.carbs, locale)}
                         </div>
                       </div>
                     </div>
@@ -420,10 +433,11 @@ export default function EntryModal({
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="entry-custom-meal-type" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('meal_type')}
                 </label>
                 <select
+                  id="entry-custom-meal-type"
                   value={entryForm.meal_type}
                   onChange={(e) =>
                     onEntryFormChange('meal_type', e.target.value)
@@ -439,10 +453,11 @@ export default function EntryModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="entry-custom-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('meal_name')}
                 </label>
                 <input
+                  id="entry-custom-name"
                   type="text"
                   value={entryForm.name}
                   onChange={(e) => onEntryFormChange('name', e.target.value)}
@@ -455,10 +470,11 @@ export default function EntryModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="entry-custom-weight" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('weight')}
                   </label>
                   <input
+                    id="entry-custom-weight"
                     type="number"
                     value={entryForm.weight_g}
                     onChange={(e) => onEntryFormChange('weight_g', Number(e.target.value))}
@@ -468,10 +484,11 @@ export default function EntryModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="entry-custom-calories" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('calories_label')}
                   </label>
                   <input
+                    id="entry-custom-calories"
                     type="number"
                     value={entryForm.calories}
                     onChange={(e) => onEntryFormChange('calories', Number(e.target.value))}
@@ -484,10 +501,11 @@ export default function EntryModal({
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="entry-custom-protein" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('protein')}
                   </label>
                   <input
+                    id="entry-custom-protein"
                     type="number"
                     value={entryForm.protein_g}
                     onChange={(e) => onEntryFormChange('protein_g', Number(e.target.value))}
@@ -497,10 +515,11 @@ export default function EntryModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="entry-custom-fat" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('fat')}
                   </label>
                   <input
+                    id="entry-custom-fat"
                     type="number"
                     value={entryForm.fat_g}
                     onChange={(e) => onEntryFormChange('fat_g', Number(e.target.value))}
@@ -510,10 +529,11 @@ export default function EntryModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="entry-custom-carbs" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('carbs')}
                   </label>
                   <input
+                    id="entry-custom-carbs"
                     type="number"
                     value={entryForm.carbs_g}
                     onChange={(e) => onEntryFormChange('carbs_g', Number(e.target.value))}

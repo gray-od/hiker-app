@@ -306,10 +306,10 @@ export default function ListsPage() {
 
                 <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-3">
                   <span>
-                    {itemsCount} {t('items')}
+                    {t('items', { count: itemsCount })}
                   </span>
                   <span>
-                    {formatWeight(totalWeight, tCommon)}
+                    {formatWeight(totalWeight, locale, tCommon)}
                   </span>
                 </div>
 
@@ -327,7 +327,7 @@ export default function ListsPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl max-h-[90dvh] overflow-y-auto w-full max-w-md pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <div className="p-6">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 {t('add')}
@@ -335,10 +335,11 @@ export default function ListsPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="list-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('name')}
                   </label>
                   <input
+                    id="list-name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
@@ -351,10 +352,11 @@ export default function ListsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="list-season" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tGear('season_label')}
                   </label>
                   <select
+                    id="list-season"
                     value={formData.season}
                     onChange={(e) => handleFormChange('season', e.target.value)}
                     className={inputClass}
@@ -368,10 +370,11 @@ export default function ListsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="list-trip-date" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('trip_date')}
                   </label>
                   <input
+                    id="list-trip-date"
                     type="date"
                     value={formData.trip_date}
                     onChange={(e) => handleFormChange('trip_date', e.target.value)}
@@ -380,10 +383,11 @@ export default function ListsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="list-meal-plan" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('linked_meal_plan')}
                   </label>
                   <select
+                    id="list-meal-plan"
                     value={formData.meal_plan_id || ''}
                     onChange={(e) => handleFormChange('meal_plan_id', e.target.value)}
                     className={inputClass}
@@ -421,7 +425,7 @@ export default function ListsPage() {
 
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl max-h-[90dvh] overflow-y-auto w-full max-w-sm p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {tCommon('delete')}
             </h3>

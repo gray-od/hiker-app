@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchUserFoodItems } from '@/lib/supabase/service';
 import type { UserFoodItem } from '@/lib/types';
+import { formatNumber } from '@/lib/format';
 
 export default function PrintFoodPage() {
   const router = useRouter();
@@ -136,16 +137,16 @@ export default function PrintFoodPage() {
                       {tFood(`categories.${item.category}`)}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
-                      {item.calories_per100g}
+                      {formatNumber(item.calories_per100g, locale)}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
-                      {item.protein_per100g}
+                      {formatNumber(item.protein_per100g, locale)}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
-                      {item.fat_per100g}
+                      {formatNumber(item.fat_per100g, locale)}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
-                      {item.carbs_per100g}
+                      {formatNumber(item.carbs_per100g, locale)}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
                       {item.default_portion_g} {tCommon('weight_g')}

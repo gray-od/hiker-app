@@ -350,6 +350,7 @@ export default function LoginPage() {
                 <input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -364,7 +365,7 @@ export default function LoginPage() {
                 <input
                   id="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
                   required
                   minLength={6}
                   value={password}
@@ -402,6 +403,7 @@ export default function LoginPage() {
                         <input
                           id="customQuestion"
                           type="text"
+                          aria-label={t('question_custom')}
                           required
                           value={customQuestion}
                           onChange={(e) => setCustomQuestion(e.target.value)}

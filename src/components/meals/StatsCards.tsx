@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import type { MealPlan, MealDayWithEntries } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 
@@ -11,6 +12,7 @@ interface StatsCardsProps {
 }
 
 export default function StatsCards({ days, plan, t, tCommon }: StatsCardsProps) {
+  const locale = useLocale();
   const totalCalories = days.reduce(
     (sum, d) => sum + (d.meal_entries || []).reduce((s, e) => s + e.calories, 0),
     0,
@@ -35,7 +37,7 @@ export default function StatsCards({ days, plan, t, tCommon }: StatsCardsProps) 
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
         <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('total_weight')}</div>
         <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-          {formatWeight(totalWeight, tCommon)}
+          {formatWeight(totalWeight, locale, tCommon)}
         </div>
       </div>
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">

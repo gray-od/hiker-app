@@ -1,8 +1,9 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import type { MealPlan, MealEntry, MealDayWithEntries } from '@/lib/types';
 import { getAdaptationCoefficient } from '@/lib/hiking-standards';
-import { formatWeight } from '@/lib/format';
+import { formatWeight, formatNumber } from '@/lib/format';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
@@ -37,6 +38,7 @@ export default function DayCard({
   t,
   tCommon,
 }: DayCardProps) {
+  const locale = useLocale();
   const entries = day.meal_entries || [];
 
   const groupedEntries: Record<string, MealEntry[]> = {
@@ -73,7 +75,7 @@ export default function DayCard({
             {t('day')} {dayNumber}
           </h3>
           <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
-            {dayTotalCal} {t('kcal')} / {formatWeight(dayTotalWeight, tCommon)}
+            {dayTotalCal} {t('kcal')} / {formatWeight(dayTotalWeight, locale, tCommon)}
           </span>
         </div>
         <svg
@@ -143,15 +145,15 @@ export default function DayCard({
                       </div>
                       <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
                         <span className="tabular-nums">
-                          {entry.weight_g} {tCommon('weight_g')}
+                          {formatNumber(entry.weight_g, locale)} {tCommon('weight_g')}
                         </span>
                         <span className="tabular-nums">
                           {entry.calories} {t('kcal')}
                         </span>
                         <span className="text-zinc-400 dark:text-zinc-500 tabular-nums">
-                          {t('protein')}: {entry.protein_g}{tCommon('weight_g')}{' '}
-                          {t('fat')}: {entry.fat_g}{tCommon('weight_g')}{' '}
-                          {t('carbs')}: {entry.carbs_g}{tCommon('weight_g')}
+                          {t('protein')}: {formatNumber(entry.protein_g, locale)} {tCommon('weight_g')}{' '}
+                          {t('fat')}: {formatNumber(entry.fat_g, locale)} {tCommon('weight_g')}{' '}
+                          {t('carbs')}: {formatNumber(entry.carbs_g, locale)} {tCommon('weight_g')}
                         </span>
                       </div>
                     </div>

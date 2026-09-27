@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import Head from 'next/head';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchUserListDetail, fetchListItems, fetchUserGear, fetchUserMealPlansLight, updateList, deleteList, updateListItem, deleteListItem, addListItems } from '@/lib/supabase/service';
@@ -24,6 +24,7 @@ export default function ListDetailPage() {
   const t = useTranslations('lists');
   const tCommon = useTranslations('common');
   const tGear = useTranslations('gear');
+  const locale = useLocale();
 
   const [list, setList] = useState<GearList | null>(null);
   const [listItems, setListItems] = useState<ListItemWithGear[]>([]);
@@ -810,6 +811,8 @@ export default function ListDetailPage() {
             return (
               <>
                 <select
+                  id="linked-meal-plan"
+                  aria-label={t('linked_meal_plan')}
                   value={list?.meal_plan_id || ''}
                   onChange={async (e) => {
                     const planId = e.target.value;
@@ -844,7 +847,7 @@ export default function ListDetailPage() {
                 </select>
                 {linkedPlan && (
                   <span className="text-xs text-[var(--color-brand)]">
-                    · {formatWeight(linkedPlan.total_weight_g / linkedPlan.people_count, tCommon)} {t('per_person')} · {t('total')} {formatWeight(linkedPlan.total_weight_g, tCommon)}
+                    · {formatWeight(linkedPlan.total_weight_g / linkedPlan.people_count, locale, tCommon)} {t('per_person')} · {t('total')} {formatWeight(linkedPlan.total_weight_g, locale, tCommon)}
                   </span>
                 )}
               </>
@@ -952,7 +955,7 @@ export default function ListDetailPage() {
                       </span>
                     )}
                     <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                      {formatWeight((item.gear_item?.weight_g || 0) * item.quantity, tCommon)}
+                      {formatWeight((item.gear_item?.weight_g || 0) * item.quantity, locale, tCommon)}
                     </span>
                   </div>
                 </div>
@@ -972,8 +975,10 @@ export default function ListDetailPage() {
                     −
                   </button>
                   <input
+                    id={`list-item-qty-${item.id}`}
                     type="number"
                     min={1}
+                    aria-label={t('quantity')}
                     value={quantityDrafts[item.id] ?? item.quantity}
                     onChange={(e) => setQuantityDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
                     onBlur={() => commitQuantityDraft(item.id)}

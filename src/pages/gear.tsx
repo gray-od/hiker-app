@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import type { GearItem } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
@@ -30,6 +30,7 @@ export default function GearPage() {
   const router = useRouter();
   const tGear = useTranslations('gear');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   const [items, setItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -298,7 +299,7 @@ export default function GearPage() {
                       </span>
                       <span className="text-zinc-300 dark:text-zinc-600">·</span>
                       <span className="text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
-                        {formatWeight(item.weight_g, tCommon)}
+                        {formatWeight(item.weight_g, locale, tCommon)}
                       </span>
                       <span className="text-zinc-300 dark:text-zinc-600">·</span>
                       <span className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -366,7 +367,7 @@ export default function GearPage() {
                         {tGear(`categories.${item.category}`)}
                       </td>
                       <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400 whitespace-nowrap tabular-nums">
-                        {formatWeight(item.weight_g, tCommon)}
+                        {formatWeight(item.weight_g, locale, tCommon)}
                       </td>
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
                         {tGear(`season.${item.season}`)}
@@ -407,7 +408,7 @@ export default function GearPage() {
       {/* Add/Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <div className="p-6">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 {editingItem ? tCommon('edit') : tGear('add_item')}
@@ -415,10 +416,11 @@ export default function GearPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="gear-item-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tGear('name')}
                   </label>
                   <input
+                    id="gear-item-name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
@@ -431,10 +433,11 @@ export default function GearPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="gear-item-category" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tGear('category')}
                   </label>
                   <select
+                    id="gear-item-category"
                     value={formData.category}
                     onChange={(e) => handleFormChange('category', e.target.value)}
                     className={inputClass}
@@ -448,10 +451,11 @@ export default function GearPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="gear-item-weight" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tGear('weight')}, {tCommon('weight_g')}
                   </label>
                   <input
+                    id="gear-item-weight"
                     type="number"
                     placeholder="0"
                     value={formData.weight_g > 0 ? formData.weight_g : ''}
@@ -463,10 +467,11 @@ export default function GearPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="gear-item-season" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tGear('season_label')}
                   </label>
                   <select
+                    id="gear-item-season"
                     value={formData.season}
                     onChange={(e) => handleFormChange('season', e.target.value)}
                     className={inputClass}
@@ -480,10 +485,11 @@ export default function GearPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label htmlFor="gear-item-notes" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     {tGear('notes')}
                   </label>
                   <textarea
+                    id="gear-item-notes"
                     value={formData.notes}
                     onChange={(e) => handleFormChange('notes', e.target.value)}
                     rows={3}
@@ -516,7 +522,7 @@ export default function GearPage() {
       {/* Delete confirmation modal */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-sm max-h-[90dvh] overflow-y-auto p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {tCommon('delete')}
             </h3>

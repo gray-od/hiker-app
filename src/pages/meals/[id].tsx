@@ -1225,7 +1225,6 @@ export default function MealPlanDetailPage() {
           userFoodItems={userFoodItems}
           saving={saving}
           actionError={actionError}
-          locale={locale}
           foodCategories={foodCategories}
           onClose={() => setEntryModalOpen(false)}
           onSave={handleSaveEntry}

@@ -138,7 +138,7 @@ export default function PrintGearPage() {
                         {tGear(`categories.${item.category}`)}
                       </td>
                       <td className="px-3 py-1.5 text-right tabular-nums">
-                        {formatWeight(item.weight_g, tCommon)}
+                        {formatWeight(item.weight_g, locale, tCommon)}
                       </td>
                       <td className="px-3 py-1.5 text-zinc-500">
                         {tGear(`season.${item.season}`)}
@@ -155,7 +155,7 @@ export default function PrintGearPage() {
             <div className="border-t-2 border-zinc-300 pt-4 mb-8">
               <div className="grid grid-cols-2 gap-y-2 text-sm max-w-xs">
                 <span className="text-zinc-500">{tGear('weight')}:</span>
-                <span className="text-right tabular-nums font-medium">{formatWeight(totalWeight, tCommon)}</span>
+                <span className="text-right tabular-nums font-medium">{formatWeight(totalWeight, locale, tCommon)}</span>
               </div>
             </div>
           </>

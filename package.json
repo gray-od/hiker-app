@@ -10,7 +10,7 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"

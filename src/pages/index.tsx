@@ -257,7 +257,7 @@ export default function Dashboard() {
                 />
               </svg>
               <p className="text-zinc-400 dark:text-zinc-500 text-sm">
-                {t('recent_lists')}
+                {t('recent_lists_empty')}
               </p>
             </div>
           )}
@@ -302,7 +302,7 @@ export default function Dashboard() {
                       {plan.name}
                     </h3>
                     <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                      {plan.days_count} {tMeals('days')} · {formatDate(plan.created_at, locale)}
+                      {tMeals('days_short', { count: plan.days_count })} · {formatDate(plan.created_at, locale)}
                     </p>
                   </Link>
                 );
@@ -324,7 +324,7 @@ export default function Dashboard() {
                 />
               </svg>
               <p className="text-zinc-400 dark:text-zinc-500 text-sm">
-                {t('recent_meals')}
+                {t('recent_meals_empty')}
               </p>
             </div>
           )}

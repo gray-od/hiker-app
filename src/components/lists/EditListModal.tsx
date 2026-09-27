@@ -33,10 +33,11 @@ export default function EditListModal({
     <Modal open={open} onClose={onClose} title={t('edit_list')} maxWidth="max-w-md">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-list-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('name')}
           </label>
           <input
+            id="edit-list-name"
             type="text"
             value={editForm.name}
             onChange={(e) => onFieldChange('name', e.target.value)}
@@ -48,10 +49,11 @@ export default function EditListModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-list-season" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('season')}
           </label>
           <select
+            id="edit-list-season"
             value={editForm.season}
             onChange={(e) => onFieldChange('season', e.target.value)}
             className={inputClass}
@@ -65,10 +67,11 @@ export default function EditListModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="edit-list-date" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             {t('trip_date')}
           </label>
           <input
+            id="edit-list-date"
             type="date"
             value={editForm.trip_date}
             onChange={(e) => onFieldChange('trip_date', e.target.value)}

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { fetchMealPlanDetail } from '@/lib/supabase/service';
 import type { MealPlan, MealDayWithEntries, MealEntry } from '@/lib/types';
+import { formatWeight, formatNumber } from '@/lib/format';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
@@ -211,11 +212,11 @@ export default function MealPlanPrintPage() {
                         {mealEntries.map((entry) => (
                           <tr key={entry.id}>
                             <td className="border border-zinc-300 px-2 py-1 text-black max-w-[140px] sm:max-w-none break-words">{entry.name}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.weight_g}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.calories}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.protein_g}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.fat_g}</td>
-                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{entry.carbs_g}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatWeight(entry.weight_g, locale, tCommon)}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatNumber(entry.calories, locale)}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatNumber(entry.protein_g, locale)}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatNumber(entry.fat_g, locale)}</td>
+                            <td className="border border-zinc-300 px-2 py-1 text-right tabular-nums text-black whitespace-nowrap">{formatNumber(entry.carbs_g, locale)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -226,7 +227,7 @@ export default function MealPlanPrintPage() {
               })}
 
               <div className="text-sm text-right text-zinc-600 border-t border-zinc-200 pt-1">
-                {t('day')} {day.day_number} {t('total_calories').toLowerCase()}: {dayTotalCal} {t('kcal')} &nbsp;|&nbsp; {dayTotalWeight} {tCommon('weight_g')}
+                {t('day')} {day.day_number} {t('total_calories').toLowerCase()}: {formatNumber(dayTotalCal, locale)} {t('kcal')} &nbsp;|&nbsp; {formatWeight(dayTotalWeight, locale, tCommon)}
               </div>
             </div>
           );
@@ -238,10 +239,10 @@ export default function MealPlanPrintPage() {
           </div>
           <div className="text-sm text-center text-zinc-800 space-y-1">
             <div>
-              {t('total_calories')}: {totalCalories} {t('kcal')} &nbsp;|&nbsp; {totalWeight} {tCommon('weight_g')}
+              {t('total_calories')}: {formatNumber(totalCalories, locale)} {t('kcal')} &nbsp;|&nbsp; {formatWeight(totalWeight, locale, tCommon)}
             </div>
             <div>
-              {t('per_person')} / {tCommon('day')}: {avgCalPerPersonDay} {t('kcal')} &nbsp;|&nbsp; {avgWeightPerPersonDay} {tCommon('weight_g')}
+              {t('per_person')} / {tCommon('day')}: {formatNumber(avgCalPerPersonDay, locale)} {t('kcal')} &nbsp;|&nbsp; {formatWeight(avgWeightPerPersonDay, locale, tCommon)}
             </div>
           </div>
         </div>

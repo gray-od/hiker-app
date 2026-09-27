@@ -327,9 +327,11 @@ export default function ChatWidget() {
           </div>
 
           <input
+            id="chat-file-input"
             type="file"
             ref={fileInputRef}
             accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values"
+            aria-label={t('attach_file')}
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];

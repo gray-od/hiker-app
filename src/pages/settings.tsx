@@ -666,18 +666,25 @@ export default function SettingsPage() {
           </h2>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+              <div className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
                 {t('email')}
-              </label>
+              </div>
               <p className="text-sm text-zinc-900 dark:text-zinc-100">{email}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-                {t('name')}
-              </label>
+              {editingName ? (
+                <label htmlFor="profile-name" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  {t('name')}
+                </label>
+              ) : (
+                <div className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  {t('name')}
+                </div>
+              )}
               {editingName ? (
                 <div className="flex items-center gap-2">
                   <input
+                    id="profile-name"
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
@@ -758,7 +765,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-                {t('enter_new_password')}
+                {tCommon('enter_new_password')}
               </label>
               <input
                 id="newPassword"
@@ -934,7 +941,7 @@ export default function SettingsPage() {
 
       {deleteModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] w-full max-w-md">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] w-full max-w-md max-h-[90dvh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('delete_confirm_title')}
             </h3>
@@ -942,7 +949,9 @@ export default function SettingsPage() {
               {t('delete_confirm_text', { email })}
             </p>
             <input
+              id="delete-confirm-email"
               type="email"
+              aria-label={t('email')}
               value={deleteEmailInput}
               onChange={(e) => setDeleteEmailInput(e.target.value)}
               placeholder={t('delete_confirm_placeholder')}
