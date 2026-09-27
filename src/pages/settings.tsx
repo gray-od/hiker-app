@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import { isAuthRetryableFetchError, type User } from '@supabase/supabase-js';
 import { createClient, clearStoredSession } from '@/lib/supabase/client';
 import { resolveUser } from '@/lib/supabase/resolveUser';
-import { fetchUserProfile, updateUserProfile } from '@/lib/supabase/service';
+import { fetchUserProfile, updateUserProfile, QUEUE_DRAINED_EVENT } from '@/lib/supabase/service';
 import { clearUserCache } from '@/lib/cache';
 import { inputClass, cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
@@ -165,6 +165,28 @@ export default function SettingsPage() {
     });
     return () => { cancelled = true; };
   }, [router, loadSecurityStatus]);
+
+  // A drained queue may have replayed a profile write that happened in another tab.
+  // Refresh only the displayed name: an in-progress edit lives in nameInput and
+  // editingName, which this effect must not touch.
+  useEffect(() => {
+    const refreshProfile = async () => {
+      try {
+        const user = await resolveUser();
+        if (!user) return;
+        const { data, error } = await fetchUserProfile(user.id);
+        if (error) {
+          console.error('Settings profile refresh failed:', error);
+          return;
+        }
+        if (data?.name) setName(data.name);
+      } catch (err) {
+        console.error('Settings profile refresh failed:', err);
+      }
+    };
+    window.addEventListener(QUEUE_DRAINED_EVENT, refreshProfile);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refreshProfile);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

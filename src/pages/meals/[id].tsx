@@ -13,6 +13,7 @@ import {
   deleteMealPlan,
   fetchMealPlanDetail,
   fetchUserFoodItems,
+  QUEUE_DRAINED_EVENT,
   updateMealDay,
   updateMealEntry,
   updateMealPlan,
@@ -927,7 +928,7 @@ export default function MealPlanDetailPage() {
     if (!confirmTypeChange) setEditPlanModalOpen(false);
   }, [confirmTypeChange]);
 
-  async function refreshPlanFromServer() {
+  const refreshPlanFromServer = useCallback(async () => {
     const userId = userIdRef.current;
     if (!userId) return;
 
@@ -941,7 +942,14 @@ export default function MealPlanDetailPage() {
     }
     setPlan(data.plan);
     setDays(data.days);
-  }
+  }, [id]);
+
+  // The shell replays the offline queue and drops the cache keys it touched; this page is
+  // cache-first, so it would keep showing the pre-sync plan until the next reload.
+  useEffect(() => {
+    window.addEventListener(QUEUE_DRAINED_EVENT, refreshPlanFromServer);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refreshPlanFromServer);
+  }, [refreshPlanFromServer]);
 
   async function handleApplyTemplate(templateId: string, peopleCountOverride?: number): Promise<boolean> {
     // Rebuilding deletes rows by filter (day_id / plan_id), which the offline queue cannot

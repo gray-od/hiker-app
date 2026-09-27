@@ -28,9 +28,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const syncIfOnline = () => {
       if (navigator.onLine) syncPendingMutations();
     };
+    // A frozen background tab can miss the `online` event, so the drain is retried
+    // whenever the app is brought back to the foreground.
+    const syncIfVisible = () => {
+      if (document.visibilityState === 'visible') syncIfOnline();
+    };
     syncIfOnline();
     window.addEventListener('online', syncIfOnline);
-    return () => window.removeEventListener('online', syncIfOnline);
+    window.addEventListener('pageshow', syncIfOnline);
+    document.addEventListener('visibilitychange', syncIfVisible);
+    return () => {
+      window.removeEventListener('online', syncIfOnline);
+      window.removeEventListener('pageshow', syncIfOnline);
+      document.removeEventListener('visibilitychange', syncIfVisible);
+    };
   }, [isPublic]);
 
   // Keyed on `isPublic`: signing in navigates client-side, so the shell survives

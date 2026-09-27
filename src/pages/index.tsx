@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import Head from 'next/head';
 import Link from 'next/link';
 import { resolveUser } from '@/lib/supabase/resolveUser';
-import { fetchUserProfile, fetchUserLists, fetchUserMealPlans } from '@/lib/supabase/service';
+import { fetchUserProfile, fetchUserLists, fetchUserMealPlans, QUEUE_DRAINED_EVENT } from '@/lib/supabase/service';
 import type { GearList, MealPlan, Profile } from '@/lib/types';
 import type { GearListWithTotalWeight } from '@/lib/supabase/service';
 import { getPlanType, type PlanTypeId } from '@/lib/hiking-standards';
@@ -68,6 +68,17 @@ export default function Dashboard() {
       cancelled = true;
     };
   }, [loadDashboard, router]);
+
+  // The queue drain has already invalidated the cached keys; without re-reading, the
+  // dashboard keeps showing pre-drain data until a manual reload.
+  useEffect(() => {
+    if (!user) return;
+    const refresh = () => {
+      void loadDashboard(user.id);
+    };
+    window.addEventListener(QUEUE_DRAINED_EVENT, refresh);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refresh);
+  }, [user, loadDashboard]);
 
   const head = (
     <Head>

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslations, useLocale } from 'next-intl';
 import Head from 'next/head';
 import { resolveUser } from '@/lib/supabase/resolveUser';
-import { fetchUserListDetail, fetchListItems, fetchUserGear, fetchUserMealPlansLight, updateList, deleteList, updateListItem, deleteListItem, addListItems } from '@/lib/supabase/service';
+import { fetchUserListDetail, fetchListItems, fetchUserGear, fetchUserMealPlansLight, updateList, deleteList, updateListItem, deleteListItem, addListItems, QUEUE_DRAINED_EVENT } from '@/lib/supabase/service';
 import type { GearList, GearItem, ListItemWithGear } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 import { fetchRouteWeather } from '@/lib/gpx-weather';
@@ -114,6 +114,32 @@ export default function ListDetailPage() {
       setError(tCommon('error_loading'));
     });
   }, [id, router]);
+
+  // A drained offline queue means the server now holds the truth the optimistic state cannot show.
+  const refreshListDetail = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId || typeof id !== 'string') return;
+    const [listResult, itemsResult] = await Promise.all([
+      fetchUserListDetail(userId, id),
+      fetchListItems(userId, id),
+    ]);
+    if (listResult.error) {
+      console.error('Failed to refresh list:', listResult.error);
+    } else if (listResult.data) {
+      setList(listResult.data);
+    }
+    if (itemsResult.error) {
+      console.error('Failed to refresh items:', itemsResult.error);
+    } else if (itemsResult.data) {
+      setListItems(itemsResult.data);
+      setItemsLoadFailed(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    window.addEventListener(QUEUE_DRAINED_EVENT, refreshListDetail);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refreshListDetail);
+  }, [refreshListDetail]);
 
   async function retryLoadItems() {
     const userId = userIdRef.current;

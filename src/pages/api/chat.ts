@@ -474,7 +474,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 | { name: string; category: string; weight_g: number }[]
                 | null;
             }>;
-            if (items.length === 0) return 'This list has no items yet.';
+            // Built before the empty-list check on purpose: the model needs the track
+            // facts even when no items are packed yet.
+            let routeText = '';
+            if (listData?.gpx_data) {
+              const g = listData.gpx_data;
+              routeText = `\n\nRoute: ${g.track_name || 'Track'}\n  Trip date: ${listData.trip_date || 'not set'}\n  Distance: ${g.distance_km} km\n  Elevation gain: ${g.elevation_gain_m} m\n  Elevation loss: ${g.elevation_loss_m} m\n  Max elevation: ${g.max_elevation_m} m\n  Weather (for trip date): ${g.weather || 'not available'}`;
+            }
+            if (items.length === 0) return `This list has no items yet.${routeText}`;
             let total = 0;
             const lines: string[] = [];
             for (const it of items) {
@@ -487,11 +494,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               lines.push(
                 `- ${g.name} | ${g.category} | ${g.weight_g}g ×${it.quantity}${flags ? ' (' + flags + ')' : ''}`,
               );
-            }
-            let routeText = '';
-            if (listData?.gpx_data) {
-              const g = listData.gpx_data;
-              routeText = `\n\nRoute: ${g.track_name || 'Track'}\n  Trip date: ${listData.trip_date || 'not set'}\n  Distance: ${g.distance_km} km\n  Elevation gain: ${g.elevation_gain_m} m\n  Elevation loss: ${g.elevation_loss_m} m\n  Max elevation: ${g.max_elevation_m} m\n  Weather (for trip date): ${g.weather || 'not available'}`;
             }
             return `Items (${lines.length}), total ${total}g:\n${lines.join('\n')}${routeText}`;
           },

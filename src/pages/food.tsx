@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations, useLocale } from 'next-intl';
@@ -6,7 +6,8 @@ import { resolveUser } from '@/lib/supabase/resolveUser';
 import type { UserFoodItem } from '@/lib/types';
 import { formatKbju, formatNumber } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
-import { fetchUserFoodItems, createFoodItem, updateFoodItem, deleteFoodItem } from '@/lib/supabase/service';
+import { getCached, setCache, cacheKeys } from '@/lib/cache';
+import { QUEUE_DRAINED_EVENT, fetchUserFoodItems, createFoodItem, updateFoodItem, deleteFoodItem } from '@/lib/supabase/service';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -24,6 +25,27 @@ const EMPTY_FORM = {
   carbs_per100g: 0,
   default_portion_g: 100,
 };
+
+/**
+ * A queued write leaves the cache-first loader on its pre-write snapshot, so an offline
+ * reload would lose the change. Only an existing snapshot is patched — a missing one is
+ * refetched online, and fabricating a list here would claim rows the page never loaded.
+ */
+async function patchQueuedFoodCache(
+  userId: string,
+  patch: (current: UserFoodItem[]) => UserFoodItem[],
+) {
+  try {
+    const cached = await getCached<UserFoodItem[]>(cacheKeys.foodItems(userId));
+    if (cached) {
+      await setCache(cacheKeys.foodItems(userId), patch(cached));
+    }
+  } catch (err) {
+    // The cache is only a read shortcut: the queued write still replays to the database,
+    // so a failed patch costs at most a stale offline view.
+    console.error('Queued food mutation: cache patch failed', err);
+  }
+}
 
 export default function FoodPage() {
   const router = useRouter();
@@ -72,6 +94,22 @@ export default function FoodPage() {
     });
     return () => { cancelled = true; };
   }, [router]);
+
+  const refreshFood = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const { data, error } = await fetchUserFoodItems(userId);
+    if (error) {
+      console.error('Food refresh failed:', error);
+      return;
+    }
+    if (data) setItems(data);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(QUEUE_DRAINED_EVENT, refreshFood);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refreshFood);
+  }, [refreshFood]);
 
   function openAddModal() {
     setEditingItem(null);
@@ -133,6 +171,12 @@ export default function FoodPage() {
             : i,
         ),
       );
+      if (updateQueued) {
+        // Without this, an offline reload shows the snapshot from before the edit.
+        await patchQueuedFoodCache(userId, current =>
+          current.map(i => (i.id === editingItem.id ? { ...i, ...payload } : i)),
+        );
+      }
     } else {
       const { data, error: insertError, queued: insertQueued } = await createFoodItem(userId, payload);
 
@@ -150,6 +194,10 @@ export default function FoodPage() {
       }
       if (data) {
         setItems(prev => [data, ...prev]);
+      }
+      if (insertQueued && data) {
+        // Without this, an offline reload shows the snapshot from before the insert.
+        await patchQueuedFoodCache(userId, current => [data, ...current]);
       }
     }
 
@@ -188,6 +236,11 @@ export default function FoodPage() {
     setItems(prev => prev.filter(i => i.id !== id));
     setConfirmDelete(null);
     setDeleting(false);
+    if (deleteQueued) {
+      // A queued delete keeps its row in the snapshot; without the drop an offline reload
+      // would resurrect the item.
+      await patchQueuedFoodCache(userId, current => current.filter(i => i.id !== id));
+    }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Operation failed';
       toast.error(msg || tCommon('error_occurred'));

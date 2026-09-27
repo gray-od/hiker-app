@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useTranslations, useLocale } from 'next-intl';
@@ -6,7 +6,8 @@ import { resolveUser } from '@/lib/supabase/resolveUser';
 import type { GearItem } from '@/lib/types';
 import { formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
-import { fetchUserGear, createGearItem, updateGearItem, deleteGearItem } from '@/lib/supabase/service';
+import { QUEUE_DRAINED_EVENT, fetchUserGear, createGearItem, updateGearItem, deleteGearItem } from '@/lib/supabase/service';
+import { getCached, setCache, cacheKeys } from '@/lib/cache';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -74,6 +75,22 @@ export default function GearPage() {
     return () => { cancelled = true; };
   }, [router]);
 
+  const refreshGear = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const { data, error } = await fetchUserGear(userId);
+    if (error) {
+      console.error('Gear refresh failed:', error);
+      return;
+    }
+    if (data) setItems(data);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(QUEUE_DRAINED_EVENT, refreshGear);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refreshGear);
+  }, [refreshGear]);
+
   function openAddModal() {
     setEditingItem(null);
     setFormData(EMPTY_FORM);
@@ -130,6 +147,24 @@ export default function GearPage() {
             : i,
         ),
       );
+
+      if (updateQueued) {
+        // A queued update skips invalidateGearCache, so the cache-first snapshot would keep
+        // serving the pre-edit row after an offline reload. Patch it to match local state.
+        try {
+          const cached = await getCached<GearItem[]>(cacheKeys.gear(userId));
+          if (cached) {
+            await setCache(
+              cacheKeys.gear(userId),
+              cached.map(i => (i.id === editingItem.id ? { ...i, ...payload } : i)),
+            );
+          }
+        } catch (err) {
+          // The cache is an offline convenience, not the write path: the mutation is already
+          // queued, so a failed patch is logged rather than surfaced.
+          console.error('Gear cache patch after queued update failed:', err);
+        }
+      }
     } else {
       const { data, error: insertError, queued: insertQueued } = await createGearItem(userId, payload);
 
@@ -147,6 +182,21 @@ export default function GearPage() {
       }
       if (data) {
         setItems(prev => [data, ...prev]);
+      }
+
+      if (insertQueued && data) {
+        // A queued insert skips invalidateGearCache, so the cache-first snapshot would keep
+        // serving the pre-create list after an offline reload. Patch it to match local state.
+        try {
+          const cached = await getCached<GearItem[]>(cacheKeys.gear(userId));
+          if (cached) {
+            await setCache(cacheKeys.gear(userId), [data, ...cached]);
+          }
+        } catch (err) {
+          // The cache is an offline convenience, not the write path: the mutation is already
+          // queued, so a failed patch is logged rather than surfaced.
+          console.error('Gear cache patch after queued create failed:', err);
+        }
       }
     }
 
@@ -183,6 +233,22 @@ export default function GearPage() {
       toast.success(tGear('deleted'));
     }
     setItems(prev => prev.filter(i => i.id !== id));
+
+    if (deleteQueued) {
+      // A queued delete keeps the snapshot inside the service, so an offline reload would
+      // resurrect the row. Drop it here, matching the optimistic state.
+      try {
+        const cached = await getCached<GearItem[]>(cacheKeys.gear(userId));
+        if (cached) {
+          await setCache(cacheKeys.gear(userId), cached.filter(i => i.id !== id));
+        }
+      } catch (err) {
+        // The cache is an offline convenience, not the write path: the mutation is already
+        // queued, so a failed patch is logged rather than surfaced.
+        console.error('Gear cache patch after queued delete failed:', err);
+      }
+    }
+
     setConfirmDelete(null);
     setDeleting(false);
     } catch (err) {

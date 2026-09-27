@@ -839,12 +839,17 @@ export async function deleteMealEntry(
   return { error: null };
 }
 
+// Background drains invalidate cache keys while pages keep their own copy of the data; pages listen
+// for this event to re-read instead of showing stale state until the next manual reload.
+export const QUEUE_DRAINED_EVENT = 'prohikes:queue-drained';
+
 let syncInFlight: Promise<number> | null = null;
 
 /**
- * Replay the queued offline mutations of the signed-in user. Call on app load and when coming back online.
- * The shell fires this on mount, on `online` and on route changes, so same-tab callers share the in-flight
- * run instead of replaying the same entries twice, and the Web Locks API serialises runs across tabs.
+ * Replay the queued offline mutations of the signed-in user. The shell calls this on mount, on `online`
+ * and on `visibilitychange`/`pageshow` (a frozen background tab can miss `online`), so same-tab callers
+ * share the in-flight run instead of replaying the same entries twice, and the Web Locks API serialises
+ * runs across tabs. A fully replayed queue dispatches `QUEUE_DRAINED_EVENT` for the open pages to re-read.
  */
 export function syncPendingMutations(): Promise<number> {
   if (syncInFlight) return syncInFlight;
@@ -862,6 +867,8 @@ async function runQueueSync(): Promise<number> {
   if (!user) return 0;
 
   const supabase = createClient();
+
+  let applied = 0;
 
   const replay = () =>
     syncQueue(user.id, async (m) => {
@@ -914,6 +921,7 @@ async function runQueueSync(): Promise<number> {
         // Replay runs outside the pages, so the executor owns the cache invalidation that a
         // page write would have done had it gone through online.
         await invalidateAfterReplay(user.id, m);
+        applied += 1;
         return true;
       } catch (err) {
         console.error('Offline queue error (syncPendingMutations):', err);
@@ -924,6 +932,10 @@ async function runQueueSync(): Promise<number> {
   // Web Locks is missing in older browsers and on non-secure origins; there the replay runs
   // unguarded, which the idempotent client-generated ids keep safe across tabs.
   const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
-  if (!locks) return replay();
-  return locks.request('prohikes-offline-queue', replay);
+  const remaining = locks ? await locks.request('prohikes-offline-queue', replay) : await replay();
+  // The queue is fully replayed and its cache keys are already invalidated; the shell's pages re-read on this.
+  if (typeof window !== 'undefined' && applied > 0 && remaining === 0) {
+    window.dispatchEvent(new Event(QUEUE_DRAINED_EVENT));
+  }
+  return remaining;
 }

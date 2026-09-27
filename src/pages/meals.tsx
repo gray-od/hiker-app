@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
@@ -10,6 +10,7 @@ import {
   createMealPlan,
   deleteMealPlan,
   fetchUserMealPlans,
+  QUEUE_DRAINED_EVENT,
 } from '@/lib/supabase/service';
 import type { MealPlanLight } from '@/lib/supabase/service';
 import { setCache, removeCache, cacheKeys } from '@/lib/cache';
@@ -112,6 +113,24 @@ export default function MealsPage() {
     });
     return () => { cancelled = true; };
   }, [router]);
+
+  // The shell replays the offline queue and drops the cache keys it touched; the list is
+  // cache-first, so it would keep showing the pre-sync picture until the next reload.
+  const refreshMeals = useCallback(async () => {
+    const user = await resolveUser();
+    if (!user) return;
+    const { data, error } = await fetchUserMealPlans(user.id);
+    if (error) {
+      console.error('Meals refresh failed:', error);
+      return;
+    }
+    if (data) setPlans(data);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(QUEUE_DRAINED_EVENT, refreshMeals);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refreshMeals);
+  }, [refreshMeals]);
 
   function getTotalCalories(plan: MealPlanWithDays): number {
     return (plan.meal_days ?? []).reduce((sum, d) => sum + (d.total_calories ?? 0), 0);

@@ -1,12 +1,13 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslations, useLocale } from 'next-intl';
 import Head from 'next/head';
 import { resolveUser } from '@/lib/supabase/resolveUser';
 import { formatDate, formatWeight } from '@/lib/format';
 import { inputClass, cn } from '@/lib/cn';
-import { fetchUserLists, fetchUserMealPlansLight, createList, deleteList } from '@/lib/supabase/service';
+import { fetchUserLists, fetchUserMealPlansLight, createList, deleteList, QUEUE_DRAINED_EVENT } from '@/lib/supabase/service';
 import type { GearListWithTotalWeight } from '@/lib/supabase/service';
+import { getCached, setCache, cacheKeys } from '@/lib/cache';
 import { toast } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -77,6 +78,23 @@ export default function ListsPage() {
     return () => { cancelled = true; };
   }, [router]);
 
+  // A drained offline queue means the server now holds the truth the optimistic state cannot show.
+  const refreshLists = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const { data, error } = await fetchUserLists(userId);
+    if (error) {
+      console.error('Lists refresh failed:', error);
+      return;
+    }
+    if (data) setLists(data);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(QUEUE_DRAINED_EVENT, refreshLists);
+    return () => window.removeEventListener(QUEUE_DRAINED_EVENT, refreshLists);
+  }, [refreshLists]);
+
   function loadMealPlans(userId: string, isCancelled?: () => boolean) {
     fetchUserMealPlansLight(userId).then(({ data, error }) => {
       if (isCancelled?.()) return;
@@ -133,6 +151,18 @@ export default function ListsPage() {
     }
     if (data) {
       setLists((prev) => [data, ...prev]);
+
+      if (queued) {
+        // The cache-first loader cannot see the queued insert, so an offline reload would
+        // drop the list again; without a snapshot there is no offline picture to correct.
+        try {
+          const snapshot = await getCached<GearListWithTotalWeight[]>(cacheKeys.lists(userId));
+          if (snapshot) await setCache(cacheKeys.lists(userId), [data, ...snapshot]);
+        } catch (err) {
+          // Cache is best-effort: no toast — the queued write replays regardless of the patch.
+          console.error('Failed to patch lists cache for a queued create:', err);
+        }
+      }
     }
 
     setSaving(false);
@@ -169,6 +199,19 @@ export default function ListsPage() {
       toast.success(t('deleted'));
     }
     setLists((prev) => prev.filter((l) => l.id !== id));
+
+    if (queued) {
+      // The queued delete leaves the snapshot untouched, so an offline reload would
+      // resurrect the list; without a snapshot there is nothing to correct.
+      try {
+        const snapshot = await getCached<GearListWithTotalWeight[]>(cacheKeys.lists(userId));
+        if (snapshot) await setCache(cacheKeys.lists(userId), snapshot.filter((l) => l.id !== id));
+      } catch (err) {
+        // Cache is best-effort: no toast — the queued write replays regardless of the patch.
+        console.error('Failed to patch lists cache for a queued delete:', err);
+      }
+    }
+
     setConfirmDelete(null);
     setDeleting(false);
     } catch (err) {
