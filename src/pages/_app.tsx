@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import type { AppProps } from "next/app";
 import { NextIntlClientProvider } from "next-intl";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/Providers";
 import AppShell from "@/components/AppShell";
@@ -62,7 +63,10 @@ export default function App({ Component, pageProps }: AppProps) {
       suppressHydrationWarning
     >
       <Providers>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <Head>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </Head>
+        <NextIntlClientProvider locale={locale} messages={messages} timeZone="Europe/Kyiv">
           <Toaster />
           <AppShell>
             <Component {...pageProps} />
